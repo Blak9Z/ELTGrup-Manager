@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,22 +14,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ETL GRUP Manager",
-  description:
-    "Aplicatie pentru planificare, echipe, interventii, materiale si rapoarte ELTGRUP.",
+  title: "ELTGRUP Manager",
+  description: "Platforma operationala pentru constructii si echipe de teren",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="ro"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="ro" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>
+        {children}
+        <Toaster richColors position="top-right" />
+      </body>
     </html>
   );
 }
