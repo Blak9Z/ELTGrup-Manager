@@ -1,4 +1,4 @@
-import { MaterialRequestStatus, RoleKey } from "@prisma/client";
+import { MaterialRequestStatus, RoleKey, StockMovementType } from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
@@ -45,7 +45,20 @@ export default async function MaterialePage({
   };
 
   const [materials, totalMaterials, requests, projects, warehouses, materialInvoices] = await Promise.all([
-    prisma.material.findMany({ include: { stockMovements: true }, where: materialWhere, skip: (page - 1) * pageSize, take: pageSize, orderBy: { name: "asc" } }),
+    prisma.material.findMany({
+      where: materialWhere,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        unitOfMeasure: true,
+        internalCost: true,
+        minStockLevel: true,
+      },
+    }),
     prisma.material.count({ where: materialWhere }),
     prisma.materialRequest.findMany({
       include: { material: true, project: true, requestedBy: true },
@@ -73,6 +86,21 @@ export default async function MaterialePage({
       take: 40,
     }),
   ]);
+  const movementSums = materials.length
+    ? await prisma.stockMovement.groupBy({
+        by: ["materialId", "type"],
+        where: { materialId: { in: materials.map((material) => material.id) } },
+        _sum: { quantity: true },
+      })
+    : [];
+  const stockByMaterial = new Map<string, number>();
+  for (const row of movementSums) {
+    const signedQty =
+      row.type === StockMovementType.OUT || row.type === StockMovementType.WASTE
+        ? -Number(row._sum.quantity || 0)
+        : Number(row._sum.quantity || 0);
+    stockByMaterial.set(row.materialId, (stockByMaterial.get(row.materialId) || 0) + signedQty);
+  }
   const totalPages = Math.max(1, Math.ceil(totalMaterials / pageSize));
 
   return (
@@ -151,10 +179,7 @@ export default async function MaterialePage({
                 <thead><tr><TH>Cod</TH><TH>Material</TH><TH>UM</TH><TH>Stoc curent</TH><TH>Cost intern</TH><TH>Alerte</TH></tr></thead>
                 <tbody>
                   {materials.map((material) => {
-                    const stock = material.stockMovements.reduce((sum, move) => {
-                      if (move.type === "OUT" || move.type === "WASTE") return sum - Number(move.quantity);
-                      return sum + Number(move.quantity);
-                    }, 0);
+                    const stock = stockByMaterial.get(material.id) || 0;
                     const min = Number(material.minStockLevel || 0);
                     return (
                       <tr key={material.id}>

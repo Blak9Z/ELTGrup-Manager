@@ -3,8 +3,11 @@ import { RoleKey } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import NextAuth, { type NextAuthOptions, getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { cache } from "react";
 import { z } from "zod";
 import { prisma } from "@/src/lib/prisma";
+
+const JWT_ROLE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const loginSchema = z.object({
   email: z.email("Email invalid"),
@@ -61,9 +64,13 @@ export const authOptions: NextAuthOptions = {
         const candidate = user as { roleKeys?: RoleKey[]; email?: string };
         token.roleKeys = candidate.roleKeys || [];
         token.email = candidate.email;
+        token.roleSyncedAt = Date.now();
       }
 
-      if (token.userId) {
+      const lastSyncedAt = Number(token.roleSyncedAt || 0);
+      const shouldRefreshRoles = !lastSyncedAt || Date.now() - lastSyncedAt >= JWT_ROLE_SYNC_INTERVAL_MS;
+
+      if (token.userId && shouldRefreshRoles) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.userId as string },
           select: {
@@ -76,11 +83,13 @@ export const authOptions: NextAuthOptions = {
 
         if (!dbUser || !dbUser.isActive || dbUser.deletedAt) {
           token.roleKeys = [];
+          token.roleSyncedAt = Date.now();
           return token;
         }
 
         token.roleKeys = dbUser.roles.map((item) => item.role.key) as RoleKey[];
         token.email = dbUser.email;
+        token.roleSyncedAt = Date.now();
       }
 
       return token;
@@ -97,7 +106,8 @@ export const authOptions: NextAuthOptions = {
 };
 
 export const authHandler = NextAuth(authOptions);
+const cachedAuth = cache(() => getServerSession(authOptions));
 
 export async function auth() {
-  return getServerSession(authOptions);
+  return cachedAuth();
 }

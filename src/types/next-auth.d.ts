@@ -21,5 +21,6 @@ declare module "next-auth/jwt" {
     userId: string;
     roleKeys: RoleKey[];
     email?: string;
+    roleSyncedAt?: number;
   }
 }
