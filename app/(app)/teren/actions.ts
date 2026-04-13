@@ -4,6 +4,7 @@ import { TimeEntryLiveState, TimeEntryStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
+import { assertProjectAccess, assertWorkOrderAccess } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import { uploadDocumentFile } from "@/src/lib/storage";
@@ -25,6 +26,16 @@ const fileSchema = z.object({
   note: z.string().optional(),
 });
 
+const fieldUpdateSchema = z.object({
+  projectId: z.string().cuid(),
+  workOrderId: z.string().cuid().optional(),
+  weather: z.string().optional(),
+  workersCount: z.coerce.number().int().min(0).max(400),
+  progress: z.string().min(3),
+  blockers: z.string().optional(),
+  note: z.string().optional(),
+});
+
 function todayDateAtMidnight() {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
@@ -41,6 +52,8 @@ export async function startLivePontaj(formData: FormData) {
   });
 
   if (!parsed.success) throw new Error("Date invalide pentru start pontaj.");
+  await assertProjectAccess(currentUser, parsed.data.projectId);
+  await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
 
   const existing = await prisma.timeEntry.findFirst({
     where: {
@@ -232,6 +245,8 @@ export async function uploadTaskPhoto(formData: FormData) {
     note: formData.get("note") || undefined,
   });
   if (!parsed.success) throw new Error("Date foto invalide");
+  await assertProjectAccess(currentUser, parsed.data.projectId);
+  await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
 
   const file = formData.get("file");
   if (!(file instanceof File)) throw new Error("Fisier foto lipsa");
@@ -272,6 +287,8 @@ export async function uploadTaskSignature(formData: FormData) {
     note: formData.get("note") || undefined,
   });
   if (!parsed.success) throw new Error("Date semnatura invalide");
+  await assertProjectAccess(currentUser, parsed.data.projectId);
+  await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
 
   const file = formData.get("file");
   if (!(file instanceof File)) throw new Error("Fisier semnatura lipsa");
@@ -302,4 +319,41 @@ export async function uploadTaskSignature(formData: FormData) {
 
   revalidatePath("/teren");
   revalidatePath("/documente");
+}
+
+export async function createFieldUpdate(formData: FormData) {
+  const currentUser = await requirePermission("REPORTS", "CREATE");
+
+  const parsed = fieldUpdateSchema.safeParse({
+    projectId: formData.get("projectId"),
+    workOrderId: formData.get("workOrderId") || undefined,
+    weather: formData.get("weather") || undefined,
+    workersCount: formData.get("workersCount") || 0,
+    progress: formData.get("progress"),
+    blockers: formData.get("blockers") || undefined,
+    note: formData.get("note") || undefined,
+  });
+  if (!parsed.success) throw new Error("Date update teren invalide.");
+  await assertProjectAccess(currentUser, parsed.data.projectId);
+  if (parsed.data.workOrderId) {
+    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
+  }
+
+  await prisma.dailySiteReport.create({
+    data: {
+      projectId: parsed.data.projectId,
+      workOrderId: parsed.data.workOrderId,
+      reportDate: new Date(),
+      weather: parsed.data.weather,
+      workersCount: parsed.data.workersCount,
+      workCompleted: parsed.data.progress,
+      blockers: parsed.data.blockers,
+      materialsReceived: parsed.data.note,
+      createdById: currentUser.id,
+    },
+  });
+
+  revalidatePath("/teren");
+  revalidatePath("/rapoarte-zilnice");
+  revalidatePath("/panou");
 }

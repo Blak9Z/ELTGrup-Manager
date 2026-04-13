@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
+import { assertClientAccess } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
@@ -84,6 +85,7 @@ export async function addClientNote(formData: FormData) {
   const id = String(formData.get("id"));
   const note = String(formData.get("note") || "").trim();
   if (!note) throw new Error("Nota este obligatorie");
+  await assertClientAccess(currentUser, id);
 
   const client = await prisma.client.findUnique({ where: { id }, select: { notes: true } });
   await prisma.client.update({

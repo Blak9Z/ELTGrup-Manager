@@ -1,4 +1,5 @@
 import { ProjectStatus } from "@prisma/client";
+import { Table as HeroTable } from "@heroui/react";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
@@ -7,8 +8,9 @@ import { Card } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
-import { TH, TD, Table } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { auth } from "@/src/lib/auth";
+import { projectScopeWhere, resolveAccessScope } from "@/src/lib/access-scope";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { bulkProjectsAction, deleteProject, updateProjectStatus } from "./actions";
@@ -41,8 +43,17 @@ export default async function ProjectsPage({
   const statusFilter = params.status;
   const page = Math.max(1, Number(params.page || "1"));
   const pageSize = 10;
+  const session = await auth();
+  const scope = session?.user
+    ? await resolveAccessScope({
+        id: session.user.id,
+        email: session.user.email,
+        roleKeys: session.user.roleKeys || [],
+      })
+    : { projectIds: null, teamId: null };
   const where = {
     deletedAt: null,
+    ...projectScopeWhere(scope.projectIds),
     title: query ? { contains: query, mode: "insensitive" as const } : undefined,
     status: statusFilter || undefined,
   };
@@ -59,133 +70,158 @@ export default async function ProjectsPage({
       take: pageSize,
     }),
     prisma.project.count({ where }),
-    prisma.client.findMany({ where: { deletedAt: null }, orderBy: { name: "asc" } }),
+    prisma.client.findMany({
+      where:
+        scope.projectIds === null
+          ? { deletedAt: null }
+          : { deletedAt: null, projects: { some: { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } } } },
+      orderBy: { name: "asc" },
+    }),
   ]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
       <div className="space-y-6">
-        <PageHeader
-          title="Proiecte"
-          subtitle="Management complet lucrari: status, buget, manager, progres, riscuri"
-        />
+        <PageHeader title="Proiecte" subtitle="Control complet pentru status, buget, progres si risc operational" />
 
         <Card>
-          <h2 className="text-lg font-extrabold">Adauga proiect nou</h2>
+          <h2 className="text-lg font-semibold text-[#f0f5ff]">Proiect nou</h2>
           <ProjectCreateForm clients={clients} />
         </Card>
 
-        <Card>
-          <h2 className="text-lg font-extrabold">Actiuni bulk proiecte</h2>
-          <form action={bulkProjectsAction} className="mt-3 space-y-3">
-            <div className="grid gap-2 md:grid-cols-3">
-              <select name="operation" defaultValue="SET_STATUS" className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+        <Card className="bulk-zone">
+          <details>
+            <summary>Actiuni bulk proiecte</summary>
+            <form action={bulkProjectsAction} className="mt-3 space-y-3">
+            <div className="bulk-controls grid gap-2 md:grid-cols-3">
+              <select name="operation" defaultValue="SET_STATUS">
                 <option value="SET_STATUS">Actualizeaza status</option>
                 <option value="ARCHIVE">Arhiveaza (soft delete)</option>
               </select>
-              <select name="status" defaultValue={ProjectStatus.ACTIVE} className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+              <select name="status" defaultValue={ProjectStatus.ACTIVE}>
                 {Object.values(ProjectStatus).map((status) => (
-                  <option key={status} value={status}>{status}</option>
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
                 ))}
               </select>
               <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi executia actiunii bulk pe proiectele selectate?" />
             </div>
-            <div className="max-h-36 overflow-y-auto rounded-lg border border-[#dce8df] p-2">
+            <div className="max-h-36 overflow-y-auto rounded-xl border border-[color:var(--border)] p-3">
               <div className="grid gap-1 md:grid-cols-2">
                 {projects.map((project) => (
-                  <label key={project.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="ids" value={project.id} />
-                    <span>{project.code} - {project.title}</span>
+                  <label key={project.id} className="flex items-center gap-2 text-sm text-[#d9e5f8]">
+                    <input type="checkbox" name="ids" value={project.id} className="h-4 w-4" />
+                    <span>
+                      {project.code} - {project.title}
+                    </span>
                   </label>
                 ))}
               </div>
             </div>
-          </form>
+            </form>
+          </details>
         </Card>
 
         <Card>
           <form className="mb-4 grid gap-3 md:grid-cols-3">
             <Input name="q" placeholder="Filtru dupa nume proiect" defaultValue={query} />
             <input type="hidden" name="page" value="1" />
-            <select name="status" defaultValue={statusFilter || ""} className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+            <select name="status" defaultValue={statusFilter || ""}>
               <option value="">Toate statusurile</option>
               {Object.values(ProjectStatus).map((status) => (
-                <option key={status} value={status}>{status}</option>
+                <option key={status} value={status}>
+                  {status}
+                </option>
               ))}
             </select>
-            <Button type="submit" variant="secondary">Aplica filtre</Button>
+            <Button type="submit" variant="secondary">
+              Aplica filtre
+            </Button>
           </form>
 
           {projects.length === 0 ? (
             <EmptyState title="Nu exista proiecte" description="Adauga primul proiect pentru a incepe planificarea." />
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <thead>
-                  <tr>
-                    <TH>Cod</TH>
-                    <TH>Proiect</TH>
-                    <TH>Client</TH>
-                    <TH>Manager</TH>
-                    <TH>Buget</TH>
-                    <TH>Progres</TH>
-                    <TH>Status</TH>
-                    <TH>Actiuni</TH>
-                  </tr>
-                </thead>
-                <tbody>
+            <div className="overflow-x-auto rounded-xl border border-[color:var(--border)]">
+              <HeroTable aria-label="Tabel proiecte" className="bg-transparent">
+                <HeroTable.Content>
+                <HeroTable.Header>
+                  <HeroTable.Column>COD</HeroTable.Column>
+                  <HeroTable.Column>PROIECT</HeroTable.Column>
+                  <HeroTable.Column>CLIENT</HeroTable.Column>
+                  <HeroTable.Column>MANAGER</HeroTable.Column>
+                  <HeroTable.Column>BUGET</HeroTable.Column>
+                  <HeroTable.Column>PROGRES</HeroTable.Column>
+                  <HeroTable.Column>STATUS</HeroTable.Column>
+                  <HeroTable.Column>ACTIUNI</HeroTable.Column>
+                </HeroTable.Header>
+                <HeroTable.Body>
                   {projects.map((project) => {
                     const status = mapStatus(project.status);
                     return (
-                      <tr key={project.id}>
-                        <TD>{project.code}</TD>
-                        <TD>
-                          <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#0f5d39] hover:underline">
+                      <HeroTable.Row key={project.id}>
+                        <HeroTable.Cell>{project.code}</HeroTable.Cell>
+                        <HeroTable.Cell>
+                          <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#b9d4ff] hover:text-[#d9e7ff] hover:underline">
                             {project.title}
                           </Link>
-                          <p className="text-xs text-[#617468]">{project.siteAddress}</p>
-                          <p className="text-xs text-[#617468]">{project.startDate ? formatDate(project.startDate) : "-"} - {project.endDate ? formatDate(project.endDate) : "-"}</p>
-                        </TD>
-                        <TD>{project.client.name}</TD>
-                        <TD>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</TD>
-                        <TD>
+                          <p className="text-xs text-[#95a9c4]">{project.siteAddress}</p>
+                          <p className="text-xs text-[#95a9c4]">
+                            {project.startDate ? formatDate(project.startDate) : "-"} - {project.endDate ? formatDate(project.endDate) : "-"}
+                          </p>
+                        </HeroTable.Cell>
+                        <HeroTable.Cell>{project.client.name}</HeroTable.Cell>
+                        <HeroTable.Cell>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</HeroTable.Cell>
+                        <HeroTable.Cell>
                           <p>{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
-                          <p className="text-xs text-[#617468]">Contract: {formatCurrency(project.contractValue?.toString() || 0)}</p>
-                        </TD>
-                        <TD>{project.progressPercent}%</TD>
-                        <TD><Badge tone={status.tone}>{status.label}</Badge></TD>
-                        <TD>
+                          <p className="text-xs text-[#95a9c4]">Contract: {formatCurrency(project.contractValue?.toString() || 0)}</p>
+                        </HeroTable.Cell>
+                        <HeroTable.Cell>{project.progressPercent}%</HeroTable.Cell>
+                        <HeroTable.Cell>
+                          <Badge tone={status.tone}>{status.label}</Badge>
+                        </HeroTable.Cell>
+                        <HeroTable.Cell>
                           <div className="flex gap-2">
                             <form action={updateProjectStatus}>
                               <input type="hidden" name="id" value={project.id} />
-                              <select name="status" defaultValue={project.status} className="h-9 rounded-md border border-[#cfdcd2] px-2 text-xs">
+                              <select name="status" defaultValue={project.status} className="h-9 rounded-md px-2 text-xs">
                                 {Object.values(ProjectStatus).map((st) => (
-                                  <option key={st} value={st}>{st}</option>
+                                  <option key={st} value={st}>
+                                    {st}
+                                  </option>
                                 ))}
                               </select>
-                              <Button size="sm" variant="ghost" type="submit" className="ml-1">Salveaza</Button>
+                              <Button size="sm" variant="ghost" type="submit" className="ml-1">
+                                Salveaza
+                              </Button>
                             </form>
                             <form action={deleteProject}>
                               <input type="hidden" name="id" value={project.id} />
-                              <Button size="sm" variant="destructive" type="submit">Sterge</Button>
+                              <Button size="sm" variant="destructive" type="submit">
+                                Sterge
+                              </Button>
                             </form>
                           </div>
-                        </TD>
-                      </tr>
+                        </HeroTable.Cell>
+                      </HeroTable.Row>
                     );
                   })}
-                </tbody>
-              </Table>
+                </HeroTable.Body>
+                </HeroTable.Content>
+              </HeroTable>
             </div>
           )}
-          <div className="mt-4 flex items-center justify-between text-sm text-[#5f7265]">
-            <span>Pagina {page} din {totalPages}</span>
+          <div className="mt-4 flex items-center justify-between text-sm text-[#9cb0cb]">
+            <span>
+              Pagina {page} din {totalPages}
+            </span>
             <div className="flex gap-2">
               {page > 1 ? (
                 <Link
                   href={`/proiecte?page=${page - 1}&q=${encodeURIComponent(query)}&status=${statusFilter || ""}`}
-                  className="rounded-md border border-[#cfdcd2] px-3 py-1"
+                  className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]"
                 >
                   Anterior
                 </Link>
@@ -193,7 +229,7 @@ export default async function ProjectsPage({
               {page < totalPages ? (
                 <Link
                   href={`/proiecte?page=${page + 1}&q=${encodeURIComponent(query)}&status=${statusFilter || ""}`}
-                  className="rounded-md border border-[#cfdcd2] px-3 py-1"
+                  className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]"
                 >
                   Urmator
                 </Link>

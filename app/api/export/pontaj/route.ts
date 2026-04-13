@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import * as XLSX from "xlsx";
 import { auth } from "@/src/lib/auth";
+import { resolveAccessScope, timeEntryScopeWhere } from "@/src/lib/access-scope";
+import { toCsv } from "@/src/lib/csv";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
   const session = await auth();
   const roles = session?.user?.roleKeys || [];
 
-  if (!session?.user?.id || !hasPermission(roles, "TIME_TRACKING", "EXPORT")) {
+  if (!session?.user?.id || !hasPermission(roles, "TIME_TRACKING", "EXPORT", session?.user?.email)) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
   }
 
@@ -18,9 +19,18 @@ export async function GET(request: Request) {
 
   const from = new Date(year, month - 1, 1);
   const to = new Date(year, month, 0, 23, 59, 59);
+  const userContext = {
+    id: session.user.id,
+    email: session.user.email,
+    roleKeys: session.user.roleKeys || [],
+  };
+  const scope = await resolveAccessScope(userContext);
 
   const rows = await prisma.timeEntry.findMany({
-    where: { startAt: { gte: from, lte: to } },
+    where: {
+      startAt: { gte: from, lte: to },
+      ...timeEntryScopeWhere(userContext, scope),
+    },
     include: { user: true, project: true, workOrder: true },
     orderBy: { startAt: "asc" },
   });
@@ -36,16 +46,12 @@ export async function GET(request: Request) {
     Status: entry.status,
   }));
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Pontaj");
-  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-  const body = new Uint8Array(buffer);
+  const body = toCsv(data);
 
   return new NextResponse(body, {
     headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename=pontaj-${year}-${String(month).padStart(2, "0")}.xlsx`,
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename=pontaj-${year}-${String(month).padStart(2, "0")}.csv`,
     },
   });
 }

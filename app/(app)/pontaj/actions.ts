@@ -3,14 +3,17 @@
 import { NotificationType, TimeEntryStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState } from "@/src/lib/action-state";
 import { notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
+import { isAbsoluteSuperAdmin } from "@/src/lib/rbac";
 
 const timeEntrySchema = z.object({
   projectId: z.string().min(1),
+  userId: z.string().optional(),
   workOrderId: z.string().optional(),
   startAt: z.string().optional(),
   startDate: z.string().optional(),
@@ -38,6 +41,7 @@ async function createTimeEntryInternal(formData: FormData) {
 
   const parsed = timeEntrySchema.safeParse({
     projectId: formData.get("projectId"),
+    userId: formData.get("userId") || undefined,
     workOrderId: formData.get("workOrderId") || undefined,
     startAt: formData.get("startAt") || undefined,
     startDate: formData.get("startDate") || undefined,
@@ -50,6 +54,10 @@ async function createTimeEntryInternal(formData: FormData) {
   });
 
   if (!parsed.success) throw parsed.error;
+  await assertProjectAccess(currentUser, parsed.data.projectId);
+  if (parsed.data.workOrderId) {
+    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
+  }
 
   const startAt =
     (parsed.data.startAt ? new Date(parsed.data.startAt) : null) ||
@@ -66,19 +74,43 @@ async function createTimeEntryInternal(formData: FormData) {
     throw new Error("Data/ora de final este invalida.");
   }
 
-  const durationMinutes = endAt
-    ? Math.max(0, Math.round((endAt.getTime() - startAt.getTime()) / 60000) - parsed.data.breakMinutes)
-    : 0;
+  const canManageTeamPontaj =
+    isAbsoluteSuperAdmin(currentUser.email) ||
+    currentUser.roleKeys.some((role) =>
+      ["SUPER_ADMIN", "ADMINISTRATOR", "PROJECT_MANAGER", "SITE_MANAGER", "BACKOFFICE"].includes(role),
+    );
+
+  if (!canManageTeamPontaj) {
+    throw new Error("Pontajul poate fi introdus doar de ingineri/manageri de proiect.");
+  }
+
+  const targetUserId = parsed.data.userId || currentUser.id;
+
+  const computedEndAt = endAt || (() => {
+    const fallback = new Date(startAt);
+    fallback.setHours(17, 0, 0, 0);
+    if (fallback < startAt) {
+      fallback.setHours(startAt.getHours(), startAt.getMinutes(), 0, 0);
+    }
+    return fallback;
+  })();
+
+  const durationMinutes = Math.max(
+    0,
+    Math.round((computedEndAt.getTime() - startAt.getTime()) / 60000) - parsed.data.breakMinutes,
+  );
+  const overtimeMinutes = Math.max(0, durationMinutes - 8 * 60);
 
   const created = await prisma.timeEntry.create({
     data: {
-      userId: currentUser.id,
+      userId: targetUserId,
       projectId: parsed.data.projectId,
       workOrderId: parsed.data.workOrderId,
       startAt,
-      endAt,
+      endAt: computedEndAt,
       breakMinutes: parsed.data.breakMinutes,
       durationMinutes,
+      overtimeMinutes,
       status: TimeEntryStatus.SUBMITTED,
       note: parsed.data.note,
     },
@@ -117,6 +149,9 @@ export async function approveTimeEntry(formData: FormData) {
   const currentUser = await requirePermission("TIME_TRACKING", "APPROVE");
 
   const id = String(formData.get("id"));
+  const current = await prisma.timeEntry.findUnique({ where: { id }, select: { projectId: true } });
+  if (!current) throw new Error("Pontaj inexistent.");
+  await assertProjectAccess(currentUser, current.projectId);
 
   const entry = await prisma.timeEntry.update({
     where: { id },
@@ -186,8 +221,19 @@ export async function bulkTimeEntriesAction(formData: FormData) {
   if (!parsed.success) throw new Error("Selectie bulk invalida pentru pontaj.");
 
   const status = parsed.data.operation === "APPROVE" ? TimeEntryStatus.APPROVED : TimeEntryStatus.REJECTED;
+  const scope = await resolveAccessScope(currentUser);
+  let scopedIds = parsed.data.ids;
+  if (scope.projectIds !== null) {
+    const allowed = await prisma.timeEntry.findMany({
+      where: { id: { in: parsed.data.ids }, projectId: { in: scope.projectIds } },
+      select: { id: true },
+    });
+    const allowedSet = new Set(allowed.map((row) => row.id));
+    scopedIds = parsed.data.ids.filter((id) => allowedSet.has(id));
+  }
+  if (scopedIds.length === 0) throw new Error("Nu ai acces la pontajele selectate.");
   const result = await prisma.timeEntry.updateMany({
-    where: { id: { in: parsed.data.ids }, status: TimeEntryStatus.SUBMITTED },
+    where: { id: { in: scopedIds }, status: TimeEntryStatus.SUBMITTED },
     data: {
       status,
       approvedAt: new Date(),
@@ -200,7 +246,7 @@ export async function bulkTimeEntriesAction(formData: FormData) {
     entityType: "TIME_ENTRY_BULK",
     entityId: "MULTI",
     action: `TIME_ENTRIES_${status}_BULK`,
-    diff: { ids: parsed.data.ids, affectedRows: result.count },
+    diff: { ids: scopedIds, affectedRows: result.count },
   });
 
   revalidatePath("/pontaj");

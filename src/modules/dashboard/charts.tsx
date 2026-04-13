@@ -4,20 +4,28 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 
 export function ProductivityChart({ data }: { data: { name: string; ore: number }[] }) {
   return (
-    <div className="h-[260px] w-full">
-      <ResponsiveContainer>
+    <div className="w-full min-w-0">
+      <ResponsiveContainer width="100%" height={280} minWidth={0}>
         <AreaChart data={data} margin={{ left: 8, right: 8, top: 10, bottom: 0 }}>
           <defs>
             <linearGradient id="oreGradient" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="5%" stopColor="#1b8a52" stopOpacity={0.45} />
-              <stop offset="95%" stopColor="#1b8a52" stopOpacity={0.02} />
+              <stop offset="5%" stopColor="#4e8dff" stopOpacity={0.5} />
+              <stop offset="95%" stopColor="#4e8dff" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#e4ece7" strokeDasharray="4 4" />
-          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#5e7063" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 12, fill: "#5e7063" }} axisLine={false} tickLine={false} />
-          <Tooltip />
-          <Area type="monotone" dataKey="ore" stroke="#1b8a52" fill="url(#oreGradient)" strokeWidth={2} />
+          <CartesianGrid stroke="#273852" strokeDasharray="4 4" />
+          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#9db1ce" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 12, fill: "#9db1ce" }} axisLine={false} tickLine={false} />
+          <Tooltip
+            contentStyle={{
+              background: "#0f1a2f",
+              border: "1px solid #2a4167",
+              color: "#e7eefb",
+              borderRadius: "12px",
+            }}
+            labelStyle={{ color: "#e7eefb", fontWeight: 600 }}
+          />
+          <Area type="monotone" dataKey="ore" stroke="#4e8dff" fill="url(#oreGradient)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

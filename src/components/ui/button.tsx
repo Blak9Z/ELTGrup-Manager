@@ -1,34 +1,41 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { Button as HeroButton } from "@heroui/react";
 import { cn } from "@/src/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-semibold transition disabled:pointer-events-none disabled:opacity-60",
-  {
-    variants: {
-      variant: {
-        default: "bg-[#125a38] text-white hover:bg-[#0d432a]",
-        secondary: "bg-white text-[#1d2f22] border border-[#d4dfd8] hover:bg-[#f4f8f5]",
-        ghost: "text-[#1d2f22] hover:bg-[#eef5f0]",
-        destructive: "bg-[#9d2930] text-white hover:bg-[#7a1f25]",
-      },
-      size: {
-        sm: "h-9 px-3",
-        default: "h-10 px-4",
-        lg: "h-11 px-6",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
+type BaseHeroButtonProps = Omit<React.ComponentProps<typeof HeroButton>, "variant" | "size" | "color">;
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+export interface ButtonProps extends BaseHeroButtonProps {
+  variant?: "default" | "secondary" | "ghost" | "destructive";
+  size?: "sm" | "default" | "lg";
+  disabled?: boolean;
+}
 
-export function Button({ className, variant, size, ...props }: ButtonProps) {
-  return <button className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+const sizeMap = {
+  sm: "sm",
+  default: "md",
+  lg: "lg",
+} as const;
+
+const variantClassMap: Record<NonNullable<ButtonProps["variant"]>, string> = {
+  default: "bg-[linear-gradient(180deg,#3f73f2,#325fd0)] text-[#edf3ff] border border-[#3a66d8] hover:brightness-110",
+  secondary: "bg-[rgba(16,26,44,0.8)] text-[color:var(--foreground)] border border-[color:var(--border)] hover:border-[#355282]",
+  ghost: "bg-transparent text-[#d9e4f6] hover:bg-[rgba(53,82,130,0.24)]",
+  destructive: "bg-[linear-gradient(180deg,#c85865,#a5424d)] text-[#fff2f4] border border-[#a64a53] hover:brightness-105",
+};
+
+export function Button({ className, variant = "default", size = "default", ...props }: ButtonProps) {
+  const { disabled, ...rest } = props;
+
+  return (
+    <HeroButton
+      size={sizeMap[size]}
+      isDisabled={disabled}
+      className={cn(
+        "min-w-0 rounded-lg text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]",
+        variantClassMap[variant],
+        className,
+      )}
+      {...rest}
+    />
+  );
 }

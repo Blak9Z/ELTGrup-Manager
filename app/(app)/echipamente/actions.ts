@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
+import { assertEquipmentAccess } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
@@ -63,6 +64,7 @@ export async function updateEquipmentStatus(formData: FormData) {
   const currentUser = await requirePermission("MATERIALS", "UPDATE");
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
+  await assertEquipmentAccess(currentUser, id);
 
   if (!Object.values(EquipmentStatus).includes(status as EquipmentStatus)) {
     throw new Error("Status invalid");

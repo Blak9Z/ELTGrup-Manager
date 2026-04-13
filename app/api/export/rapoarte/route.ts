@@ -1,17 +1,30 @@
 import { NextResponse } from "next/server";
-import * as XLSX from "xlsx";
 import { auth } from "@/src/lib/auth";
+import { resolveAccessScope } from "@/src/lib/access-scope";
+import { toCsv } from "@/src/lib/csv";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 
 export async function GET() {
   const session = await auth();
   const roles = session?.user?.roleKeys || [];
-  if (!session?.user?.id || !hasPermission(roles, "REPORTS", "EXPORT")) {
+  if (!session?.user?.id || !hasPermission(roles, "REPORTS", "EXPORT", session?.user?.email)) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
   }
 
-  const reports = await prisma.dailySiteReport.findMany({ include: { project: true, createdBy: true }, orderBy: { reportDate: "desc" } });
+  const scope = await resolveAccessScope({
+    id: session.user.id,
+    email: session.user.email,
+    roleKeys: session.user.roleKeys || [],
+  });
+  const reports = await prisma.dailySiteReport.findMany({
+    where:
+      scope.projectIds === null
+        ? {}
+        : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
+    include: { project: true, createdBy: true },
+    orderBy: { reportDate: "desc" },
+  });
   const data = reports.map((report) => ({
     Data: report.reportDate.toLocaleDateString("ro-RO"),
     Proiect: report.project.title,
@@ -22,15 +35,12 @@ export async function GET() {
     Autor: report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-",
   }));
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Rapoarte");
-  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  const csv = toCsv(data);
 
-  return new NextResponse(new Uint8Array(buffer), {
+  return new NextResponse(csv, {
     headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": "attachment; filename=rapoarte-zilnice.xlsx",
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": "attachment; filename=rapoarte-zilnice.csv",
     },
   });
 }

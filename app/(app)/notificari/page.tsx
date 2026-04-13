@@ -37,18 +37,18 @@ export default async function NotificariPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{notification.title}</p>
-                  <p className="text-sm text-[#57695e]">{notification.message}</p>
-                  <p className="mt-1 text-xs text-[#5f7265]">{formatDateTime(notification.createdAt)}</p>
+                  <p className="text-sm text-[#9fb3ce]">{notification.message}</p>
+                  <p className="mt-1 text-xs text-[#9fb3ce]">{formatDateTime(notification.createdAt)}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {notification.actionUrl ? (
-                      <Link href={notification.actionUrl} className="text-xs font-semibold text-[#0f5d39] hover:underline">
+                      <Link href={notification.actionUrl} className="text-xs font-semibold text-[#b9d4ff] hover:underline">
                         Deschide
                       </Link>
                     ) : null}
                     {!notification.isRead ? (
                       <form action={markNotificationRead}>
                         <input type="hidden" name="id" value={notification.id} />
-                        <button className="text-xs font-semibold text-[#2f4536] hover:underline" type="submit">Marcheaza citit</button>
+                        <button className="text-xs font-semibold text-[#dce7f9] hover:underline" type="submit">Marcheaza citit</button>
                       </form>
                     ) : null}
                   </div>

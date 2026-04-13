@@ -9,9 +9,11 @@ import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { TD, TH, Table } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { auth } from "@/src/lib/auth";
+import { resolveAccessScope } from "@/src/lib/access-scope";
 import { prisma } from "@/src/lib/prisma";
 import { approveMaterialRequest, bulkMaterialRequestsAction } from "./actions";
-import { MaterialRequestForm, StockMovementForm } from "./material-forms";
+import { MaterialCreateForm, MaterialInvoiceUploadForm, MaterialRequestForm, StockMovementForm } from "./material-forms";
 
 export default async function MaterialePage({
   searchParams,
@@ -21,16 +23,47 @@ export default async function MaterialePage({
   const params = await searchParams;
   const page = Math.max(1, Number(params.page || "1"));
   const pageSize = 20;
+  const session = await auth();
+  const scope = session?.user
+    ? await resolveAccessScope({
+        id: session.user.id,
+        email: session.user.email,
+        roleKeys: session.user.roleKeys || [],
+      })
+    : { projectIds: null, teamId: null };
+  const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
   const materialWhere = {
     name: params.q ? { contains: params.q, mode: "insensitive" as const } : undefined,
   };
 
-  const [materials, totalMaterials, requests, projects, warehouses] = await Promise.all([
+  const [materials, totalMaterials, requests, projects, warehouses, materialInvoices] = await Promise.all([
     prisma.material.findMany({ include: { stockMovements: true }, where: materialWhere, skip: (page - 1) * pageSize, take: pageSize, orderBy: { name: "asc" } }),
     prisma.material.count({ where: materialWhere }),
-    prisma.materialRequest.findMany({ include: { material: true, project: true, requestedBy: true }, where: { status: params.status || undefined }, orderBy: { requestedAt: "desc" }, take: 50 }),
-    prisma.project.findMany({ where: { deletedAt: null }, select: { id: true, title: true }, orderBy: { title: "asc" } }),
+    prisma.materialRequest.findMany({
+      include: { material: true, project: true, requestedBy: true },
+      where: {
+        status: params.status || undefined,
+        ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }),
+      },
+      orderBy: { requestedAt: "desc" },
+      take: 50,
+    }),
+    prisma.project.findMany({
+      where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
+      select: { id: true, title: true },
+      orderBy: { title: "asc" },
+    }),
     prisma.warehouse.findMany({ where: { deletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.document.findMany({
+      where: {
+        category: "INVOICE",
+        tags: { has: "material-invoice" },
+        ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }),
+      },
+      include: { project: true },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+    }),
   ]);
   const totalPages = Math.max(1, Math.ceil(totalMaterials / pageSize));
 
@@ -40,11 +73,16 @@ export default async function MaterialePage({
         <PageHeader title="Materiale si stoc" subtitle="Catalog, cereri santier, consum pe proiect, miscari stoc si aprobari" />
         <div className="flex justify-end">
           <Link href="/api/export/materiale">
-            <Button variant="secondary">Export Excel Materiale</Button>
+            <Button variant="secondary">Export CSV Materiale</Button>
           </Link>
         </div>
 
         <section className="grid gap-4 xl:grid-cols-2">
+          <Card>
+            <h2 className="text-lg font-extrabold">Catalog materiale</h2>
+            <MaterialCreateForm />
+          </Card>
+
           <Card>
             <h2 className="text-lg font-extrabold">Cerere materiale</h2>
             <MaterialRequestForm
@@ -61,13 +99,26 @@ export default async function MaterialePage({
               warehouses={warehouses.map((warehouse) => ({ id: warehouse.id, label: warehouse.name }))}
             />
           </Card>
+
+          <Card>
+            <h2 className="text-lg font-extrabold">Facturi materiale</h2>
+            <MaterialInvoiceUploadForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+            <div className="mt-3 space-y-2">
+              {materialInvoices.map((doc) => (
+                <a key={doc.id} href={doc.storagePath} target="_blank" className="block rounded-lg border border-[var(--border)] p-3 text-sm hover:border-[#4a74b0]">
+                  <p className="font-semibold">{doc.title}</p>
+                  <p className="text-xs text-[#9fb3ce]">{doc.project?.title || "General"} • {doc.fileName}</p>
+                </a>
+              ))}
+            </div>
+          </Card>
         </section>
 
         <Card>
           <form className="mb-3 grid gap-3 md:grid-cols-3">
             <input type="hidden" name="page" value="1" />
             <Input name="q" defaultValue={params.q || ""} placeholder="Cauta material" />
-            <select name="status" defaultValue={params.status || ""} className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+            <select name="status" defaultValue={params.status || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
               <option value="">Toate statusurile cereri</option>
               {Object.values(MaterialRequestStatus).map((status) => (
                 <option key={status} value={status}>{status}</option>
@@ -104,27 +155,27 @@ export default async function MaterialePage({
               </Table>
             </div>
           )}
-          <div className="mt-3 flex items-center justify-between text-sm text-[#5f7265]">
+          <div className="mt-3 flex items-center justify-between text-sm text-[#9fb3ce]">
             <span>Pagina {page} din {totalPages}</span>
             <div className="flex gap-2">
-              {page > 1 ? <Link className="rounded-md border border-[#cfdcd2] px-3 py-1" href={`/materiale?page=${page - 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Anterior</Link> : null}
-              {page < totalPages ? <Link className="rounded-md border border-[#cfdcd2] px-3 py-1" href={`/materiale?page=${page + 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Urmator</Link> : null}
+              {page > 1 ? <Link className="rounded-md border border-[var(--border)] px-3 py-1" href={`/materiale?page=${page - 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Anterior</Link> : null}
+              {page < totalPages ? <Link className="rounded-md border border-[var(--border)] px-3 py-1" href={`/materiale?page=${page + 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Urmator</Link> : null}
             </div>
           </div>
         </Card>
 
-        <Card>
+        <Card className="bulk-zone">
           <h2 className="text-lg font-extrabold">Cereri materiale recente</h2>
           <form action={bulkMaterialRequestsAction} className="mt-3 space-y-3">
-            <div className="grid gap-2 md:grid-cols-3">
-              <select name="operation" defaultValue="APPROVE" className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+            <div className="bulk-controls grid gap-2 md:grid-cols-3">
+              <select name="operation" defaultValue="APPROVE" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
                 <option value="APPROVE">Aproba selectie</option>
                 <option value="REJECT">Respinge selectie</option>
               </select>
               <div />
               <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pe cererile selectate?" />
             </div>
-            <div className="grid gap-1 md:grid-cols-2 rounded-lg border border-[#dce8df] p-2">
+            <div className="grid gap-1 md:grid-cols-2 rounded-lg border border-[var(--border)] p-2">
               {requests.filter((request) => request.status === "PENDING").map((request) => (
                 <label key={request.id} className="flex items-center gap-2 text-sm">
                   <input type="checkbox" name="ids" value={request.id} />
@@ -135,12 +186,12 @@ export default async function MaterialePage({
           </form>
           <div className="mt-3 space-y-2">
             {requests.map((request) => (
-              <div key={request.id} className="rounded-lg border border-[#dce8df] bg-[#f7fbf8] p-3 text-sm">
+              <div key={request.id} className="rounded-lg border border-[var(--border)] bg-[rgba(14,24,43,0.72)] p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{request.project.title} • {request.material.name} • {request.quantity.toString()} {request.material.unitOfMeasure}</span>
                   <Badge tone={request.status === "PENDING" ? "warning" : request.status === "APPROVED" ? "success" : request.status === "REJECTED" ? "danger" : "neutral"}>{request.status}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-[#5f7266]">Solicitant: {request.requestedBy.firstName} {request.requestedBy.lastName}</p>
+                <p className="mt-1 text-xs text-[#9fb3ce]">Solicitant: {request.requestedBy.firstName} {request.requestedBy.lastName}</p>
                 {request.status === "PENDING" ? (
                   <div className="mt-2 flex gap-2">
                     <form action={approveMaterialRequest}>

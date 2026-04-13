@@ -5,10 +5,11 @@ import NextAuth, { type NextAuthOptions, getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { z } from "zod";
 import { prisma } from "@/src/lib/prisma";
+import { SUPER_ADMIN_EMAIL } from "@/src/lib/rbac";
 
 const loginSchema = z.object({
   email: z.email("Email invalid"),
-  password: z.string().min(8, "Parola trebuie sa aiba minim 8 caractere"),
+  password: z.string().min(1, "Parola este obligatorie"),
 });
 
 export const authOptions: NextAuthOptions = {
@@ -29,7 +30,7 @@ export const authOptions: NextAuthOptions = {
         if (!parsed.success) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
+          where: { email: parsed.data.email.toLowerCase() },
           include: { roles: { include: { role: true } } },
         });
 
@@ -43,11 +44,16 @@ export const authOptions: NextAuthOptions = {
           data: { lastLoginAt: new Date() },
         });
 
+        const roleKeys = user.roles.map((r) => r.role.key) as RoleKey[];
+        if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL && !roleKeys.includes(RoleKey.SUPER_ADMIN)) {
+          roleKeys.push(RoleKey.SUPER_ADMIN);
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
-          roleKeys: user.roles.map((r) => r.role.key) as RoleKey[],
+          roleKeys,
         };
       },
     }),
@@ -56,8 +62,9 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.userId = user.id;
-        const candidate = user as { roleKeys?: RoleKey[] };
+        const candidate = user as { roleKeys?: RoleKey[]; email?: string };
         token.roleKeys = candidate.roleKeys || [];
+        token.email = candidate.email;
       }
       return token;
     },
@@ -65,6 +72,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.userId as string;
         session.user.roleKeys = (token.roleKeys as RoleKey[]) || [];
+        session.user.email = (token.email as string | undefined) || session.user.email;
       }
       return session;
     },

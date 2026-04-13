@@ -172,10 +172,10 @@ async function main() {
     }
   }
 
-  const passwordHash = await bcrypt.hash("Parola123!", 10);
+  const passwordHash = await bcrypt.hash("eltgrup", 10);
 
   const userSeeds = [
-    ["Alexandru", "Pop", "alex.pop@eltgrup.ro", RoleKey.SUPER_ADMIN],
+    ["Eduard", "Administrator", "eduard@eltgrup.com", RoleKey.SUPER_ADMIN],
     ["Maria", "Ionescu", "maria.ionescu@eltgrup.ro", RoleKey.ADMINISTRATOR],
     ["Mihai", "Radu", "mihai.radu@eltgrup.ro", RoleKey.PROJECT_MANAGER],
     ["Andrei", "Stoica", "andrei.stoica@eltgrup.ro", RoleKey.SITE_MANAGER],

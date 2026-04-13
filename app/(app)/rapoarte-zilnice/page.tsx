@@ -3,20 +3,44 @@ import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { auth } from "@/src/lib/auth";
+import { resolveAccessScope } from "@/src/lib/access-scope";
 import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { DailyReportCreateForm } from "./daily-report-create-form";
 
 export default async function RapoarteZilnicePage() {
+  const session = await auth();
+  const scope = session?.user
+    ? await resolveAccessScope({
+        id: session.user.id,
+        email: session.user.email,
+        roleKeys: session.user.roleKeys || [],
+      })
+    : { projectIds: null, teamId: null };
+  const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
+
   const [projects, workOrders, reports] = await Promise.all([
-    prisma.project.findMany({ where: { deletedAt: null }, select: { id: true, title: true }, orderBy: { title: "asc" } }),
-    prisma.workOrder.findMany({ where: { deletedAt: null }, select: { id: true, title: true }, orderBy: { title: "asc" }, take: 150 }),
+    prisma.project.findMany({
+      where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
+      select: { id: true, title: true },
+      orderBy: { title: "asc" },
+    }),
+    prisma.workOrder.findMany({
+      where: { deletedAt: null, ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }) },
+      select: { id: true, title: true },
+      orderBy: { title: "asc" },
+      take: 150,
+    }),
     prisma.dailySiteReport.findMany({
+      where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter! },
       include: { project: true, workOrder: true, createdBy: true },
       orderBy: { reportDate: "desc" },
       take: 60,
     }),
   ]);
+  const blockersCount = reports.filter((item) => Boolean(item.blockers)).length;
+  const totalWorkers = reports.reduce((sum, item) => sum + item.workersCount, 0);
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
@@ -24,9 +48,24 @@ export default async function RapoarteZilnicePage() {
         <PageHeader title="Rapoarte zilnice de santier" subtitle="Vreme, prezenta, progres lucrari, blocaje, SSM, poze si semnaturi" />
         <div className="flex justify-end">
           <Link href="/api/export/rapoarte">
-            <Button variant="secondary">Export Excel Rapoarte</Button>
+            <Button variant="secondary">Export CSV Rapoarte</Button>
           </Link>
         </div>
+
+        <section className="grid gap-3 md:grid-cols-3">
+          <Card>
+            <p className="text-xs text-[#9fb2ce]">Rapoarte recente</p>
+            <p className="mt-2 text-2xl font-semibold">{reports.length}</p>
+          </Card>
+          <Card>
+            <p className="text-xs text-[#9fb2ce]">Rapoarte cu blocaje</p>
+            <p className="mt-2 text-2xl font-semibold">{blockersCount}</p>
+          </Card>
+          <Card>
+            <p className="text-xs text-[#9fb2ce]">Total muncitori raportati</p>
+            <p className="mt-2 text-2xl font-semibold">{totalWorkers}</p>
+          </Card>
+        </section>
 
         <Card>
           <h2 className="text-lg font-extrabold">Raport nou</h2>
@@ -42,10 +81,10 @@ export default async function RapoarteZilnicePage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-base font-bold">{report.project.title}</p>
-                  <p className="text-xs text-[#5d7064]">Data: {formatDate(report.reportDate)} • Vreme: {report.weather || "-"}</p>
-                  <p className="mt-2 text-sm text-[#304638]">{report.workCompleted}</p>
-                  <p className="mt-1 text-xs text-[#607367]">Blocaje: {report.blockers || "N/A"}</p>
-                  <p className="mt-1 text-xs text-[#607367]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
+                  <p className="text-xs text-[#9fb3ce]">Data: {formatDate(report.reportDate)} • Vreme: {report.weather || "-"}</p>
+                  <p className="mt-2 text-sm text-[#dce7f9]">{report.workCompleted}</p>
+                  <p className="mt-1 text-xs text-[#9fb3ce]">Blocaje: {report.blockers || "N/A"}</p>
+                  <p className="mt-1 text-xs text-[#9fb3ce]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
                 </div>
                 <Link href={`/api/rapoarte-zilnice/${report.id}/pdf`}>
                   <Button size="sm" variant="secondary">Export PDF</Button>

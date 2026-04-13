@@ -4,6 +4,7 @@ import { NotificationType, TaskPriority, WorkOrderStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
+import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { ActionState } from "@/src/lib/action-state";
 import { notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
@@ -44,6 +45,7 @@ async function createWorkOrderInternal(formData: FormData) {
   });
 
   if (!parsed.success) throw parsed.error;
+  await assertProjectAccess(currentUser, parsed.data.projectId);
 
   const created = await prisma.workOrder.create({
     data: {
@@ -108,6 +110,7 @@ export async function updateWorkOrderStatus(formData: FormData) {
 
   const id = String(formData.get("id"));
   const status = formData.get("status") as WorkOrderStatus;
+  await assertWorkOrderAccess(currentUser, id);
 
   const before = await prisma.workOrder.findUnique({ where: { id }, select: { status: true } });
   const updated = await prisma.workOrder.update({ where: { id }, data: { status } });
@@ -131,6 +134,7 @@ export async function deleteWorkOrder(formData: FormData) {
   const currentUser = await requirePermission("TASKS", "DELETE");
 
   const id = String(formData.get("id"));
+  await assertWorkOrderAccess(currentUser, id);
 
   await prisma.workOrder.update({
     where: { id },
@@ -152,6 +156,7 @@ export async function rescheduleWorkOrder(input: { id: string; startDate: string
   const currentUser = await requirePermission("TASKS", "UPDATE");
   const parsed = rescheduleSchema.safeParse(input);
   if (!parsed.success) throw new Error("Date planificare invalide.");
+  await assertWorkOrderAccess(currentUser, parsed.data.id);
 
   const startDate = new Date(parsed.data.startDate);
   if (Number.isNaN(startDate.getTime())) throw new Error("Data planificata invalida.");
@@ -191,32 +196,49 @@ export async function bulkWorkOrdersAction(formData: FormData) {
   const parsed = bulkWorkOrderSchema.safeParse({ operation, status, ids });
   if (!parsed.success) throw new Error("Selectie bulk invalida pentru lucrari.");
 
+  const actor =
+    parsed.data.operation === "DELETE"
+      ? await requirePermission("TASKS", "DELETE")
+      : await requirePermission("TASKS", "UPDATE");
+  const scope = await resolveAccessScope(actor);
+  let scopedIds = parsed.data.ids;
+  if (scope.projectIds !== null) {
+    const allowedIds = new Set(
+      (
+        await prisma.workOrder.findMany({
+          where: { id: { in: parsed.data.ids }, projectId: { in: scope.projectIds } },
+          select: { id: true },
+        })
+      ).map((item) => item.id),
+    );
+    scopedIds = parsed.data.ids.filter((id) => allowedIds.has(id));
+  }
+  if (scopedIds.length === 0) throw new Error("Nu ai acces la lucrarile selectate.");
+
   if (parsed.data.operation === "DELETE") {
-    const currentUser = await requirePermission("TASKS", "DELETE");
     const result = await prisma.workOrder.updateMany({
-      where: { id: { in: parsed.data.ids }, deletedAt: null },
+      where: { id: { in: scopedIds }, deletedAt: null },
       data: { deletedAt: new Date(), status: WorkOrderStatus.CANCELED },
     });
     await logActivity({
-      userId: currentUser.id,
+      userId: actor.id,
       entityType: "WORK_ORDER_BULK",
       entityId: "MULTI",
       action: "WORK_ORDERS_SOFT_DELETED_BULK",
-      diff: { ids: parsed.data.ids, affectedRows: result.count },
+      diff: { ids: scopedIds, affectedRows: result.count },
     });
   } else {
-    const currentUser = await requirePermission("TASKS", "UPDATE");
     if (!parsed.data.status) throw new Error("Statusul este obligatoriu.");
     const result = await prisma.workOrder.updateMany({
-      where: { id: { in: parsed.data.ids }, deletedAt: null },
+      where: { id: { in: scopedIds }, deletedAt: null },
       data: { status: parsed.data.status },
     });
     await logActivity({
-      userId: currentUser.id,
+      userId: actor.id,
       entityType: "WORK_ORDER_BULK",
       entityId: "MULTI",
       action: "WORK_ORDERS_STATUS_UPDATED_BULK",
-      diff: { ids: parsed.data.ids, status: parsed.data.status, affectedRows: result.count },
+      diff: { ids: scopedIds, status: parsed.data.status, affectedRows: result.count },
     });
   }
 

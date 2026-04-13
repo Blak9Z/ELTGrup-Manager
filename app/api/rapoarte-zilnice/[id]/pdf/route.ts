@@ -1,13 +1,14 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { NextResponse } from "next/server";
 import { auth } from "@/src/lib/auth";
+import { assertProjectAccess } from "@/src/lib/access-scope";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const roleKeys = session?.user?.roleKeys || [];
-  if (!session?.user?.id || !hasPermission(roleKeys, "REPORTS", "VIEW")) {
+  if (!session?.user?.id || !hasPermission(roleKeys, "REPORTS", "VIEW", session?.user?.email)) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
   }
 
@@ -19,6 +20,18 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   if (!report) {
     return NextResponse.json({ error: "Raport inexistent" }, { status: 404 });
+  }
+  try {
+    await assertProjectAccess(
+      {
+        id: session.user.id,
+        email: session.user.email,
+        roleKeys: session.user.roleKeys || [],
+      },
+      report.projectId,
+    );
+  } catch {
+    return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
 
   const pdf = await PDFDocument.create();

@@ -1,8 +1,20 @@
 @import "tailwindcss";
+@import "@heroui/react/styles";
 
 :root {
-  --background: #f3f7f5;
-  --foreground: #1b2b20;
+  --background: #060b16;
+  --surface: #0d1526;
+  --surface-2: #111b31;
+  --surface-3: #152440;
+  --border: #24324a;
+  --foreground: #e6edf7;
+  --muted: #9cafc6;
+  --accent: #2f64d6;
+  --accent-strong: #3d78ff;
+  --danger: #d95f6a;
+  --success: #45b97f;
+  --warning: #d5aa45;
+  --info: #5fa0ff;
 }
 
 @theme inline {
@@ -20,5 +32,72 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  font-family: var(--font-geist-sans), "IBM Plex Sans", "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+a {
+  color: inherit;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+select,
+input[type="file"] {
+  height: 2.5rem;
+  width: 100%;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: rgba(16, 27, 47, 0.85);
+  color: var(--foreground);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+select:focus,
+input[type="file"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(61, 120, 255, 0.25);
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 0.5rem;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  padding-right: 0.75rem;
+}
+
+label {
+  color: #c8d4e8;
+}
+
+::selection {
+  background: rgba(61, 120, 255, 0.28);
+  color: #f3f7ff;
+}
+
+.bulk-zone details > summary {
+  cursor: pointer;
+  color: #9fb3ce;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bulk-zone .bulk-controls {
+  display: none;
+}
+
+.bulk-zone:has(input[name="ids"]:checked) .bulk-controls {
+  display: grid;
 }

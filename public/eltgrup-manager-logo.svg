@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 220" role="img" aria-labelledby="title desc">
+  <title id="title">ELTGRUP Manager Logo</title>
+  <desc id="desc">Logo geometric cyan for ELTGRUP Manager.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7BFCFF"/>
+      <stop offset="100%" stop-color="#34D8E8"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="none" stroke="url(#g)" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" transform="translate(70,22)">
+    <polygon points="95,0 130,20 130,60 95,80 60,60 60,20"/>
+    <polygon points="40,35 75,55 75,95 40,115 5,95 5,55"/>
+    <polygon points="150,35 185,55 185,95 150,115 115,95 115,55"/>
+  </g>
+
+  <g fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" transform="translate(70,22)">
+    <path d="M90 22 v26"/>
+    <path d="M27 72 h16"/>
+    <path d="M27 83 h12"/>
+    <path d="M157 72 h16"/>
+    <path d="M157 83 h12"/>
+  </g>
+
+  <text x="210" y="185" text-anchor="middle" font-family="Geist, Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="1.8" fill="url(#g)">ELTGRUPMANAGER</text>
+</svg>

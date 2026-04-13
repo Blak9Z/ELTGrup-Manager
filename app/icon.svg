@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="ELTGRUP Manager Icon">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7BFCFF"/>
+      <stop offset="100%" stop-color="#34D8E8"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="24" fill="#071023"/>
+  <g fill="none" stroke="url(#g)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" transform="translate(16,14)">
+    <polygon points="44,0 60,10 60,28 44,38 28,28 28,10"/>
+    <polygon points="18,16 34,26 34,44 18,54 2,44 2,26"/>
+    <polygon points="70,16 86,26 86,44 70,54 54,44 54,26"/>
+    <path d="M41 11 v13"/>
+    <path d="M12 33 h7"/>
+    <path d="M12 40 h6"/>
+    <path d="M74 33 h7"/>
+    <path d="M74 40 h6"/>
+  </g>
+</svg>

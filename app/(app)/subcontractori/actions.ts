@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
+import { assertSubcontractorAccess } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
@@ -65,6 +66,7 @@ export async function updateSubcontractorStatus(formData: FormData) {
   const currentUser = await requirePermission("TASKS", "UPDATE");
   const id = String(formData.get("id"));
   const status = String(formData.get("approvalStatus"));
+  await assertSubcontractorAccess(currentUser, id);
 
   await prisma.subcontractor.update({
     where: { id },
@@ -77,6 +79,53 @@ export async function updateSubcontractorStatus(formData: FormData) {
     entityId: id,
     action: "SUBCONTRACTOR_STATUS_UPDATED",
     diff: { status },
+  });
+
+  revalidatePath("/subcontractori");
+}
+
+const updateSubcontractorSchema = z.object({
+  id: z.string().cuid(),
+  name: z.string().min(2),
+  cui: z.string().optional(),
+  contactName: z.string().optional(),
+  email: z.email().optional().or(z.literal("")),
+  phone: z.string().optional(),
+  approvalStatus: z.string().min(2),
+});
+
+export async function updateSubcontractorAction(formData: FormData) {
+  const currentUser = await requirePermission("TASKS", "UPDATE");
+
+  const parsed = updateSubcontractorSchema.safeParse({
+    id: formData.get("id"),
+    name: formData.get("name"),
+    cui: formData.get("cui") || undefined,
+    contactName: formData.get("contactName") || undefined,
+    email: formData.get("email") || undefined,
+    phone: formData.get("phone") || undefined,
+    approvalStatus: formData.get("approvalStatus") || "IN_VERIFICARE",
+  });
+  if (!parsed.success) throw parsed.error;
+  await assertSubcontractorAccess(currentUser, parsed.data.id);
+
+  await prisma.subcontractor.update({
+    where: { id: parsed.data.id },
+    data: {
+      name: parsed.data.name,
+      cui: parsed.data.cui,
+      contactName: parsed.data.contactName,
+      email: parsed.data.email || null,
+      phone: parsed.data.phone,
+      approvalStatus: parsed.data.approvalStatus,
+    },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "SUBCONTRACTOR",
+    entityId: parsed.data.id,
+    action: "SUBCONTRACTOR_UPDATED",
   });
 
   revalidatePath("/subcontractori");

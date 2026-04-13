@@ -3,6 +3,7 @@
 import { NotificationType, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { assertProjectAccess, assertWorkOrderAccess } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
 import { notifyRoles } from "@/src/lib/notifications";
@@ -45,6 +46,10 @@ async function createDailyReportInternal(formData: FormData) {
   });
 
   if (!parsed.success) throw parsed.error;
+  await assertProjectAccess(currentUser, parsed.data.projectId);
+  if (parsed.data.workOrderId) {
+    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
+  }
 
   const created = await prisma.dailySiteReport.create({
     data: {

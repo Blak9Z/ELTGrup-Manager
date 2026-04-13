@@ -27,27 +27,27 @@ export function DocumentUploadForm({
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4" encType="multipart/form-data">
       <div>
         <Input name="title" placeholder="Titlu document" required />
-        {state.errors?.title ? <p className="mt-1 text-xs text-[#9b1f30]">{state.errors.title[0]}</p> : null}
+        {state.errors?.title ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.title[0]}</p> : null}
       </div>
       <div>
-        <select name="category" className="h-10 w-full rounded-lg border border-[#cfddd3] px-3 text-sm" defaultValue={DocumentCategory.OTHER}>
+        <select name="category" className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm" defaultValue={DocumentCategory.OTHER}>
           {Object.values(DocumentCategory).map((category) => (
             <option key={category} value={category}>{category}</option>
           ))}
         </select>
       </div>
       <div>
-        <input name="file" type="file" className="h-10 w-full rounded-lg border border-[#cfddd3] px-3 text-sm file:mr-2 file:border-0 file:bg-transparent" required />
-        {state.errors?.file ? <p className="mt-1 text-xs text-[#9b1f30]">{state.errors.file[0]}</p> : null}
+        <input name="file" type="file" className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm file:mr-2 file:border-0 file:bg-transparent" required />
+        {state.errors?.file ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.file[0]}</p> : null}
       </div>
       <Input name="expiresAt" type="date" />
-      <select name="projectId" className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+      <select name="projectId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Fara proiect</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>{project.label}</option>
         ))}
       </select>
-      <select name="clientId" className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+      <select name="clientId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Fara client</option>
         {clients.map((client) => (
           <option key={client.id} value={client.id}>{client.label}</option>
@@ -58,7 +58,7 @@ export function DocumentUploadForm({
         <button
           type="submit"
           disabled={pending}
-          className="h-10 rounded-lg bg-[#125a38] px-4 text-sm font-semibold text-white disabled:opacity-70"
+          className="h-10 rounded-lg bg-[#3b6fe9] px-4 text-sm font-semibold text-white disabled:opacity-70"
         >
           {pending ? "Se incarca..." : "Salveaza document"}
         </button>

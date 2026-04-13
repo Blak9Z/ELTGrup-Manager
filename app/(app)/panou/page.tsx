@@ -1,14 +1,30 @@
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
-import { Badge } from "@/src/components/ui/badge";
 import { Card } from "@/src/components/ui/card";
 import { KpiCard } from "@/src/components/ui/kpi-card";
 import { PageHeader } from "@/src/components/ui/page-header";
-import { TD, TH, Table } from "@/src/components/ui/table";
+import { DashboardScheduleTable } from "@/src/components/dashboard/schedule-table";
+import { auth } from "@/src/lib/auth";
+import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
 import { formatCurrency, formatDate, fullName } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { ProductivityChart } from "@/src/modules/dashboard/charts";
 
 export default async function DashboardPage() {
+  const session = await auth();
+  const scope = session?.user
+    ? await resolveAccessScope({
+        id: session.user.id,
+        email: session.user.email,
+        roleKeys: session.user.roleKeys || [],
+      })
+    : { projectIds: null, teamId: null };
+  const userContext = session?.user
+    ? { id: session.user.id, email: session.user.email, roleKeys: session.user.roleKeys || [] }
+    : { id: "", email: null, roleKeys: [] };
+  const scopedProjectWhere = scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } };
+  const scopedProjectIdWhere = scope.projectIds === null ? {} : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } };
+  const scopedWorkOrderWhere = { ...workOrderScopeWhere(userContext, scope), deletedAt: null };
+
   const [
     activeProjects,
     delayedTasks,
@@ -19,23 +35,24 @@ export default async function DashboardPage() {
     latestActivities,
     weeklyHours,
   ] = await Promise.all([
-    prisma.project.count({ where: { status: "ACTIVE", deletedAt: null } }),
-    prisma.workOrder.count({ where: { dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] }, deletedAt: null } }),
+    prisma.project.count({ where: { status: "ACTIVE", deletedAt: null, ...scopedProjectWhere } }),
+    prisma.workOrder.count({ where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } } }),
     prisma.workOrder.findMany({
-      where: { deletedAt: null, startDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+      where: { ...scopedWorkOrderWhere, startDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
       include: { project: true, team: true },
       orderBy: { startDate: "asc" },
       take: 8,
     }),
-    prisma.timeEntry.count({ where: { endAt: null } }),
-    prisma.materialRequest.count({ where: { status: "PENDING" } }),
+    prisma.timeEntry.count({ where: { ...scopedProjectIdWhere, endAt: null } }),
+    prisma.materialRequest.count({ where: { ...scopedProjectIdWhere, status: "PENDING" } }),
     prisma.invoice.aggregate({
-      where: { status: { in: ["SENT", "OVERDUE", "PARTIAL_PAID"] } },
+      where: { ...scopedProjectIdWhere, status: { in: ["SENT", "OVERDUE", "PARTIAL_PAID"] } },
       _sum: { totalAmount: true, paidAmount: true },
     }),
     prisma.activityLog.findMany({ orderBy: { createdAt: "desc" }, include: { user: true }, take: 8 }),
     prisma.timeEntry.groupBy({
       by: ["projectId"],
+      where: scopedProjectIdWhere,
       _sum: { durationMinutes: true },
       orderBy: { _sum: { durationMinutes: "desc" } },
       take: 6,
@@ -43,7 +60,13 @@ export default async function DashboardPage() {
   ]);
 
   const projectsById = await prisma.project.findMany({
-    where: { id: { in: weeklyHours.map((h) => h.projectId) } },
+    where: {
+      deletedAt: null,
+      AND: [
+        { id: { in: weeklyHours.map((h) => h.projectId) } },
+        scopedProjectWhere,
+      ],
+    },
     select: { id: true, title: true },
   });
 
@@ -59,75 +82,66 @@ export default async function DashboardPage() {
       <div className="space-y-6">
         <PageHeader
           title="Panou operational"
-          subtitle="Vizibilitate in timp real pentru proiecte, echipe, pontaj si cashflow operational"
+          subtitle="Centru de comanda pentru proiecte, echipe, pontaj si cashflow operational"
         />
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard label="Proiecte active" value={String(activeProjects)} helper="In executie" />
-          <KpiCard label="Lucrari intarziate" value={String(delayedTasks)} helper="Necesita interventie manager" />
-          <KpiCard label="Echipe active acum" value={String(clockedIn)} helper="Cu pontaj deschis" />
-          <KpiCard label="Creante neincasate" value={formatCurrency(receivables)} helper="Facturi neplatite" />
+          <KpiCard label="Lucrari intarziate" value={String(delayedTasks)} helper="Necesita interventie" />
+          <KpiCard label="Echipe in teren" value={String(clockedIn)} helper="Cu pontaj deschis" />
+          <KpiCard label="Creante neincasate" value={formatCurrency(receivables)} helper="Facturi restante" />
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[2fr_1fr]">
           <Card>
-            <h2 className="text-lg font-extrabold">Productivitate ore pe proiect</h2>
-            <p className="mt-1 text-sm text-[#5e7265]">Suma orelor inregistrate in pontaj</p>
+            <h2 className="text-lg font-semibold text-[#f0f5ff]">Productivitate ore pe proiect</h2>
+            <p className="mt-1 text-sm text-[#9fb2cd]">Ore inregistrate in pontajul ultimelor intervale</p>
             <ProductivityChart data={chartData} />
           </Card>
           <Card>
-            <h2 className="text-lg font-extrabold">Alerte rapide</h2>
+            <h2 className="text-lg font-semibold text-[#f0f5ff]">Alerte operationale</h2>
             <div className="mt-4 space-y-3 text-sm">
-              <div className="rounded-lg border border-[#f2d3d5] bg-[#fff2f3] p-3">{delayedTasks} lucrari depasite termen</div>
-              <div className="rounded-lg border border-[#f6e8c8] bg-[#fff8e9] p-3">{pendingMaterialApprovals} cereri materiale in asteptare</div>
-              <div className="rounded-lg border border-[#cce5d5] bg-[#eefaf2] p-3">{activeProjects} proiecte active in monitorizare</div>
+              <div className="rounded-xl border border-[rgba(217,95,106,0.45)] bg-[rgba(217,95,106,0.16)] p-3 text-[#ffc8cf]">
+                {delayedTasks} lucrari depasite fata de termen
+              </div>
+              <div className="rounded-xl border border-[rgba(213,170,69,0.45)] bg-[rgba(213,170,69,0.16)] p-3 text-[#f4d483]">
+                {pendingMaterialApprovals} cereri materiale in asteptare
+              </div>
+              <div className="rounded-xl border border-[rgba(95,160,255,0.4)] bg-[rgba(95,160,255,0.15)] p-3 text-[#c4dcff]">
+                {activeProjects} proiecte active sub monitorizare
+              </div>
             </div>
           </Card>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-extrabold">Program echipe astazi</h2>
-            <div className="mt-4 overflow-x-auto">
-              <Table>
-                <thead>
-                  <tr>
-                    <TH>Ora</TH>
-                    <TH>Lucrare</TH>
-                    <TH>Proiect</TH>
-                    <TH>Echipa</TH>
-                    <TH>Status</TH>
-                  </tr>
-                </thead>
-                <tbody>
-                  {todaySchedule.map((item) => (
-                    <tr key={item.id}>
-                      <TD>{item.startDate ? formatDate(item.startDate) : "-"}</TD>
-                      <TD className="font-semibold">{item.title}</TD>
-                      <TD>{item.project.title}</TD>
-                      <TD>{item.team?.name || "Nealocata"}</TD>
-                      <TD>
-                        <Badge tone={item.status === "IN_PROGRESS" ? "info" : item.status === "BLOCKED" ? "danger" : item.status === "DONE" ? "success" : "neutral"}>
-                          {item.status}
-                        </Badge>
-                      </TD>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+            <h2 className="text-lg font-semibold text-[#f0f5ff]">Program echipe astazi</h2>
+            <div className="mt-4">
+              <DashboardScheduleTable
+                items={todaySchedule.map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                  startLabel: item.startDate ? formatDate(item.startDate) : "-",
+                  projectTitle: item.project.title,
+                  teamName: item.team?.name || "Nealocata",
+                  status: item.status,
+                  description: item.description || "",
+                }))}
+              />
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-extrabold">Activitate recenta</h2>
+            <h2 className="text-lg font-semibold text-[#f0f5ff]">Activitate recenta</h2>
             <div className="mt-4 space-y-3">
               {latestActivities.map((log) => (
-                <div key={log.id} className="rounded-lg border border-[#e5eee8] bg-[#f8fbf9] p-3">
-                  <p className="text-sm font-semibold text-[#1d2e23]">{log.action}</p>
-                  <p className="text-xs text-[#5f7265]">
+                <div key={log.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(15,25,44,0.72)] p-3">
+                  <p className="text-sm font-semibold text-[#eaf1fd]">{log.action}</p>
+                  <p className="text-xs text-[#a7bad3]">
                     {fullName(log.user?.firstName, log.user?.lastName)} • {log.entityType} #{log.entityId.slice(-6)}
                   </p>
-                  <p className="mt-1 text-xs text-[#61776a]">{formatDate(log.createdAt)}</p>
+                  <p className="mt-1 text-xs text-[#8ea2bf]">{formatDate(log.createdAt)}</p>
                 </div>
               ))}
             </div>

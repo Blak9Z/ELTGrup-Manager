@@ -3,6 +3,7 @@
 import { DocumentCategory } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { assertProjectAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState } from "@/src/lib/action-state";
 import { requirePermission } from "@/src/lib/permissions";
@@ -37,6 +38,9 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
         message: "Date document invalide",
         errors: parsed.error.flatten().fieldErrors,
       };
+    }
+    if (parsed.data.projectId) {
+      await assertProjectAccess(currentUser, parsed.data.projectId);
     }
 
     const file = formData.get("file");
@@ -89,31 +93,48 @@ export async function bulkDocumentsAction(formData: FormData) {
   const parsed = bulkDocumentSchema.safeParse({ operation, ids });
   if (!parsed.success) throw new Error("Selectie bulk invalida pentru documente.");
 
+  const actor =
+    parsed.data.operation === "DELETE"
+      ? await requirePermission("DOCUMENTS", "DELETE")
+      : await requirePermission("DOCUMENTS", "UPDATE");
+  const scope = await resolveAccessScope(actor);
+  let scopedIds = parsed.data.ids;
+  if (scope.projectIds !== null) {
+    const allowed = await prisma.document.findMany({
+      where: {
+        id: { in: parsed.data.ids },
+        OR: [{ projectId: { in: scope.projectIds } }, { projectId: null, uploadedById: actor.id }],
+      },
+      select: { id: true },
+    });
+    const allowedSet = new Set(allowed.map((row) => row.id));
+    scopedIds = parsed.data.ids.filter((id) => allowedSet.has(id));
+  }
+  if (scopedIds.length === 0) throw new Error("Nu ai acces la documentele selectate.");
+
   if (parsed.data.operation === "DELETE") {
-    const currentUser = await requirePermission("DOCUMENTS", "DELETE");
     const result = await prisma.document.deleteMany({
-      where: { id: { in: parsed.data.ids } },
+      where: { id: { in: scopedIds } },
     });
     await logActivity({
-      userId: currentUser.id,
+      userId: actor.id,
       entityType: "DOCUMENT_BULK",
       entityId: "MULTI",
       action: "DOCUMENTS_DELETED_BULK",
-      diff: { ids: parsed.data.ids, affectedRows: result.count },
+      diff: { ids: scopedIds, affectedRows: result.count },
     });
   } else {
-    const currentUser = await requirePermission("DOCUMENTS", "UPDATE");
     const isPrivate = parsed.data.operation === "MAKE_PRIVATE";
     const result = await prisma.document.updateMany({
-      where: { id: { in: parsed.data.ids } },
+      where: { id: { in: scopedIds } },
       data: { isPrivate },
     });
     await logActivity({
-      userId: currentUser.id,
+      userId: actor.id,
       entityType: "DOCUMENT_BULK",
       entityId: "MULTI",
       action: isPrivate ? "DOCUMENTS_MARKED_PRIVATE_BULK" : "DOCUMENTS_MARKED_PUBLIC_BULK",
-      diff: { ids: parsed.data.ids, affectedRows: result.count },
+      diff: { ids: scopedIds, affectedRows: result.count },
     });
   }
 

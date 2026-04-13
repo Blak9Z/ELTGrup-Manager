@@ -1,13 +1,23 @@
 "use client";
 
-import { CSS } from "@dnd-kit/utilities";
-import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
 import { useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
-import { rescheduleWorkOrder } from "@/app/(app)/lucrari/actions";
-import { cn, formatDate } from "@/src/lib/utils";
+import {
+  closestCorners,
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { formatDate } from "@/src/lib/utils";
+import { updateWorkOrderScheduleAction } from "./actions";
 
-type BoardTask = {
+type Task = {
   id: string;
   title: string;
   project: string;
@@ -18,144 +28,165 @@ type BoardTask = {
   startDateIso: string | null;
 };
 
-const days = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"];
+const weekdays = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"];
 
-function TaskCard({ task }: { task: BoardTask }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform) }}
-      className={cn(
-        "rounded-lg border border-[#d8e4dc] bg-white p-2 text-xs shadow-sm",
-        isDragging && "opacity-60",
-      )}
-      {...listeners}
-      {...attributes}
-    >
-      <p className="font-semibold text-[#1f3125]">{task.title}</p>
-      <p className="text-[#5d7063]">{task.project}</p>
-      <div className="mt-1 flex justify-between text-[11px] text-[#5c6f62]">
-        <span>{task.team}</span>
-        <span>{task.priority}</span>
-      </div>
-      <p className="mt-1 text-[11px] text-[#5c6f62]">{task.startDateIso ? formatDate(task.startDateIso) : "Fara data"}</p>
-    </div>
-  );
+function cardTone(priority: string) {
+  if (priority === "CRITICAL") return "border-[#7d3a45] bg-[rgba(98,42,50,0.42)]";
+  if (priority === "HIGH") return "border-[#82683c] bg-[rgba(109,84,42,0.3)]";
+  return "border-[color:var(--border)] bg-[rgba(17,29,50,0.9)]";
 }
 
-function DropColumn({
-  day,
-  children,
-  conflicts,
-}: {
-  day: string;
-  children: React.ReactNode;
-  conflicts: number;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: day });
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "min-h-56 rounded-xl border border-[#d9e4dc] bg-[#f7fbf8] p-3 transition",
-        isOver && "border-[#1b7a4a] bg-[#eef8f2]",
-      )}
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#506557]">{day}</p>
-        {conflicts > 0 ? <span className="rounded-full bg-[#ffe9cc] px-2 py-0.5 text-[10px] font-semibold text-[#8a5a00]">{conflicts} conflicte</span> : null}
-      </div>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
+function DraggableTaskCard({ task }: { task: Task }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id, data: task });
 
-function nextDateForWeekday(weekdayLabel: string) {
-  const map: Record<string, number> = {
-    Duminica: 0,
-    Luni: 1,
-    Marti: 2,
-    Miercuri: 3,
-    Joi: 4,
-    Vineri: 5,
-    Sambata: 6,
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.65 : 1,
   };
 
-  const target = map[weekdayLabel] ?? 1;
-  const now = new Date();
-  const current = now.getDay();
-  const delta = (target - current + 7) % 7;
-  const next = new Date(now);
-  next.setDate(now.getDate() + delta);
-  next.setHours(8, 0, 0, 0);
-  return next;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`touch-none cursor-grab rounded-xl border p-2.5 text-xs shadow-[0_10px_25px_-18px_rgba(0,0,0,0.85)] transition hover:border-[#4e73aa] active:cursor-grabbing ${cardTone(task.priority)}`}
+    >
+      <p className="font-semibold text-[#ecf3ff]">{task.title}</p>
+      <p className="text-[#a8bbd6]">{task.project}</p>
+      <div className="mt-1 flex justify-between text-[11px] text-[#90a5c2]">
+        <span>{task.team}</span>
+        <span>{task.status}</span>
+      </div>
+      <p className="mt-1 text-[11px] text-[#8da3c1]">{task.startDateIso ? formatDate(task.startDateIso) : "Fara data"}</p>
+    </div>
+  );
 }
 
-export function PlanningBoard({ initialTasks }: { initialTasks: BoardTask[] }) {
-  const [tasks, setTasks] = useState(initialTasks);
-  const [isPending, startTransition] = useTransition();
+function DayColumn({ day, tasks, conflicts }: { day: string; tasks: Task[]; conflicts: number }) {
+  const { setNodeRef, isOver } = useDroppable({ id: day });
 
-  const conflictsByDay = useMemo(() => {
-    const grouped = new Map<string, number>();
-    for (const day of days) {
-      const teamCounts = new Map<string, number>();
-      tasks
-        .filter((task) => task.day === day)
-        .forEach((task) => teamCounts.set(task.team, (teamCounts.get(task.team) || 0) + 1));
-      const conflicts = [...teamCounts.values()].filter((count) => count > 1).length;
-      grouped.set(day, conflicts);
-    }
-    return grouped;
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        "min-h-56 rounded-2xl border p-3 transition",
+        isOver
+          ? "border-[#4f79ba] bg-[rgba(31,52,86,0.42)]"
+          : "border-[color:var(--border)] bg-[rgba(10,18,33,0.84)]",
+      ].join(" ")}
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#92a6c3]">{day}</p>
+        {conflicts > 0 ? (
+          <span className="rounded-full border border-[rgba(213,170,69,0.45)] bg-[rgba(213,170,69,0.16)] px-2 py-0.5 text-[10px] font-semibold text-[#f2cf77]">
+            {conflicts} conflicte
+          </span>
+        ) : null}
+      </div>
+      <div className="space-y-2">
+        {tasks.map((task) => (
+          <DraggableTaskCard key={task.id} task={task} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function PlanningBoard({ initialTasks }: { initialTasks: Task[] }) {
+  const [isPending, startTransition] = useTransition();
+  const [tasks, setTasks] = useState(initialTasks);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const tasksByDay = useMemo(() => {
+    return weekdays.reduce<Record<string, Task[]>>((acc, day) => {
+      acc[day] = tasks.filter((task) => task.day === day);
+      return acc;
+    }, {});
   }, [tasks]);
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
+  const conflictsByDay = useMemo(() => {
+    const output: Record<string, number> = {};
+    for (const day of weekdays) {
+      const dayTasks = tasksByDay[day] ?? [];
+      const duplicateTeams = dayTasks.filter(
+        (item, index) => dayTasks.findIndex((candidate) => candidate.team === item.team) !== index,
+      );
+      output[day] = duplicateTeams.length;
+    }
+    return output;
+  }, [tasksByDay]);
 
-    const day = String(over.id);
-    const taskId = String(active.id);
-    const nextDate = nextDateForWeekday(day);
+  function parseDayToOffset(day: string) {
+    const index = weekdays.indexOf(day);
+    return index >= 0 ? index : 0;
+  }
 
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              day,
-              startDateIso: nextDate.toISOString(),
-            }
-          : task,
-      ),
-    );
+  async function handleMove(task: Task, targetDay: string) {
+    const previousTasks = tasks;
+    const now = new Date();
+    const start = new Date(now);
+    const currentDay = start.getDay();
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+    start.setDate(start.getDate() + mondayOffset + parseDayToOffset(targetDay));
+    start.setHours(8, 0, 0, 0);
+
+    setError(null);
+    setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, day: targetDay, startDateIso: start.toISOString() } : item)));
 
     startTransition(async () => {
       try {
-        await rescheduleWorkOrder({ id: taskId, startDate: nextDate.toISOString() });
-        toast.success("Planificare actualizata");
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Nu s-a putut actualiza planificarea");
+        await updateWorkOrderScheduleAction({
+          id: task.id,
+          dayLabel: targetDay,
+          startDateIso: start.toISOString(),
+        });
+      } catch {
+        setTasks(previousTasks);
+        setError("Mutarea nu a fost salvata. Verifica permisiunile sau conexiunea.");
       }
     });
   }
 
-  const grouped = useMemo(() => {
-    return days.map((day) => ({ day, items: tasks.filter((task) => task.day === day) }));
-  }, [tasks]);
+  function onDragEnd(event: DragEndEvent) {
+    const task = event.active.data.current as Task | undefined;
+    const rawOverId = event.over?.id ? String(event.over.id) : undefined;
+    let targetDay = rawOverId;
+
+    if (targetDay && !weekdays.includes(targetDay)) {
+      const hoveredTask = tasks.find((item) => item.id === targetDay);
+      targetDay = hoveredTask?.day;
+    }
+
+    setActiveTaskId(null);
+
+    if (!task || !targetDay || task.day === targetDay) return;
+    void handleMove(task, targetDay);
+  }
+
+  function onDragStart(event: DragStartEvent) {
+    setActiveTaskId(String(event.active.id));
+  }
+
+  const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
-      <div className="mb-3 text-xs text-[#5f7265]">{isPending ? "Se salveaza modificari..." : "Trage o lucrare pe alta zi pentru replanificare."}</div>
-      <div className="grid gap-3 overflow-x-auto lg:grid-cols-7">
-        {grouped.map((column) => (
-          <DropColumn key={column.day} day={column.day} conflicts={conflictsByDay.get(column.day) || 0}>
-            {column.items.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
-          </DropColumn>
-        ))}
+    <div>
+      <div className="mb-3 text-xs text-[#9fb2cd]">
+        {isPending ? "Se salveaza replanificarea..." : "Trage o lucrare intre zile pentru a actualiza programul saptamanii."}
       </div>
-    </DndContext>
+      {error ? <p className="mb-3 text-xs font-medium text-[#ffb7bf]">{error}</p> : null}
+      <DndContext collisionDetection={closestCorners} sensors={sensors} onDragEnd={onDragEnd} onDragStart={onDragStart}>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+          {weekdays.map((day) => (
+            <DayColumn key={day} day={day} tasks={tasksByDay[day] ?? []} conflicts={conflictsByDay[day] ?? 0} />
+          ))}
+        </div>
+        <DragOverlay>{activeTask ? <DraggableTaskCard task={activeTask} /> : null}</DragOverlay>
+      </DndContext>
+    </div>
   );
 }

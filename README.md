@@ -89,10 +89,10 @@ Seed-ul creeaza date realiste in romana:
 - 15 facturi
 - subcontractori, echipe, depozite, echipamente, documente, notificari
 
-Cont demo principal:
+Cont admin principal:
 
-- Email: `alex.pop@eltgrup.ro`
-- Parola: `Parola123!`
+- Email: `eduard@eltgrup.com`
+- Parola: `eltgrup`
 
 ## Setup local
 
@@ -108,7 +108,21 @@ npm install
 cp .env.example .env
 ```
 
-3. Porneste PostgreSQL (local sau cu docker-compose):
+### Setup Supabase (recomandat)
+
+1. In Supabase Dashboard -> Project Settings -> Database -> Connection string:
+- copiaza `Transaction pooler` in `DATABASE_URL`
+- copiaza `Direct connection` in `DIRECT_URL`
+
+2. Ruleaza migrari + seed:
+
+```bash
+npm run db:generate
+npm run db:migrate -- --name init
+npm run db:seed
+```
+
+3. (Optional, doar local) Porneste PostgreSQL cu docker-compose:
 
 ```bash
 docker compose up -d db

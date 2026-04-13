@@ -9,7 +9,7 @@ export async function requirePermission(resource: PermissionResource, action: Pe
     throw new Error("Sesiune invalida. Reautentificare necesara.");
   }
 
-  const allowed = hasPermission(session.user.roleKeys || [], resource, action);
+  const allowed = hasPermission(session.user.roleKeys || [], resource, action, session.user.email);
   if (!allowed) {
     throw new Error("Nu ai permisiunea necesara pentru aceasta actiune.");
   }

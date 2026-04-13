@@ -3,6 +3,7 @@
 import { CostType, InvoiceStatus, NotificationType, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { assertProjectAccess } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
 import { notifyRoles } from "@/src/lib/notifications";
@@ -29,6 +30,7 @@ async function createCostEntryInternal(formData: FormData) {
   });
 
   if (!parsed.success) throw parsed.error;
+  await assertProjectAccess(currentUser, parsed.data.projectId);
 
   const entry = await prisma.costEntry.create({
     data: {
@@ -70,6 +72,10 @@ export async function updateInvoiceStatus(formData: FormData) {
   if (!Object.values(InvoiceStatus).includes(status as InvoiceStatus)) {
     throw new Error("Status factura invalid");
   }
+
+  const current = await prisma.invoice.findUnique({ where: { id }, select: { projectId: true } });
+  if (!current) throw new Error("Factura inexistenta.");
+  await assertProjectAccess(currentUser, current.projectId);
 
   const updated = await prisma.invoice.update({
     where: { id },

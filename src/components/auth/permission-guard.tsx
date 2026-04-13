@@ -15,7 +15,7 @@ export async function PermissionGuard({
   const session = await auth();
   const roles = session?.user?.roleKeys || [];
 
-  if (!hasPermission(roles, resource, action)) {
+  if (!hasPermission(roles, resource, action, session?.user?.email)) {
     return <EmptyState title="Acces restrictionat" description="Nu ai permisiunea necesara pentru aceasta sectiune." />;
   }
 

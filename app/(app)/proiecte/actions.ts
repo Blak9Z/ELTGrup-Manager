@@ -4,6 +4,7 @@ import { NotificationType, ProjectStatus, ProjectType, RoleKey } from "@prisma/c
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
+import { assertProjectAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { ActionState } from "@/src/lib/action-state";
 import { notifyRoles } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
@@ -102,6 +103,7 @@ export async function updateProjectStatus(formData: FormData) {
 
   const id = String(formData.get("id"));
   const status = formData.get("status") as ProjectStatus;
+  await assertProjectAccess(currentUser, id);
 
   const before = await prisma.project.findUnique({ where: { id }, select: { status: true, title: true } });
   const updated = await prisma.project.update({
@@ -135,6 +137,7 @@ export async function deleteProject(formData: FormData) {
   const currentUser = await requirePermission("PROJECTS", "DELETE");
 
   const id = String(formData.get("id"));
+  await assertProjectAccess(currentUser, id);
 
   const project = await prisma.project.update({
     where: { id },
@@ -169,32 +172,39 @@ export async function bulkProjectsAction(formData: FormData) {
     throw new Error("Selectie bulk invalida pentru proiecte.");
   }
 
+  const actor =
+    parsed.data.operation === "ARCHIVE"
+      ? await requirePermission("PROJECTS", "DELETE")
+      : await requirePermission("PROJECTS", "UPDATE");
+  const scope = await resolveAccessScope(actor);
+  const scopedIds =
+    scope.projectIds === null ? parsed.data.ids : parsed.data.ids.filter((id) => scope.projectIds!.includes(id));
+  if (scopedIds.length === 0) throw new Error("Nu ai acces la proiectele selectate.");
+
   if (parsed.data.operation === "ARCHIVE") {
-    const currentUser = await requirePermission("PROJECTS", "DELETE");
     const result = await prisma.project.updateMany({
-      where: { id: { in: parsed.data.ids }, deletedAt: null },
+      where: { id: { in: scopedIds }, deletedAt: null },
       data: { deletedAt: new Date(), status: ProjectStatus.CANCELED },
     });
     await logActivity({
-      userId: currentUser.id,
+      userId: actor.id,
       entityType: "PROJECT_BULK",
       entityId: "MULTI",
       action: "PROJECTS_ARCHIVED_BULK",
-      diff: { ids: parsed.data.ids, affectedRows: result.count },
+      diff: { ids: scopedIds, affectedRows: result.count },
     });
   } else {
-    const currentUser = await requirePermission("PROJECTS", "UPDATE");
     if (!parsed.data.status) throw new Error("Statusul este obligatoriu.");
     const result = await prisma.project.updateMany({
-      where: { id: { in: parsed.data.ids }, deletedAt: null },
+      where: { id: { in: scopedIds }, deletedAt: null },
       data: { status: parsed.data.status },
     });
     await logActivity({
-      userId: currentUser.id,
+      userId: actor.id,
       entityType: "PROJECT_BULK",
       entityId: "MULTI",
       action: "PROJECTS_STATUS_UPDATED_BULK",
-      diff: { ids: parsed.data.ids, status: parsed.data.status, affectedRows: result.count },
+      diff: { ids: scopedIds, status: parsed.data.status, affectedRows: result.count },
     });
   }
 

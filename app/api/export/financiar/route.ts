@@ -1,17 +1,31 @@
 import { NextResponse } from "next/server";
-import * as XLSX from "xlsx";
 import { auth } from "@/src/lib/auth";
+import { resolveAccessScope } from "@/src/lib/access-scope";
+import { toCsv } from "@/src/lib/csv";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 
 export async function GET() {
   const session = await auth();
   const roles = session?.user?.roleKeys || [];
-  if (!session?.user?.id || !hasPermission(roles, "INVOICES", "EXPORT")) {
+  if (!session?.user?.id || !hasPermission(roles, "INVOICES", "EXPORT", session?.user?.email)) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
   }
 
-  const invoices = await prisma.invoice.findMany({ include: { project: true, client: true }, orderBy: { dueDate: "asc" } });
+  const scope = await resolveAccessScope({
+    id: session.user.id,
+    email: session.user.email,
+    roleKeys: session.user.roleKeys || [],
+  });
+
+  const invoices = await prisma.invoice.findMany({
+    where:
+      scope.projectIds === null
+        ? {}
+        : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
+    include: { project: true, client: true },
+    orderBy: { dueDate: "asc" },
+  });
   const data = invoices.map((invoice) => ({
     Factura: invoice.invoiceNumber,
     Proiect: invoice.project.title,
@@ -23,15 +37,12 @@ export async function GET() {
     Scadenta: invoice.dueDate.toLocaleDateString("ro-RO"),
   }));
 
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Financiar");
-  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  const csv = toCsv(data);
 
-  return new NextResponse(new Uint8Array(buffer), {
+  return new NextResponse(csv, {
     headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": "attachment; filename=financiar.xlsx",
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": "attachment; filename=financiar.csv",
     },
   });
 }

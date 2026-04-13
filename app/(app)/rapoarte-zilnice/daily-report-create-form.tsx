@@ -20,13 +20,13 @@ export function DailyReportCreateForm({ projects, workOrders }: { projects: Opti
 
   return (
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <select name="projectId" required className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+      <select name="projectId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Proiect</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>{project.label}</option>
         ))}
       </select>
-      <select name="workOrderId" className="h-10 rounded-lg border border-[#cfddd3] px-3 text-sm">
+      <select name="workOrderId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Lucrare (optional)</option>
         {workOrders.map((workOrder) => (
           <option key={workOrder.id} value={workOrder.id}>{workOrder.label}</option>
@@ -36,7 +36,7 @@ export function DailyReportCreateForm({ projects, workOrders }: { projects: Opti
       <Input name="weather" placeholder="Vreme" />
       <div>
         <Input name="workersCount" type="number" min={0} defaultValue={0} placeholder="Numar muncitori" />
-        {state.errors?.workersCount ? <p className="mt-1 text-xs text-[#9b1f30]">{state.errors.workersCount[0]}</p> : null}
+        {state.errors?.workersCount ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.workersCount[0]}</p> : null}
       </div>
       <Input name="subcontractorsPresent" placeholder="Subcontractori prezenti" />
       <Input name="materialsReceived" placeholder="Materiale primite" />
@@ -49,7 +49,7 @@ export function DailyReportCreateForm({ projects, workOrders }: { projects: Opti
       <div className="md:col-span-2 xl:col-span-4 flex justify-end">
         <Button type="submit" disabled={pending}>{pending ? "Se salveaza..." : "Salveaza raport"}</Button>
       </div>
-      {state.errors?.workCompleted ? <p className="md:col-span-2 xl:col-span-4 text-xs text-[#9b1f30]">{state.errors.workCompleted[0]}</p> : null}
+      {state.errors?.workCompleted ? <p className="md:col-span-2 xl:col-span-4 text-xs text-[#ffb4bd]">{state.errors.workCompleted[0]}</p> : null}
     </form>
   );
 }
