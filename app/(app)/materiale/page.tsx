@@ -33,9 +33,13 @@ export default async function MaterialePage({
     : { projectIds: null, teamId: null };
   const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
   const roleKeys = session?.user?.roleKeys || [];
-  const canManageStockAndInvoices = roleKeys.some((role) =>
-    [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.SITE_MANAGER, RoleKey.ACCOUNTANT].includes(role as RoleKey),
-  );
+  const stockInvoiceRoles = new Set<RoleKey>([
+    RoleKey.SUPER_ADMIN,
+    RoleKey.ADMINISTRATOR,
+    RoleKey.SITE_MANAGER,
+    RoleKey.ACCOUNTANT,
+  ]);
+  const canManageStockAndInvoices = roleKeys.some((role) => stockInvoiceRoles.has(role as RoleKey));
   const materialWhere = {
     name: params.q ? { contains: params.q, mode: "insensitive" as const } : undefined,
   };
