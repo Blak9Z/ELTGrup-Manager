@@ -27,6 +27,11 @@ const movementSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const approveAndIssueSchema = z.object({
+  id: z.string().cuid(),
+  warehouseId: z.string().cuid(),
+});
+
 const createMaterialSchema = z.object({
   code: z.string().min(2),
   name: z.string().min(2),
@@ -36,6 +41,18 @@ const createMaterialSchema = z.object({
   minStockLevel: z.coerce.number().min(0).optional(),
   supplierName: z.string().optional(),
 });
+
+const stockAndInvoiceAllowedRoles = new Set<RoleKey>([
+  RoleKey.SUPER_ADMIN,
+  RoleKey.ADMINISTRATOR,
+  RoleKey.SITE_MANAGER,
+  RoleKey.ACCOUNTANT,
+]);
+
+function ensureStockAndInvoiceAccess(roleKeys: RoleKey[]) {
+  if (roleKeys.some((role) => stockAndInvoiceAllowedRoles.has(role))) return;
+  throw new Error("Doar Admin, Sef Santier sau Financiar pot opera miscari de stoc si facturi materiale.");
+}
 
 async function createMaterialRequestInternal(formData: FormData) {
   const currentUser = await requirePermission("MATERIALS", "CREATE");
@@ -137,8 +154,129 @@ export async function approveMaterialRequest(formData: FormData) {
   revalidatePath("/panou");
 }
 
+export async function approveAndIssueMaterialRequest(formData: FormData) {
+  const currentUser = await requirePermission("MATERIALS", "APPROVE");
+  ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
+  const parsed = approveAndIssueSchema.safeParse({
+    id: formData.get("id"),
+    warehouseId: formData.get("warehouseId"),
+  });
+  if (!parsed.success) throw new Error("Date invalide pentru aprobare cu emitere din stoc.");
+
+  const request = await prisma.materialRequest.findUnique({
+    where: { id: parsed.data.id },
+    include: {
+      material: { select: { name: true, internalCost: true } },
+      requestedBy: { select: { id: true } },
+      project: { select: { title: true } },
+    },
+  });
+  if (!request) throw new Error("Cerere inexistenta.");
+  await assertProjectAccess(currentUser, request.projectId);
+
+  if (request.status !== MaterialRequestStatus.PENDING) {
+    throw new Error("Doar cererile PENDING pot fi aprobate cu emitere stoc.");
+  }
+
+  const existingIssuance = await prisma.stockMovement.findFirst({
+    where: {
+      materialId: request.materialId,
+      warehouseId: parsed.data.warehouseId,
+      type: StockMovementType.OUT,
+      documentRef: `MATERIAL_REQUEST:${request.id}`,
+    },
+    select: { id: true },
+  });
+  if (existingIssuance) {
+    throw new Error("Cererea are deja o emitere de stoc inregistrata.");
+  }
+
+  const warehouseMovements = await prisma.stockMovement.findMany({
+    where: { materialId: request.materialId, warehouseId: parsed.data.warehouseId },
+    select: { type: true, quantity: true },
+  });
+  const availableStock = warehouseMovements.reduce((sum, move) => {
+    if (move.type === StockMovementType.OUT || move.type === StockMovementType.WASTE) return sum - Number(move.quantity);
+    return sum + Number(move.quantity);
+  }, 0);
+  const requestedQty = Number(request.quantity);
+  if (availableStock < requestedQty) {
+    throw new Error(`Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${requestedQty.toFixed(2)}).`);
+  }
+
+  const now = new Date();
+  await prisma.$transaction(async (tx) => {
+    await tx.materialRequest.update({
+      where: { id: request.id },
+      data: { status: MaterialRequestStatus.APPROVED, approvedAt: now, approvedById: currentUser.id },
+    });
+
+    const movement = await tx.stockMovement.create({
+      data: {
+        materialId: request.materialId,
+        warehouseId: parsed.data.warehouseId,
+        projectId: request.projectId,
+        type: StockMovementType.OUT,
+        quantity: request.quantity,
+        note: `Emitere automata din cererea ${request.id}`,
+        documentRef: `MATERIAL_REQUEST:${request.id}`,
+      },
+    });
+
+    await tx.projectMaterialUsage.create({
+      data: {
+        projectId: request.projectId,
+        materialId: request.materialId,
+        quantityUsed: requestedQty,
+        quantityIssued: requestedQty,
+        note: `Consum din cerere materiale #${request.id}`,
+      },
+    });
+
+    await tx.costEntry.create({
+      data: {
+        projectId: request.projectId,
+        type: "MATERIAL",
+        description: `Consum material ${request.material.name} din cererea #${request.id}`,
+        amount: requestedQty * Number(request.material.internalCost || 0),
+        occurredAt: now,
+        approvedById: currentUser.id,
+      },
+    });
+
+    await tx.activityLog.create({
+      data: {
+        userId: currentUser.id,
+        entityType: "MATERIAL_REQUEST",
+        entityId: request.id,
+        action: "MATERIAL_REQUEST_APPROVED_AND_ISSUED",
+        diff: {
+          warehouseId: parsed.data.warehouseId,
+          stockMovementId: movement.id,
+          quantity: request.quantity.toString(),
+          projectId: request.projectId,
+        },
+      },
+    });
+  });
+
+  await notifyUser({
+    userId: request.requestedBy.id,
+    type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
+    title: "Cerere aprobata si emisa din stoc",
+    message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
+    actionUrl: "/materiale",
+  });
+
+  revalidatePath("/materiale");
+  revalidatePath("/financiar");
+  revalidatePath("/proiecte");
+  revalidatePath("/panou");
+}
+
 async function createStockMovementInternal(formData: FormData) {
   const currentUser = await requirePermission("MATERIALS", "UPDATE");
+  ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
 
   const parsed = movementSchema.safeParse({
     materialId: formData.get("materialId"),
@@ -265,6 +403,7 @@ export async function uploadMaterialInvoiceAction(
 ): Promise<ActionState> {
   try {
     const currentUser = await requirePermission("MATERIALS", "CREATE");
+    ensureStockAndInvoiceAccess(currentUser.roleKeys || []);
     const projectId = (formData.get("projectId") || "").toString();
     const invoiceNumber = (formData.get("invoiceNumber") || "").toString().trim();
     const note = (formData.get("note") || "").toString().trim();

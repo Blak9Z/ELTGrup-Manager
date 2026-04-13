@@ -9,7 +9,12 @@ import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { DailyReportCreateForm } from "./daily-report-create-form";
 
-export default async function RapoarteZilnicePage() {
+export default async function RapoarteZilnicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ projectId?: string; workOrderId?: string }>;
+}) {
+  const params = await searchParams;
   const session = await auth();
   const scope = session?.user
     ? await resolveAccessScope({
@@ -20,6 +25,21 @@ export default async function RapoarteZilnicePage() {
     : { projectIds: null, teamId: null };
   const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
 
+  const scopedProjectIds = scope.projectIds === null ? null : scope.projectIds.length ? scope.projectIds : ["__none__"];
+  const selectedProjectId =
+    params.projectId && (scope.projectIds === null || scope.projectIds.includes(params.projectId)) ? params.projectId : undefined;
+  const workOrdersWhere =
+    selectedProjectId
+      ? { deletedAt: null, projectId: selectedProjectId }
+      : { deletedAt: null, ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }) };
+  const reportsWhere =
+    selectedProjectId
+      ? { projectId: selectedProjectId, workOrderId: params.workOrderId || undefined }
+      : {
+          ...(scope.projectIds === null ? {} : { projectId: { in: scopedProjectIds! } }),
+          workOrderId: params.workOrderId || undefined,
+        };
+
   const [projects, workOrders, reports] = await Promise.all([
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
@@ -27,13 +47,13 @@ export default async function RapoarteZilnicePage() {
       orderBy: { title: "asc" },
     }),
     prisma.workOrder.findMany({
-      where: { deletedAt: null, ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }) },
+      where: workOrdersWhere,
       select: { id: true, title: true },
       orderBy: { title: "asc" },
       take: 150,
     }),
     prisma.dailySiteReport.findMany({
-      where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter! },
+      where: reportsWhere,
       include: { project: true, workOrder: true, createdBy: true },
       orderBy: { reportDate: "desc" },
       take: 60,
@@ -46,6 +66,27 @@ export default async function RapoarteZilnicePage() {
     <PermissionGuard resource="REPORTS" action="VIEW">
       <div className="space-y-6">
         <PageHeader title="Rapoarte zilnice de santier" subtitle="Vreme, prezenta, progres lucrari, blocaje, SSM, poze si semnaturi" />
+        <Card>
+          <form className="grid gap-3 md:grid-cols-3">
+            <select name="projectId" defaultValue={selectedProjectId || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+              <option value="">Toate proiectele</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.title}
+                </option>
+              ))}
+            </select>
+            <select name="workOrderId" defaultValue={params.workOrderId || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+              <option value="">Toate lucrarile</option>
+              {workOrders.map((workOrder) => (
+                <option key={workOrder.id} value={workOrder.id}>
+                  {workOrder.title}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" variant="secondary">Filtreaza</Button>
+          </form>
+        </Card>
         <div className="flex justify-end">
           <Link href="/api/export/rapoarte">
             <Button variant="secondary">Export CSV Rapoarte</Button>
@@ -72,6 +113,8 @@ export default async function RapoarteZilnicePage() {
           <DailyReportCreateForm
             projects={projects.map((project) => ({ id: project.id, label: project.title }))}
             workOrders={workOrders.map((workOrder) => ({ id: workOrder.id, label: workOrder.title }))}
+            defaultProjectId={selectedProjectId}
+            defaultWorkOrderId={params.workOrderId}
           />
         </Card>
 

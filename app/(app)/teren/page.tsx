@@ -4,6 +4,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
+import Link from "next/link";
 import { Textarea } from "@/src/components/ui/textarea";
 import { auth } from "@/src/lib/auth";
 import { projectScopeWhere, resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
@@ -81,11 +82,30 @@ export default async function TerenPage() {
       take: 25,
     }),
   ]);
+  const reportsWithBlockers = reports.filter((report) => Boolean(report.blockers && report.blockers.trim())).length;
 
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
       <div className="space-y-6">
         <PageHeader title="Teren" subtitle="Update-uri santier, progres zilnic, blocaje, foto si raportare rapida" />
+
+        <section className="grid gap-3 md:grid-cols-3">
+          <Card>
+            <p className="text-xs uppercase tracking-[0.08em] text-[#9fb2cd]">Taskuri active in aria ta</p>
+            <p className="mt-2 text-2xl font-black text-[#edf4ff]">{tasks.length}</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase tracking-[0.08em] text-[#9fb2cd]">Rapoarte cu blocaje</p>
+            <p className="mt-2 text-2xl font-black text-[#edf4ff]">{reportsWithBlockers}</p>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase tracking-[0.08em] text-[#9fb2cd]">Stare pontaj live</p>
+            <p className="mt-2 text-sm font-semibold text-[#edf4ff]">{activeEntry ? `${activeEntry.liveState} (${activeEntry.project.title})` : "Fara pontaj activ"}</p>
+            <Link href="/pontaj" className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline">
+              Deschide pontaj complet
+            </Link>
+          </Card>
+        </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
           <Card className="xl:col-span-2">
@@ -171,7 +191,7 @@ export default async function TerenPage() {
                     <Button size="sm" className="h-10" disabled={Boolean(activeEntry)}>Start pontaj</Button>
                   </form>
 
-                  <form action={uploadTaskPhoto} className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_auto]" encType="multipart/form-data">
+                  <form action={uploadTaskPhoto} className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
                     <input type="hidden" name="workOrderId" value={task.id} />
                     <input type="hidden" name="projectId" value={task.projectId} />
                     <input name="file" type="file" accept="image/*" className="h-10 w-full text-xs" required />

@@ -18,34 +18,35 @@ Aplicatie web full-stack pentru management operational in constructii: proiecte,
 - PDF export (`pdf-lib`)
 - Docker + docker-compose
 
-## Module implementate
+## Fluxuri operationale E2E
 
-### Phase 1 (livrate complet)
+Aplicatia este organizata pe fluxuri de lucru reale, nu pe pagini izolate:
 
-- Autentificare (Credentials, NextAuth, parole hashuite)
-- RBAC granular (roluri + matrix permisiuni)
-- Dashboard operational
-- Proiecte (listare + creare + update status + soft delete)
-- Lucrari / Work Orders (listare + creare + update status + soft delete)
-- Calendar / planning board (drag-and-drop UI)
-- Pontaj (inregistrare + aprobare)
-- Mod teren mobil (`/teren`)
-  - pontaj live start/pauza/reluare/stop cu persistenta in DB
+### 1) Project workflow
 
-### Phase 2-3 (livrate ca module functionale initiale + extensibile)
+`Proiect -> Work Orders -> Calendar -> Pontaj -> Rapoarte zilnice -> Timeline proiect`
 
-- Materiale / stoc / cereri
-  - cereri cu aprobare/respingere si notificari
-- Documente
-  - upload real fisier (S3 compatibil, fallback local in `public/uploads`)
-- CRM clienti
-- Rapoarte zilnice + export PDF
-- Notificari
-- Echipamente
-- Subcontractori
-- Financiar operational
-- Analitice
-- Setari
+- proiectele centralizeaza costuri, facturi, materiale, documente, rapoarte
+- lucrarile apar in calendar si in pontaj
+- pontajul aprobat si update-urile de teren se reflecta in detalii proiect/lucrare
+- pagina de detaliu proiect + pagina de detaliu lucrare au timeline unificat (audit + documente + costuri + rapoarte + pontaj)
+
+### 2) Materials workflow
+
+`Catalog materiale -> Cerere -> Aprobare/Respingere -> Miscare stoc -> Cost proiect`
+
+- cererile au status operational + notificari
+- miscarile de stoc genereaza consum proiect
+- iesirile/waste pe proiect genereaza cost entry material in modul financiar
+- analiticele compara consumul fata de aprobare/plan
+
+### 3) Documents workflow
+
+`Upload -> Asociere entitate -> Vizualizare -> Audit`
+
+- upload document cu asociere la proiect, lucrare (work order) sau client
+- documentele apar in modulele relevante (`/documente`, detalii proiect, detalii lucrare)
+- fiecare upload este auditat in `ActivityLog`
 
 ## Roluri disponibile
 
@@ -183,6 +184,17 @@ src/
 proxy.ts
 ```
 
+## Capturi ecran (produs real)
+
+Adauga capturi reale in `docs/screenshots/` si referentiaza-le aici:
+
+- `dashboard.png`
+- `project-timeline.png`
+- `work-order-timeline.png`
+- `materials-flow.png`
+- `documents-linking.png`
+- `analytics-actionable.png`
+
 ## Securitate si conformitate
 
 - Rute protejate in `proxy.ts`
@@ -197,6 +209,6 @@ proxy.ts
 
 ## Observatii / asumptii
 
-- Upload fisiere este pregatit arhitectural prin `Document.storagePath`; integrarea UploadThing/S3 se face in modul dedicat de upload.
-- e-Factura este livrata ca placeholder arhitectural (`EFATURA_ENABLED`) pentru integrare ulterioara.
-- Calendarul DnD este functional UI; persistenta drag-and-drop se poate activa cu endpoint/action dedicat pentru mutarea task-urilor.
+- Upload fisiere este functional prin `Document.storagePath` (S3 compatibil sau fallback local).
+- `EFATURA_ENABLED` ramane un feature-flag tehnic pentru integrare externa ulterioara.
+- Calendarul DnD este operational in UI; extinderea de mutare prin drag-and-drop poate fi izolata in actiune dedicata daca se doreste schimbarea de status direct din board.

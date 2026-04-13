@@ -5,7 +5,6 @@ import NextAuth, { type NextAuthOptions, getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { z } from "zod";
 import { prisma } from "@/src/lib/prisma";
-import { SUPER_ADMIN_EMAIL } from "@/src/lib/rbac";
 
 const loginSchema = z.object({
   email: z.email("Email invalid"),
@@ -45,9 +44,6 @@ export const authOptions: NextAuthOptions = {
         });
 
         const roleKeys = user.roles.map((r) => r.role.key) as RoleKey[];
-        if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL && !roleKeys.includes(RoleKey.SUPER_ADMIN)) {
-          roleKeys.push(RoleKey.SUPER_ADMIN);
-        }
 
         return {
           id: user.id,
@@ -66,6 +62,27 @@ export const authOptions: NextAuthOptions = {
         token.roleKeys = candidate.roleKeys || [];
         token.email = candidate.email;
       }
+
+      if (token.userId) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.userId as string },
+          select: {
+            email: true,
+            isActive: true,
+            deletedAt: true,
+            roles: { include: { role: { select: { key: true } } } },
+          },
+        });
+
+        if (!dbUser || !dbUser.isActive || dbUser.deletedAt) {
+          token.roleKeys = [];
+          return token;
+        }
+
+        token.roleKeys = dbUser.roles.map((item) => item.role.key) as RoleKey[];
+        token.email = dbUser.email;
+      }
+
       return token;
     },
     async session({ session, token }) {

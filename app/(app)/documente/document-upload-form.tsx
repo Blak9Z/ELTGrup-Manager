@@ -12,9 +12,11 @@ type Option = { id: string; label: string };
 export function DocumentUploadForm({
   projects,
   clients,
+  workOrders,
 }: {
   projects: Option[];
   clients: Option[];
+  workOrders: Option[];
 }) {
   const [state, formAction, pending] = useActionState(createDocumentAction, initialActionState);
 
@@ -24,7 +26,7 @@ export function DocumentUploadForm({
   }, [state]);
 
   return (
-    <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4" encType="multipart/form-data">
+    <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <div>
         <Input name="title" placeholder="Titlu document" required />
         {state.errors?.title ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.title[0]}</p> : null}
@@ -47,13 +49,19 @@ export function DocumentUploadForm({
           <option key={project.id} value={project.id}>{project.label}</option>
         ))}
       </select>
+      <select name="workOrderId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+        <option value="">Fara lucrare</option>
+        {workOrders.map((workOrder) => (
+          <option key={workOrder.id} value={workOrder.id}>{workOrder.label}</option>
+        ))}
+      </select>
       <select name="clientId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Fara client</option>
         {clients.map((client) => (
           <option key={client.id} value={client.id}>{client.label}</option>
         ))}
       </select>
-      <Input name="tags" placeholder="Tag-uri separate prin virgula" className="md:col-span-2" />
+      <Input name="tags" placeholder="Tag-uri separate prin virgula" className="md:col-span-2 xl:col-span-2" />
       <div className="md:col-span-2 xl:col-span-4 flex justify-end">
         <button
           type="submit"

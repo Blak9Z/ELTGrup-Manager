@@ -1,10 +1,13 @@
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { auth } from "@/src/lib/auth";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { prisma } from "@/src/lib/prisma";
+import { hasSuperAdminRole } from "@/src/lib/rbac";
 import { UserAdminPanel } from "./user-admin-panel";
 
 export default async function SetariPage() {
-  const [users, roles] = await Promise.all([
+  const [session, users, roles] = await Promise.all([
+    auth(),
     prisma.user.findMany({
       where: { deletedAt: null },
       include: { roles: { include: { role: true } } },
@@ -18,6 +21,7 @@ export default async function SetariPage() {
       <div className="space-y-6">
         <PageHeader title="Setari / Administrare" subtitle="Conturi utilizatori, roluri operationale si control acces pe functii" />
         <UserAdminPanel
+          canAssignSuperAdmin={hasSuperAdminRole(session?.user?.roleKeys || [])}
           roles={roles.map((role) => ({ id: role.id, key: role.key, label: role.label }))}
           users={users.map((user) => ({
             id: user.id,

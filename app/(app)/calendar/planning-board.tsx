@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import {
   closestCorners,
@@ -59,6 +60,9 @@ function DraggableTaskCard({ task }: { task: Task }) {
         <span>{task.status}</span>
       </div>
       <p className="mt-1 text-[11px] text-[#8da3c1]">{task.startDateIso ? formatDate(task.startDateIso) : "Fara data"}</p>
+      <Link href={`/lucrari/${task.id}`} className="mt-1 inline-block text-[11px] font-semibold text-[#bcd4f7] hover:underline">
+        Deschide lucrarea
+      </Link>
     </div>
   );
 }

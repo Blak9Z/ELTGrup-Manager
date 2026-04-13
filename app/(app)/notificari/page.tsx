@@ -13,25 +13,47 @@ export default async function NotificariPage() {
   const session = await auth();
   const notifications = await prisma.notification.findMany({
     where: { userId: session?.user?.id },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ isRead: "asc" }, { createdAt: "desc" }],
     take: 80,
   });
 
   const unread = notifications.filter((n) => !n.isRead).length;
+  const byType = notifications.reduce<Record<string, number>>((acc, notification) => {
+    acc[notification.type] = (acc[notification.type] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
       <div className="space-y-6">
         <PageHeader
           title="Notificari"
-          subtitle="Atribuiri noi, intarzieri, stoc minim, documente lipsa, aprobari necesare"
+          subtitle="Inbox operational: aprobari, alerte, schimbari de status si urmarire executie"
           actions={
             <form action={markAllNotificationsRead}>
               <Button type="submit" variant="secondary">Marcheaza toate ca citite ({unread})</Button>
             </form>
           }
         />
+        <Card>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={unread > 0 ? "warning" : "success"}>
+              {unread > 0 ? `${unread} necitite` : "Toate notificarile sunt citite"}
+            </Badge>
+            {Object.entries(byType).map(([type, count]) => (
+              <Badge key={type} tone="neutral">
+                {type}: {count}
+              </Badge>
+            ))}
+          </div>
+        </Card>
         <div className="space-y-2">
+          {notifications.length === 0 ? (
+            <Card>
+              <p className="text-sm font-semibold">Nu exista notificari.</p>
+              <p className="text-xs text-[#9fb3ce]">Notificarile operationale vor aparea aici cand exista schimbari relevante.</p>
+            </Card>
+          ) : null}
           {notifications.map((notification) => (
             <Card key={notification.id} className={notification.isRead ? "opacity-80" : "border-[#bfd9c8]"}>
               <div className="flex items-start justify-between gap-3">

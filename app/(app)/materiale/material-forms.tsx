@@ -126,7 +126,7 @@ export function MaterialInvoiceUploadForm({ projects }: { projects: Option[] }) 
   }, [state]);
 
   return (
-    <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2" encType="multipart/form-data">
+    <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2">
       <select name="projectId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Proiect</option>
         {projects.map((project) => (

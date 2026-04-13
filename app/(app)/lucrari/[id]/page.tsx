@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { ActivityTimeline } from "@/src/components/ui/activity-timeline";
 import { Badge } from "@/src/components/ui/badge";
 import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { assertWorkOrderAccess } from "@/src/lib/access-scope";
+import { buildWorkOrderTimeline } from "@/src/lib/timeline";
 import { formatDate, formatDateTime } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 
@@ -38,15 +41,7 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
 
   if (!workOrder) notFound();
 
-  const activity = await prisma.activityLog.findMany({
-    where: {
-      entityType: "WORK_ORDER",
-      entityId: id,
-    },
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
-    take: 30,
-  });
+  const timeline = await buildWorkOrderTimeline(id, 40);
 
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
@@ -54,6 +49,19 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
         <PageHeader
           title={workOrder.title}
           subtitle={`${workOrder.project.title} • ${workOrder.team?.name || "Fara echipa"} • Termen ${workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}`}
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/calendar?projectId=${workOrder.projectId}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+                Calendar
+              </Link>
+              <Link href={`/pontaj?projectId=${workOrder.projectId}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+                Pontaj
+              </Link>
+              <Link href={`/rapoarte-zilnice?projectId=${workOrder.projectId}&workOrderId=${workOrder.id}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+                Raport zilnic
+              </Link>
+            </div>
+          }
         />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -94,14 +102,10 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Status history</h2>
-            <div className="mt-3 space-y-2">
-              {activity.map((log) => (
-                <div key={log.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(13,24,42,0.8)] p-3 text-sm">
-                  <p className="font-semibold text-[#edf4ff]">{log.action}</p>
-                  <p className="text-xs text-[#9fb2cd]">{log.user ? `${log.user.firstName} ${log.user.lastName}` : "Sistem"} • {formatDateTime(log.createdAt)}</p>
-                </div>
-              ))}
+            <h2 className="text-lg font-semibold text-[#edf4ff]">Timeline lucrare</h2>
+            <p className="mt-1 text-xs text-[#9fb2cd]">Cronologie unificata: update-uri, documente, pontaj, rapoarte teren si audit.</p>
+            <div className="mt-3">
+              <ActivityTimeline events={timeline} />
             </div>
           </Card>
         </section>

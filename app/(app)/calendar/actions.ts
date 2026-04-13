@@ -7,6 +7,15 @@ import { assertProjectAccess, assertWorkOrderAccess } from "@/src/lib/access-sco
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
+function revalidateScheduleRelatedPaths(args: { workOrderId?: string; projectId?: string }) {
+  revalidatePath("/calendar");
+  revalidatePath("/lucrari");
+  revalidatePath("/proiecte");
+  revalidatePath("/panou");
+  if (args.workOrderId) revalidatePath(`/lucrari/${args.workOrderId}`);
+  if (args.projectId) revalidatePath(`/proiecte/${args.projectId}`);
+}
+
 const createQuickTaskSchema = z.object({
   projectId: z.string().cuid(),
   title: z.string().min(3),
@@ -34,15 +43,16 @@ export async function updateWorkOrderScheduleAction(input: { id: string; dayLabe
   const nextDue = new Date(nextStart);
   nextDue.setHours(17, 0, 0, 0);
 
-  await prisma.workOrder.update({
+  const updated = await prisma.workOrder.update({
     where: { id: input.id },
     data: {
       startDate: nextStart,
       dueDate: nextDue,
     },
+    select: { id: true, projectId: true },
   });
 
-  revalidatePath("/calendar");
+  revalidateScheduleRelatedPaths({ workOrderId: updated.id, projectId: updated.projectId });
 }
 
 export async function createCalendarTaskAction(formData: FormData) {
@@ -62,7 +72,7 @@ export async function createCalendarTaskAction(formData: FormData) {
   const dueDate = new Date(startDate);
   dueDate.setHours(17, 0, 0, 0);
 
-  await prisma.workOrder.create({
+  const created = await prisma.workOrder.create({
     data: {
       projectId: parsed.data.projectId,
       title: parsed.data.title,
@@ -73,8 +83,8 @@ export async function createCalendarTaskAction(formData: FormData) {
       dueDate,
       description: "Creat rapid din calendar.",
     },
+    select: { id: true, projectId: true },
   });
 
-  revalidatePath("/calendar");
-  revalidatePath("/lucrari");
+  revalidateScheduleRelatedPaths({ workOrderId: created.id, projectId: created.projectId });
 }

@@ -10,7 +10,17 @@ import { Textarea } from "@/src/components/ui/textarea";
 
 type Option = { id: string; label: string };
 
-export function DailyReportCreateForm({ projects, workOrders }: { projects: Option[]; workOrders: Option[] }) {
+export function DailyReportCreateForm({
+  projects,
+  workOrders,
+  defaultProjectId,
+  defaultWorkOrderId,
+}: {
+  projects: Option[];
+  workOrders: Option[];
+  defaultProjectId?: string;
+  defaultWorkOrderId?: string;
+}) {
   const [state, formAction, pending] = useActionState(createDailyReportAction, initialActionState);
 
   useEffect(() => {
@@ -20,13 +30,13 @@ export function DailyReportCreateForm({ projects, workOrders }: { projects: Opti
 
   return (
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <select name="projectId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="projectId" required defaultValue={defaultProjectId || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Proiect</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>{project.label}</option>
         ))}
       </select>
-      <select name="workOrderId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="workOrderId" defaultValue={defaultWorkOrderId || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
         <option value="">Lucrare (optional)</option>
         {workOrders.map((workOrder) => (
           <option key={workOrder.id} value={workOrder.id}>{workOrder.label}</option>

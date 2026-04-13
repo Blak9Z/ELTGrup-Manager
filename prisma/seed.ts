@@ -187,6 +187,11 @@ async function main() {
     ["Subcontractor", "Demo", "sub.demo@eltgrup.ro", RoleKey.SUBCONTRACTOR],
   ] as const;
 
+  const superAdminSeedCount = userSeeds.filter(([, , , roleKey]) => roleKey === RoleKey.SUPER_ADMIN).length;
+  if (superAdminSeedCount !== 1) {
+    throw new Error(`Seed must include exactly one SUPER_ADMIN user. Found: ${superAdminSeedCount}`);
+  }
+
   const users = [] as { id: string; role: RoleKey; name: string }[];
   for (const [firstName, lastName, email, roleKey] of userSeeds) {
     const role = roles.find((r) => r.key === roleKey)!;

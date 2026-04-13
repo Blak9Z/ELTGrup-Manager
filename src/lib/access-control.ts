@@ -1,5 +1,5 @@
 import { PermissionAction, PermissionResource, RoleKey } from "@prisma/client";
-import { SUPER_ADMIN_EMAIL, hasPermission } from "@/src/lib/rbac";
+import { hasPermission } from "@/src/lib/rbac";
 
 export type AppModule =
   | "dashboard"
@@ -64,7 +64,6 @@ export const moduleRoutePrefixes: Record<AppModule, string[]> = {
 };
 
 export function isPrivilegedUser(user: Pick<AuthUserLike, "roleKeys" | "email">) {
-  if ((user.email || "").toLowerCase() === SUPER_ADMIN_EMAIL) return true;
   return user.roleKeys.some((role) => privilegedRoles.has(role as RoleKey));
 }
 

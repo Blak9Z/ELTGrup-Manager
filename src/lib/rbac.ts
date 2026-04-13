@@ -1,7 +1,5 @@
 import { PermissionAction, PermissionResource, RoleKey } from "@prisma/client";
 
-export const SUPER_ADMIN_EMAIL = "eduard@eltgrup.com";
-
 export type SessionUser = {
   id: string;
   roleKeys: RoleKey[];
@@ -93,8 +91,8 @@ const matrix: PermissionMap = {
   },
 };
 
-export function isAbsoluteSuperAdmin(email?: string | null) {
-  return (email || "").toLowerCase() === SUPER_ADMIN_EMAIL;
+export function hasSuperAdminRole(roleKeys: Array<RoleKey | string>) {
+  return roleKeys.includes(RoleKey.SUPER_ADMIN);
 }
 
 export function hasPermission(
@@ -103,6 +101,7 @@ export function hasPermission(
   action: PermissionAction,
   userEmail?: string | null,
 ) {
-  if (isAbsoluteSuperAdmin(userEmail)) return true;
+  void userEmail;
+  if (hasSuperAdminRole(roles)) return true;
   return roles.some((role) => matrix[role]?.[resource]?.includes(action));
 }

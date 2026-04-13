@@ -10,6 +10,14 @@ import { notifyRoles } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
+function revalidateProjectRelatedPaths(projectId?: string) {
+  revalidatePath("/proiecte");
+  revalidatePath("/lucrari");
+  revalidatePath("/calendar");
+  revalidatePath("/panou");
+  if (projectId) revalidatePath(`/proiecte/${projectId}`);
+}
+
 const createProjectSchema = z.object({
   title: z.string().min(3),
   siteAddress: z.string().min(3),
@@ -79,8 +87,7 @@ async function createProjectInternal(formData: FormData) {
     actionUrl: `/proiecte/${created.id}`,
   });
 
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
+  revalidateProjectRelatedPaths(created.id);
 }
 
 export async function createProjectAction(
@@ -129,8 +136,7 @@ export async function updateProjectStatus(formData: FormData) {
     });
   }
 
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
+  revalidateProjectRelatedPaths(id);
 }
 
 export async function deleteProject(formData: FormData) {
@@ -152,8 +158,7 @@ export async function deleteProject(formData: FormData) {
     diff: { title: project.title },
   });
 
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
+  revalidateProjectRelatedPaths(id);
 }
 
 const bulkProjectSchema = z.object({
@@ -208,6 +213,8 @@ export async function bulkProjectsAction(formData: FormData) {
     });
   }
 
-  revalidatePath("/proiecte");
-  revalidatePath("/panou");
+  revalidateProjectRelatedPaths();
+  for (const projectId of scopedIds) {
+    revalidatePath(`/proiecte/${projectId}`);
+  }
 }

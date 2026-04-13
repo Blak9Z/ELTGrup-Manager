@@ -40,7 +40,7 @@ export default async function DocumentePage({
     category: params.category || undefined,
   };
 
-  const [projects, clients, docs, total] = await Promise.all([
+  const [projects, clients, workOrders, docs, total] = await Promise.all([
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
       select: { id: true, title: true },
@@ -54,9 +54,18 @@ export default async function DocumentePage({
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    prisma.workOrder.findMany({
+      where: {
+        deletedAt: null,
+        ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }),
+      },
+      select: { id: true, title: true, project: { select: { title: true } } },
+      orderBy: { updatedAt: "desc" },
+      take: 150,
+    }),
     prisma.document.findMany({
       where,
-      include: { project: true, client: true },
+      include: { project: true, client: true, workOrder: true },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -75,6 +84,10 @@ export default async function DocumentePage({
           <DocumentUploadForm
             projects={projects.map((project) => ({ id: project.id, label: project.title }))}
             clients={clients.map((client) => ({ id: client.id, label: client.name }))}
+            workOrders={workOrders.map((workOrder) => ({
+              id: workOrder.id,
+              label: `${workOrder.title} • ${workOrder.project.title}`,
+            }))}
           />
         </Card>
 
@@ -115,7 +128,11 @@ export default async function DocumentePage({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold">{doc.title}</p>
-                    <p className="text-xs text-[#9fb3ce]">{doc.project?.title || doc.client?.name || "General"}</p>
+                    <p className="text-xs text-[#9fb3ce]">
+                      {doc.workOrder
+                        ? `Lucrare: ${doc.workOrder.title}`
+                        : doc.project?.title || doc.client?.name || "General"}
+                    </p>
                   </div>
                   <Badge tone={doc.expiresAt && doc.expiresAt < reminderThreshold ? "warning" : "neutral"}>{doc.category}</Badge>
                 </div>

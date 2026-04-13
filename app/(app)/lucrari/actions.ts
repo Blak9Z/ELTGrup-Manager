@@ -10,6 +10,15 @@ import { notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
+function revalidateWorkOrderRelatedPaths(args: { workOrderId?: string; projectId?: string }) {
+  revalidatePath("/lucrari");
+  revalidatePath("/calendar");
+  revalidatePath("/proiecte");
+  revalidatePath("/panou");
+  if (args.workOrderId) revalidatePath(`/lucrari/${args.workOrderId}`);
+  if (args.projectId) revalidatePath(`/proiecte/${args.projectId}`);
+}
+
 const createWorkOrderSchema = z.object({
   title: z.string().min(3),
   projectId: z.string().min(1),
@@ -86,8 +95,7 @@ async function createWorkOrderInternal(formData: FormData) {
     });
   }
 
-  revalidatePath("/lucrari");
-  revalidatePath("/calendar");
+  revalidateWorkOrderRelatedPaths({ workOrderId: created.id, projectId: created.projectId });
 }
 
 export async function createWorkOrderAction(
@@ -113,7 +121,11 @@ export async function updateWorkOrderStatus(formData: FormData) {
   await assertWorkOrderAccess(currentUser, id);
 
   const before = await prisma.workOrder.findUnique({ where: { id }, select: { status: true } });
-  const updated = await prisma.workOrder.update({ where: { id }, data: { status } });
+  const updated = await prisma.workOrder.update({
+    where: { id },
+    data: { status },
+    select: { id: true, status: true, projectId: true },
+  });
 
   await logActivity({
     userId: currentUser.id,
@@ -126,8 +138,7 @@ export async function updateWorkOrderStatus(formData: FormData) {
     },
   });
 
-  revalidatePath("/lucrari");
-  revalidatePath("/calendar");
+  revalidateWorkOrderRelatedPaths({ workOrderId: updated.id, projectId: updated.projectId });
 }
 
 export async function deleteWorkOrder(formData: FormData) {
@@ -136,9 +147,10 @@ export async function deleteWorkOrder(formData: FormData) {
   const id = String(formData.get("id"));
   await assertWorkOrderAccess(currentUser, id);
 
-  await prisma.workOrder.update({
+  const updated = await prisma.workOrder.update({
     where: { id },
     data: { deletedAt: new Date(), status: "CANCELED" },
+    select: { id: true, projectId: true },
   });
 
   await logActivity({
@@ -148,8 +160,7 @@ export async function deleteWorkOrder(formData: FormData) {
     action: "WORK_ORDER_SOFT_DELETED",
   });
 
-  revalidatePath("/lucrari");
-  revalidatePath("/calendar");
+  revalidateWorkOrderRelatedPaths({ workOrderId: updated.id, projectId: updated.projectId });
 }
 
 export async function rescheduleWorkOrder(input: { id: string; startDate: string }) {
@@ -167,7 +178,7 @@ export async function rescheduleWorkOrder(input: { id: string; startDate: string
   const updated = await prisma.workOrder.update({
     where: { id: parsed.data.id },
     data: { startDate, dueDate },
-    select: { id: true, startDate: true },
+    select: { id: true, startDate: true, projectId: true },
   });
 
   await logActivity({
@@ -178,8 +189,7 @@ export async function rescheduleWorkOrder(input: { id: string; startDate: string
     diff: { newStartDate: updated.startDate?.toISOString() ?? null },
   });
 
-  revalidatePath("/lucrari");
-  revalidatePath("/calendar");
+  revalidateWorkOrderRelatedPaths({ workOrderId: updated.id, projectId: updated.projectId });
 }
 
 const bulkWorkOrderSchema = z.object({
@@ -242,6 +252,16 @@ export async function bulkWorkOrdersAction(formData: FormData) {
     });
   }
 
-  revalidatePath("/lucrari");
-  revalidatePath("/calendar");
+  const affectedWorkOrders = await prisma.workOrder.findMany({
+    where: { id: { in: scopedIds } },
+    select: { id: true, projectId: true },
+  });
+  const projectIds = new Set(affectedWorkOrders.map((item) => item.projectId));
+  revalidateWorkOrderRelatedPaths({});
+  for (const workOrder of affectedWorkOrders) {
+    revalidateWorkOrderRelatedPaths({ workOrderId: workOrder.id, projectId: workOrder.projectId });
+  }
+  for (const projectId of projectIds) {
+    revalidatePath(`/proiecte/${projectId}`);
+  }
 }

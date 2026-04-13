@@ -1,4 +1,4 @@
-import { MaterialRequestStatus } from "@prisma/client";
+import { MaterialRequestStatus, RoleKey } from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
@@ -12,7 +12,7 @@ import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-butto
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
 import { prisma } from "@/src/lib/prisma";
-import { approveMaterialRequest, bulkMaterialRequestsAction } from "./actions";
+import { approveAndIssueMaterialRequest, approveMaterialRequest, bulkMaterialRequestsAction } from "./actions";
 import { MaterialCreateForm, MaterialInvoiceUploadForm, MaterialRequestForm, StockMovementForm } from "./material-forms";
 
 export default async function MaterialePage({
@@ -32,6 +32,10 @@ export default async function MaterialePage({
       })
     : { projectIds: null, teamId: null };
   const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
+  const roleKeys = session?.user?.roleKeys || [];
+  const canManageStockAndInvoices = roleKeys.some((role) =>
+    [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.SITE_MANAGER, RoleKey.ACCOUNTANT].includes(role as RoleKey),
+  );
   const materialWhere = {
     name: params.q ? { contains: params.q, mode: "insensitive" as const } : undefined,
   };
@@ -93,16 +97,24 @@ export default async function MaterialePage({
 
           <Card>
             <h2 className="text-lg font-extrabold">Miscare de stoc</h2>
-            <StockMovementForm
-              projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-              materials={materials.map((material) => ({ id: material.id, label: material.name }))}
-              warehouses={warehouses.map((warehouse) => ({ id: warehouse.id, label: warehouse.name }))}
-            />
+            {canManageStockAndInvoices ? (
+              <StockMovementForm
+                projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+                materials={materials.map((material) => ({ id: material.id, label: material.name }))}
+                warehouses={warehouses.map((warehouse) => ({ id: warehouse.id, label: warehouse.name }))}
+              />
+            ) : (
+              <p className="mt-3 text-sm text-[#9fb3ce]">Disponibil doar pentru rolurile Admin, Sef Santier si Financiar.</p>
+            )}
           </Card>
 
           <Card>
             <h2 className="text-lg font-extrabold">Facturi materiale</h2>
-            <MaterialInvoiceUploadForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+            {canManageStockAndInvoices ? (
+              <MaterialInvoiceUploadForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+            ) : (
+              <p className="mt-3 text-sm text-[#9fb3ce]">Incarcarea facturilor este disponibila doar pentru Admin, Sef Santier si Financiar.</p>
+            )}
             <div className="mt-3 space-y-2">
               {materialInvoices.map((doc) => (
                 <a key={doc.id} href={doc.storagePath} target="_blank" className="block rounded-lg border border-[var(--border)] p-3 text-sm hover:border-[#4a74b0]">
@@ -193,18 +205,36 @@ export default async function MaterialePage({
                 </div>
                 <p className="mt-1 text-xs text-[#9fb3ce]">Solicitant: {request.requestedBy.firstName} {request.requestedBy.lastName}</p>
                 {request.status === "PENDING" ? (
-                  <div className="mt-2 flex gap-2">
-                    <form action={approveMaterialRequest}>
-                      <input type="hidden" name="id" value={request.id} />
-                      <input type="hidden" name="status" value={MaterialRequestStatus.APPROVED} />
-                      <Button size="sm" type="submit">Aproba</Button>
-                    </form>
+                  <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto_auto]">
+                    {canManageStockAndInvoices ? (
+                      <form action={approveAndIssueMaterialRequest} className="contents">
+                        <input type="hidden" name="id" value={request.id} />
+                        <select
+                          name="warehouseId"
+                          required
+                          defaultValue={warehouses[0]?.id || ""}
+                          className="h-9 rounded-lg border border-[var(--border)] px-2 text-xs"
+                        >
+                          {warehouses.map((warehouse) => (
+                            <option key={warehouse.id} value={warehouse.id}>
+                              {warehouse.name}
+                            </option>
+                          ))}
+                        </select>
+                        <Button size="sm" type="submit" disabled={warehouses.length === 0}>Aproba + emite stoc</Button>
+                      </form>
+                    ) : (
+                      <div className="text-xs text-[#9fb3ce]">Emiterea din stoc este restrictionata.</div>
+                    )}
                     <form action={approveMaterialRequest}>
                       <input type="hidden" name="id" value={request.id} />
                       <input type="hidden" name="status" value={MaterialRequestStatus.REJECTED} />
                       <Button size="sm" type="submit" variant="destructive">Respinge</Button>
                     </form>
                   </div>
+                ) : null}
+                {request.status === "PENDING" && warehouses.length === 0 ? (
+                  <p className="mt-2 text-xs text-[#ffb7bf]">Nu exista depozite active. Configureaza depozitul pentru emitere din stoc.</p>
                 ) : null}
               </div>
             ))}

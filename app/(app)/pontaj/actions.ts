@@ -9,7 +9,6 @@ import { ActionState } from "@/src/lib/action-state";
 import { notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
-import { isAbsoluteSuperAdmin } from "@/src/lib/rbac";
 
 const timeEntrySchema = z.object({
   projectId: z.string().min(1),
@@ -75,7 +74,6 @@ async function createTimeEntryInternal(formData: FormData) {
   }
 
   const canManageTeamPontaj =
-    isAbsoluteSuperAdmin(currentUser.email) ||
     currentUser.roleKeys.some((role) =>
       ["SUPER_ADMIN", "ADMINISTRATOR", "PROJECT_MANAGER", "SITE_MANAGER", "BACKOFFICE"].includes(role),
     );

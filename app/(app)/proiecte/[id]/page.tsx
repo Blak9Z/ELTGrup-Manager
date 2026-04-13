@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { ActivityTimeline } from "@/src/components/ui/activity-timeline";
 import { Badge } from "@/src/components/ui/badge";
 import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { assertProjectAccess } from "@/src/lib/access-scope";
+import { buildProjectTimeline } from "@/src/lib/timeline";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 
@@ -43,12 +45,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   const totalCost = project.costs.reduce((sum, cost) => sum + Number(cost.amount), 0);
   const totalInvoiced = project.invoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount), 0);
-  const activity = await prisma.activityLog.findMany({
-    where: { entityId: id },
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
-    take: 30,
-  });
+  const timeline = await buildProjectTimeline(id, 40);
 
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
@@ -57,9 +54,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           title={project.title}
           subtitle={`${project.code} • ${project.client.name} • ${project.siteAddress}`}
           actions={
-            <Link href="/proiecte" className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
-              Inapoi la proiecte
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/calendar?projectId=${project.id}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+                Calendar
+              </Link>
+              <Link href={`/pontaj?projectId=${project.id}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+                Pontaj
+              </Link>
+              <Link href={`/rapoarte-zilnice?projectId=${project.id}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+                Rapoarte
+              </Link>
+              <Link href="/proiecte" className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+                Inapoi
+              </Link>
+            </div>
           }
         />
 
@@ -183,16 +191,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-[#f0f5ff]">Istoric activitate</h2>
-          <div className="mt-3 space-y-2">
-            {activity.map((entry) => (
-              <div key={entry.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(14,24,43,0.72)] p-3 text-sm">
-                <p className="font-semibold text-[#ecf2ff]">{entry.action}</p>
-                <p className="text-xs text-[#a0b3ce]">
-                  {entry.user ? `${entry.user.firstName} ${entry.user.lastName}` : "Sistem"} • {formatDate(entry.createdAt)}
-                </p>
-              </div>
-            ))}
+          <h2 className="text-lg font-semibold text-[#f0f5ff]">Timeline proiect (operational)</h2>
+          <p className="mt-1 text-xs text-[#9fb2cd]">Un singur fir cronologic pentru update-uri, documente, costuri, materiale, lucrari si facturi.</p>
+          <div className="mt-3">
+            <ActivityTimeline events={timeline} />
           </div>
         </Card>
       </div>

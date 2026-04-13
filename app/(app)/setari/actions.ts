@@ -5,9 +5,23 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { ActionState } from "@/src/lib/action-state";
+import { logActivity } from "@/src/lib/activity-log";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
-import { SUPER_ADMIN_EMAIL, isAbsoluteSuperAdmin } from "@/src/lib/rbac";
+import { hasSuperAdminRole } from "@/src/lib/rbac";
+
+function hasSuperAdminRoleKey(roleKeys: RoleKey[]) {
+  return roleKeys.includes(RoleKey.SUPER_ADMIN);
+}
+
+async function countActiveSuperAdmins(tx: typeof prisma = prisma) {
+  return tx.userRole.count({
+    where: {
+      role: { key: RoleKey.SUPER_ADMIN },
+      user: { deletedAt: null, isActive: true },
+    },
+  });
+}
 
 const createUserSchema = z.object({
   firstName: z.string().trim().min(2),
@@ -16,11 +30,12 @@ const createUserSchema = z.object({
   password: z.string().min(6),
   roleKey: z.nativeEnum(RoleKey),
   positionTitle: z.string().trim().optional(),
+  confirmSuperAdminAssignment: z.string().optional(),
 });
 
 export async function createUserAction(_: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    await requirePermission("USERS", "CREATE");
+    const actor = await requirePermission("USERS", "CREATE");
 
     const parsed = createUserSchema.safeParse({
       firstName: formData.get("firstName"),
@@ -29,18 +44,24 @@ export async function createUserAction(_: ActionState, formData: FormData): Prom
       password: formData.get("password"),
       roleKey: formData.get("roleKey"),
       positionTitle: formData.get("positionTitle") || undefined,
+      confirmSuperAdminAssignment: formData.get("confirmSuperAdminAssignment") || undefined,
     });
 
     if (!parsed.success) {
       return { ok: false, message: "Date utilizator invalide.", errors: parsed.error.flatten().fieldErrors };
     }
 
-    if (parsed.data.roleKey === RoleKey.SUPER_ADMIN && !isAbsoluteSuperAdmin(parsed.data.email)) {
-      return { ok: false, message: `Rolul SUPER_ADMIN este rezervat pentru ${SUPER_ADMIN_EMAIL}.` };
+    if (parsed.data.roleKey === RoleKey.SUPER_ADMIN) {
+      if (!hasSuperAdminRole(actor.roleKeys || [])) {
+        return { ok: false, message: "Doar un utilizator cu rol SUPER_ADMIN poate atribui acest rol." };
+      }
+      if (parsed.data.confirmSuperAdminAssignment !== "CONFIRM_SUPER_ADMIN") {
+        return { ok: false, message: "Confirma explicit atribuirea rolului SUPER_ADMIN." };
+      }
     }
 
     const role = await prisma.role.findUnique({ where: { key: parsed.data.roleKey } });
-    if (!role) throw new Error("Rol inexistent.");
+    if (!role) throw new Error("Rol inexistent. Actualizeaza pagina si incearca din nou.");
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
     const existingUser = await prisma.user.findUnique({
@@ -85,13 +106,26 @@ export async function createUserAction(_: ActionState, formData: FormData): Prom
             },
           });
         }
+
+        await tx.activityLog.create({
+          data: {
+            userId: actor.id,
+            entityType: "USER",
+            entityId: existingUser.id,
+            action: "ROLE_ASSIGNED_ON_REACTIVATE",
+            diff: {
+              roleKey: parsed.data.roleKey,
+              targetEmail: parsed.data.email,
+            },
+          },
+        });
       });
 
       revalidatePath("/setari");
       return { ok: true, message: "Utilizator reactivat cu succes." };
     }
 
-    await prisma.user.create({
+    const createdUser = await prisma.user.create({
       data: {
         firstName: parsed.data.firstName,
         lastName: parsed.data.lastName,
@@ -106,6 +140,17 @@ export async function createUserAction(_: ActionState, formData: FormData): Prom
               },
             }
           : undefined,
+      },
+    });
+
+    await logActivity({
+      userId: actor.id,
+      entityType: "USER",
+      entityId: createdUser.id,
+      action: "ROLE_ASSIGNED_ON_CREATE",
+      diff: {
+        roleKey: parsed.data.roleKey,
+        targetEmail: parsed.data.email,
       },
     });
 
@@ -125,60 +170,113 @@ function buildDeletedEmail(email: string, userId: string) {
   return `${local}+deleted-${Date.now()}-${userId.slice(-6)}@${domain}`;
 }
 
-const updateRolesSchema = z.object({
+const updateRoleSchema = z.object({
   userId: z.string().cuid(),
-  roleKeys: z.array(z.nativeEnum(RoleKey)).min(1),
+  roleKey: z.nativeEnum(RoleKey),
+  confirmSuperAdminAssignment: z.string().optional(),
 });
 
 export async function updateUserRolesAction(formData: FormData) {
   const actor = await requirePermission("USERS", "UPDATE");
 
-  const parsed = updateRolesSchema.safeParse({
+  const explicitRoleKey = formData.get("roleKey");
+  const legacyRoleKeys = formData.getAll("roleKeys").map(String).filter(Boolean);
+  if (!explicitRoleKey && legacyRoleKeys.length === 0) {
+    throw new Error("Nu ai selectat niciun rol.");
+  }
+  if (!explicitRoleKey && legacyRoleKeys.length > 1) {
+    throw new Error("Selecteaza un singur rol.");
+  }
+  const submittedRoleKey = String(explicitRoleKey || legacyRoleKeys[0]);
+
+  const parsed = updateRoleSchema.safeParse({
     userId: formData.get("userId"),
-    roleKeys: formData.getAll("roleKeys").map(String),
+    roleKey: submittedRoleKey,
+    confirmSuperAdminAssignment: formData.get("confirmSuperAdminAssignment") || undefined,
   });
 
-  if (!parsed.success) throw new Error("Date roluri invalide.");
+  if (!parsed.success) throw new Error("Date rol invalide.");
 
-  const target = await prisma.user.findUnique({ where: { id: parsed.data.userId }, select: { id: true, email: true } });
+  const target = await prisma.user.findUnique({
+    where: { id: parsed.data.userId },
+    select: {
+      id: true,
+      email: true,
+      roles: { include: { role: { select: { key: true } } } },
+    },
+  });
   if (!target) throw new Error("Utilizator inexistent.");
 
-  if (isAbsoluteSuperAdmin(target.email)) {
-    await ensureSuperAdminRole(target.id);
-    revalidatePath("/setari");
-    return;
+  const targetHasSuperAdmin = target.roles.some((item) => item.role.key === RoleKey.SUPER_ADMIN);
+  const actorHasSuperAdmin = hasSuperAdminRole(actor.roleKeys || []);
+
+  if (targetHasSuperAdmin && parsed.data.roleKey !== RoleKey.SUPER_ADMIN) {
+    const activeSuperAdminCount = await countActiveSuperAdmins();
+    if (activeSuperAdminCount <= 1) {
+      throw new Error("Nu poti elimina ultimul SUPER_ADMIN activ.");
+    }
   }
 
-  if (parsed.data.roleKeys.includes(RoleKey.SUPER_ADMIN)) {
-    throw new Error(`Rolul SUPER_ADMIN este rezervat pentru ${SUPER_ADMIN_EMAIL}.`);
+  if (parsed.data.roleKey === RoleKey.SUPER_ADMIN) {
+    if (!actorHasSuperAdmin) {
+      throw new Error("Doar un utilizator cu rol SUPER_ADMIN poate atribui acest rol.");
+    }
+    if (parsed.data.confirmSuperAdminAssignment !== "CONFIRM_SUPER_ADMIN") {
+      throw new Error("Confirma explicit atribuirea rolului SUPER_ADMIN.");
+    }
   }
 
-  const roles = await prisma.role.findMany({ where: { key: { in: parsed.data.roleKeys } }, select: { id: true } });
+  const role = await prisma.role.findUnique({ where: { key: parsed.data.roleKey }, select: { id: true, key: true } });
+  if (!role) throw new Error("Rol inexistent. Actualizeaza pagina si incearca din nou.");
 
-  await prisma.$transaction([
-    prisma.userRole.deleteMany({ where: { userId: target.id } }),
-    prisma.userRole.createMany({
-      data: roles.map((role) => ({ userId: target.id, roleId: role.id })),
-      skipDuplicates: true,
-    }),
-  ]);
+  const previousRoles = target.roles.map((item) => item.role.key);
 
-  if (isAbsoluteSuperAdmin(actor.email)) {
-    await ensureSuperAdminRole(target.id);
-  }
+  await prisma.$transaction(async (tx) => {
+    await tx.userRole.deleteMany({ where: { userId: target.id } });
+    await tx.userRole.create({
+      data: { userId: target.id, roleId: role.id },
+    });
+
+    await tx.activityLog.create({
+      data: {
+        userId: actor.id,
+        entityType: "USER",
+        entityId: target.id,
+        action: "ROLE_UPDATED",
+        diff: {
+          previousRoleKeys: previousRoles,
+          nextRoleKey: role.key,
+          targetEmail: target.email,
+        },
+      },
+    });
+  });
 
   revalidatePath("/setari");
 }
 
 export async function toggleUserActiveAction(formData: FormData) {
-  await requirePermission("USERS", "UPDATE");
+  const actor = await requirePermission("USERS", "UPDATE");
 
   const userId = String(formData.get("userId") || "");
-  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true, email: true } });
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, isActive: true, roles: { include: { role: { select: { key: true } } } } },
+  });
   if (!target) throw new Error("Utilizator inexistent.");
 
-  if (isAbsoluteSuperAdmin(target.email)) {
-    throw new Error(`${SUPER_ADMIN_EMAIL} nu poate fi dezactivat.`);
+  const targetHasSuperAdmin = target.roles.some((item) => item.role.key === RoleKey.SUPER_ADMIN);
+  if (targetHasSuperAdmin && target.isActive) {
+    const activeSuperAdminCount = await countActiveSuperAdmins();
+    if (activeSuperAdminCount <= 1) {
+      throw new Error("Nu poti dezactiva ultimul SUPER_ADMIN activ.");
+    }
+  }
+  if (actor.id === target.id && hasSuperAdminRoleKey(actor.roleKeys || []) && target.isActive) {
+    const activeSuperAdminCount = await countActiveSuperAdmins();
+    if (activeSuperAdminCount <= 1) {
+      throw new Error("Nu iti poti dezactiva propriul cont cand esti ultimul SUPER_ADMIN.");
+    }
   }
 
   await prisma.user.update({ where: { id: target.id }, data: { isActive: !target.isActive } });
@@ -192,14 +290,18 @@ export async function deleteUserAction(formData: FormData) {
 
   const target = await prisma.user.findUnique({
     where: { id: parsed.data.userId },
-    select: { id: true, email: true },
+    select: { id: true, email: true, roles: { include: { role: { select: { key: true } } } } },
   });
   if (!target) throw new Error("Utilizator inexistent.");
-  if (isAbsoluteSuperAdmin(target.email)) {
-    throw new Error(`${SUPER_ADMIN_EMAIL} nu poate fi sters.`);
-  }
   if (actor.id === target.id) {
     throw new Error("Nu iti poti sterge propriul cont.");
+  }
+  const targetHasSuperAdmin = target.roles.some((item) => item.role.key === RoleKey.SUPER_ADMIN);
+  if (targetHasSuperAdmin) {
+    const activeSuperAdminCount = await countActiveSuperAdmins();
+    if (activeSuperAdminCount <= 1) {
+      throw new Error("Nu poti sterge ultimul SUPER_ADMIN activ.");
+    }
   }
 
   const deletedAt = new Date();
@@ -222,15 +324,4 @@ export async function deleteUserAction(formData: FormData) {
   });
 
   revalidatePath("/setari");
-}
-
-async function ensureSuperAdminRole(userId: string) {
-  const role = await prisma.role.findUnique({ where: { key: RoleKey.SUPER_ADMIN }, select: { id: true } });
-  if (!role) return;
-
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId, roleId: role.id } },
-    update: {},
-    create: { userId, roleId: role.id },
-  });
 }
