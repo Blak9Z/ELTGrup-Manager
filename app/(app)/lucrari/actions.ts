@@ -120,11 +120,28 @@ export async function updateWorkOrderStatus(formData: FormData) {
   const status = formData.get("status") as WorkOrderStatus;
   await assertWorkOrderAccess(currentUser, id);
 
-  const before = await prisma.workOrder.findUnique({ where: { id }, select: { status: true } });
+  const before = await prisma.workOrder.findUnique({
+    where: { id },
+    select: {
+      status: true,
+      title: true,
+      responsibleId: true,
+      project: { select: { title: true } },
+    },
+  });
+  if (!before) throw new Error("Lucrarea nu a fost gasita.");
+
   const updated = await prisma.workOrder.update({
     where: { id },
     data: { status },
-    select: { id: true, status: true, projectId: true },
+    select: {
+      id: true,
+      status: true,
+      projectId: true,
+      title: true,
+      responsibleId: true,
+      project: { select: { title: true } },
+    },
   });
 
   await logActivity({
@@ -137,6 +154,16 @@ export async function updateWorkOrderStatus(formData: FormData) {
       afterStatus: updated.status,
     },
   });
+
+  if (before.status !== updated.status && updated.responsibleId && updated.responsibleId !== currentUser.id) {
+    await notifyUser({
+      userId: updated.responsibleId,
+      type: updated.status === WorkOrderStatus.BLOCKED ? NotificationType.DELAYED_PROJECT : NotificationType.NEW_ASSIGNMENT,
+      title: "Actualizare status lucrare",
+      message: `${updated.title} (${updated.project.title}) este acum ${updated.status}.`,
+      actionUrl: `/lucrari/${updated.id}`,
+    });
+  }
 
   revalidateWorkOrderRelatedPaths({ workOrderId: updated.id, projectId: updated.projectId });
 }
@@ -239,6 +266,11 @@ export async function bulkWorkOrdersAction(formData: FormData) {
     });
   } else {
     if (!parsed.data.status) throw new Error("Statusul este obligatoriu.");
+    const workOrdersBefore = await prisma.workOrder.findMany({
+      where: { id: { in: scopedIds }, deletedAt: null, responsibleId: { not: null } },
+      select: { id: true, responsibleId: true, status: true },
+    });
+
     const result = await prisma.workOrder.updateMany({
       where: { id: { in: scopedIds }, deletedAt: null },
       data: { status: parsed.data.status },
@@ -250,6 +282,28 @@ export async function bulkWorkOrdersAction(formData: FormData) {
       action: "WORK_ORDERS_STATUS_UPDATED_BULK",
       diff: { ids: scopedIds, status: parsed.data.status, affectedRows: result.count },
     });
+
+    const notificationsPerResponsible = new Map<string, number>();
+    for (const workOrder of workOrdersBefore) {
+      if (!workOrder.responsibleId || workOrder.responsibleId === actor.id) continue;
+      if (workOrder.status === parsed.data.status) continue;
+      notificationsPerResponsible.set(
+        workOrder.responsibleId,
+        (notificationsPerResponsible.get(workOrder.responsibleId) || 0) + 1,
+      );
+    }
+
+    await Promise.all(
+      Array.from(notificationsPerResponsible.entries()).map(([userId, count]) =>
+        notifyUser({
+          userId,
+          type: parsed.data.status === WorkOrderStatus.BLOCKED ? NotificationType.DELAYED_PROJECT : NotificationType.NEW_ASSIGNMENT,
+          title: "Actualizare in masa lucrari",
+          message: `${count} ${count === 1 ? "lucrare" : "lucrari"} au fost setate la status ${parsed.data.status}.`,
+          actionUrl: "/lucrari",
+        }),
+      ),
+    );
   }
 
   const affectedWorkOrders = await prisma.workOrder.findMany({

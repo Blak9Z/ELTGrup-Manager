@@ -6,7 +6,7 @@ import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { assertProjectAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { ActionState } from "@/src/lib/action-state";
-import { notifyRoles } from "@/src/lib/notifications";
+import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
@@ -112,10 +112,16 @@ export async function updateProjectStatus(formData: FormData) {
   const status = formData.get("status") as ProjectStatus;
   await assertProjectAccess(currentUser, id);
 
-  const before = await prisma.project.findUnique({ where: { id }, select: { status: true, title: true } });
+  const before = await prisma.project.findUnique({
+    where: { id },
+    select: { status: true, title: true, managerId: true },
+  });
+  if (!before) throw new Error("Proiect inexistent.");
+
   const updated = await prisma.project.update({
     where: { id },
     data: { status },
+    select: { id: true, title: true, status: true, managerId: true },
   });
 
   await logActivity({
@@ -133,6 +139,16 @@ export async function updateProjectStatus(formData: FormData) {
       title: "Proiect blocat",
       message: `Proiectul ${updated.title} a fost marcat ca blocat.`,
       actionUrl: `/proiecte/${id}`,
+    });
+  }
+
+  if (before.status !== updated.status && updated.managerId && updated.managerId !== currentUser.id) {
+    await notifyUser({
+      userId: updated.managerId,
+      type: updated.status === ProjectStatus.BLOCKED ? NotificationType.DELAYED_PROJECT : NotificationType.NEW_ASSIGNMENT,
+      title: "Actualizare status proiect",
+      message: `${updated.title} este acum ${updated.status}.`,
+      actionUrl: `/proiecte/${updated.id}`,
     });
   }
 
@@ -200,6 +216,11 @@ export async function bulkProjectsAction(formData: FormData) {
     });
   } else {
     if (!parsed.data.status) throw new Error("Statusul este obligatoriu.");
+    const projectsBefore = await prisma.project.findMany({
+      where: { id: { in: scopedIds }, deletedAt: null, managerId: { not: null } },
+      select: { id: true, managerId: true, status: true },
+    });
+
     const result = await prisma.project.updateMany({
       where: { id: { in: scopedIds }, deletedAt: null },
       data: { status: parsed.data.status },
@@ -211,6 +232,35 @@ export async function bulkProjectsAction(formData: FormData) {
       action: "PROJECTS_STATUS_UPDATED_BULK",
       diff: { ids: scopedIds, status: parsed.data.status, affectedRows: result.count },
     });
+
+    if (parsed.data.status === ProjectStatus.BLOCKED && result.count > 0) {
+      await notifyRoles({
+        roleKeys: [RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER],
+        type: NotificationType.DELAYED_PROJECT,
+        title: "Proiecte blocate",
+        message: `${result.count} proiecte au fost marcate ca blocate.`,
+        actionUrl: "/proiecte",
+      });
+    }
+
+    const notificationsPerManager = new Map<string, number>();
+    for (const project of projectsBefore) {
+      if (!project.managerId || project.managerId === actor.id) continue;
+      if (project.status === parsed.data.status) continue;
+      notificationsPerManager.set(project.managerId, (notificationsPerManager.get(project.managerId) || 0) + 1);
+    }
+
+    await Promise.all(
+      Array.from(notificationsPerManager.entries()).map(([userId, count]) =>
+        notifyUser({
+          userId,
+          type: parsed.data.status === ProjectStatus.BLOCKED ? NotificationType.DELAYED_PROJECT : NotificationType.NEW_ASSIGNMENT,
+          title: "Actualizare in masa proiecte",
+          message: `${count} ${count === 1 ? "proiect" : "proiecte"} au fost setate la ${parsed.data.status}.`,
+          actionUrl: "/proiecte",
+        }),
+      ),
+    );
   }
 
   revalidateProjectRelatedPaths();

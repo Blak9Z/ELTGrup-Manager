@@ -8,9 +8,10 @@ export async function markNotificationRead(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Sesiune invalida");
 
-  const id = String(formData.get("id"));
+  const id = String(formData.get("id") || "");
+  if (!id) throw new Error("Notificare invalida.");
   await prisma.notification.updateMany({
-    where: { id, userId: session.user.id },
+    where: { id, userId: session.user.id, isRead: false },
     data: { isRead: true },
   });
 

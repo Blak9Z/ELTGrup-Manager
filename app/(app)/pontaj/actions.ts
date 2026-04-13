@@ -1,12 +1,12 @@
 "use server";
 
-import { NotificationType, TimeEntryStatus } from "@prisma/client";
+import { NotificationType, RoleKey, TimeEntryStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState } from "@/src/lib/action-state";
-import { notifyUser } from "@/src/lib/notifications";
+import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
@@ -112,6 +112,9 @@ async function createTimeEntryInternal(formData: FormData) {
       status: TimeEntryStatus.SUBMITTED,
       note: parsed.data.note,
     },
+    include: {
+      project: { select: { title: true } },
+    },
   });
 
   await logActivity({
@@ -125,6 +128,14 @@ async function createTimeEntryInternal(formData: FormData) {
       durationMinutes: created.durationMinutes,
       breakMinutes: created.breakMinutes,
     },
+  });
+
+  await notifyRoles({
+    roleKeys: [RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE],
+    type: NotificationType.TIMESHEET_APPROVAL_REQUIRED,
+    title: "Pontaj nou pentru aprobare",
+    message: `${created.project.title}: ${created.durationMinutes} minute raportate.`,
+    actionUrl: "/pontaj",
   });
 
   revalidatePath("/pontaj");
@@ -230,6 +241,11 @@ export async function bulkTimeEntriesAction(formData: FormData) {
     scopedIds = parsed.data.ids.filter((id) => allowedSet.has(id));
   }
   if (scopedIds.length === 0) throw new Error("Nu ai acces la pontajele selectate.");
+  const submittedEntries = await prisma.timeEntry.findMany({
+    where: { id: { in: scopedIds }, status: TimeEntryStatus.SUBMITTED },
+    select: { id: true, userId: true },
+  });
+
   const result = await prisma.timeEntry.updateMany({
     where: { id: { in: scopedIds }, status: TimeEntryStatus.SUBMITTED },
     data: {
@@ -246,6 +262,27 @@ export async function bulkTimeEntriesAction(formData: FormData) {
     action: `TIME_ENTRIES_${status}_BULK`,
     diff: { ids: scopedIds, affectedRows: result.count },
   });
+
+  const notificationsPerUser = new Map<string, number>();
+  for (const entry of submittedEntries) {
+    if (entry.userId === currentUser.id) continue;
+    notificationsPerUser.set(entry.userId, (notificationsPerUser.get(entry.userId) || 0) + 1);
+  }
+
+  await Promise.all(
+    Array.from(notificationsPerUser.entries()).map(([userId, count]) =>
+      notifyUser({
+        userId,
+        type: NotificationType.TIMESHEET_APPROVAL_REQUIRED,
+        title: status === TimeEntryStatus.APPROVED ? "Pontaj aprobat" : "Pontaj respins",
+        message:
+          status === TimeEntryStatus.APPROVED
+            ? `${count} ${count === 1 ? "inregistrare" : "inregistrari"} de pontaj au fost aprobate.`
+            : `${count} ${count === 1 ? "inregistrare" : "inregistrari"} de pontaj au fost respinse.`,
+        actionUrl: "/pontaj",
+      }),
+    ),
+  );
 
   revalidatePath("/pontaj");
   revalidatePath("/panou");

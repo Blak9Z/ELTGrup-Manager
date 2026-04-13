@@ -68,10 +68,12 @@ export function isPrivilegedUser(user: Pick<AuthUserLike, "roleKeys" | "email">)
 }
 
 export function canAccessModule(user: Pick<AuthUserLike, "roleKeys" | "email">, module: AppModule) {
-  if (isPrivilegedUser(user)) return true;
+  const normalizedRoles = normalizeRoleKeys(user.roleKeys);
+  if (normalizedRoles.length === 0) return false;
+  if (module === "notifications") return true;
+  if (normalizedRoles.some((role) => privilegedRoles.has(role))) return true;
 
   const policy = modulePolicies[module];
-  const normalizedRoles = normalizeRoleKeys(user.roleKeys);
   if (policy.roles && !normalizedRoles.some((role) => policy.roles!.includes(role))) {
     // role keys can come from JWT as strings
     return false;
