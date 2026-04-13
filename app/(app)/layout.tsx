@@ -4,8 +4,6 @@ import { Topbar } from "@/src/components/layout/topbar";
 import { auth } from "@/src/lib/auth";
 import { getVisibleModules } from "@/src/lib/access-control";
 
-export const dynamic = "force-dynamic";
-
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
 

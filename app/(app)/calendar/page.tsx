@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
@@ -7,7 +8,16 @@ import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
 import { prisma } from "@/src/lib/prisma";
 import { createCalendarTaskAction } from "./actions";
-import { PlanningBoard } from "./planning-board";
+
+const PlanningBoard = dynamic(() => import("./planning-board").then((module) => module.PlanningBoard), {
+  loading: () => (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+      {Array.from({ length: 7 }).map((_, index) => (
+        <div key={index} className="min-h-56 animate-pulse rounded-2xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.7)] p-3" />
+      ))}
+    </div>
+  ),
+});
 
 export default async function CalendarPage({
   searchParams,
@@ -53,9 +63,17 @@ export default async function CalendarPage({
         teamId: params.teamId && (!scope.teamId || scope.teamId === params.teamId) ? params.teamId : undefined,
         title: params.q ? { contains: params.q, mode: "insensitive" } : undefined,
       },
-      include: { project: true, team: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        priority: true,
+        startDate: true,
+        project: { select: { title: true } },
+        team: { select: { name: true } },
+      },
       orderBy: { startDate: "asc" },
-      take: 120,
+      take: 80,
     }),
   ]);
 

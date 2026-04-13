@@ -96,7 +96,15 @@ export default async function DashboardPage() {
     prisma.workOrder.count({ where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } } }),
     prisma.workOrder.findMany({
       where: { ...scopedWorkOrderWhere, startDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
-      include: { project: true, team: true },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        status: true,
+        description: true,
+        project: { select: { title: true } },
+        team: { select: { name: true } },
+      },
       orderBy: { startDate: "asc" },
       take: 8,
     }),
@@ -106,7 +114,18 @@ export default async function DashboardPage() {
       where: { ...scopedProjectIdWhere, status: { in: ["SENT", "OVERDUE", "PARTIAL_PAID"] } },
       _sum: { totalAmount: true, paidAmount: true },
     }),
-    prisma.activityLog.findMany({ orderBy: { createdAt: "desc" }, include: { user: true }, take: 8 }),
+    prisma.activityLog.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        createdAt: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
+      take: 8,
+    }),
     prisma.timeEntry.groupBy({
       by: ["projectId"],
       where: scopedProjectIdWhere,

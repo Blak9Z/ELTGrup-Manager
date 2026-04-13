@@ -61,7 +61,14 @@ export default async function MaterialePage({
     }),
     prisma.material.count({ where: materialWhere }),
     prisma.materialRequest.findMany({
-      include: { material: true, project: true, requestedBy: true },
+      select: {
+        id: true,
+        quantity: true,
+        status: true,
+        material: { select: { name: true, unitOfMeasure: true } },
+        project: { select: { title: true } },
+        requestedBy: { select: { firstName: true, lastName: true } },
+      },
       where: {
         status: params.status || undefined,
         ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }),
@@ -174,7 +181,29 @@ export default async function MaterialePage({
           {materials.length === 0 ? (
             <EmptyState title="Nu exista materiale" description="Configureaza catalogul de materiale." />
           ) : (
-            <div className="overflow-x-auto">
+            <div>
+            <div className="space-y-3 md:hidden">
+              {materials.map((material) => {
+                const stock = stockByMaterial.get(material.id) || 0;
+                const min = Number(material.minStockLevel || 0);
+                return (
+                  <div key={material.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#e8f2ff]">{material.name}</p>
+                        <p className="text-xs text-[#95a9c4]">{material.code} • {material.unitOfMeasure}</p>
+                      </div>
+                      {stock <= min ? <Badge tone="danger">Stoc scazut</Badge> : <Badge tone="success">OK</Badge>}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#cfdff5]">
+                      <p>Stoc: {stock.toFixed(2)}</p>
+                      <p>Cost: {material.internalCost?.toString() || "0"} RON</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <thead><tr><TH>Cod</TH><TH>Material</TH><TH>UM</TH><TH>Stoc curent</TH><TH>Cost intern</TH><TH>Alerte</TH></tr></thead>
                 <tbody>
@@ -194,6 +223,7 @@ export default async function MaterialePage({
                   })}
                 </tbody>
               </Table>
+            </div>
             </div>
           )}
           <div className="mt-3 flex items-center justify-between text-sm text-[#9fb3ce]">

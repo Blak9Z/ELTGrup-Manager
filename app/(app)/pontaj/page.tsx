@@ -54,6 +54,7 @@ export default async function PontajPage({
         deletedAt: null,
         ...(scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
       },
+      select: { id: true, title: true },
       orderBy: { title: "asc" },
     }),
     prisma.workOrder.findMany({
@@ -61,13 +62,29 @@ export default async function PontajPage({
         deletedAt: null,
         ...(scope.projectIds === null ? {} : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
       },
+      select: { id: true, title: true },
       orderBy: { title: "asc" },
       take: 100,
     }),
-    prisma.user.findMany({ where: { isActive: true, deletedAt: null }, orderBy: [{ firstName: "asc" }, { lastName: "asc" }] }),
+    prisma.user.findMany({
+      where: { isActive: true, deletedAt: null },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+    }),
     prisma.timeEntry.findMany({
       where,
-      include: { user: true, project: true, workOrder: true },
+      select: {
+        id: true,
+        startAt: true,
+        endAt: true,
+        durationMinutes: true,
+        breakMinutes: true,
+        status: true,
+        approvedAt: true,
+        user: { select: { firstName: true, lastName: true } },
+        project: { select: { title: true } },
+        workOrder: { select: { title: true } },
+      },
       orderBy: { startAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -156,7 +173,34 @@ export default async function PontajPage({
           {entries.length === 0 ? (
             <EmptyState title="Nu exista pontaj" description="Adauga prima inregistrare de timp." />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[color:var(--border)]">
+            <div>
+            <div className="space-y-3 md:hidden">
+              {entries.map((entry) => (
+                <div key={entry.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#e7f1ff]">{entry.user.firstName} {entry.user.lastName}</p>
+                      <p className="text-xs text-[#95a9c4]">{entry.project.title}</p>
+                    </div>
+                    <Badge tone={entry.status === "APPROVED" ? "success" : entry.status === "REJECTED" ? "danger" : "warning"}>{entry.status}</Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-[#95a9c4]">{formatDateTime(entry.startAt)} {entry.endAt ? `- ${formatDateTime(entry.endAt)}` : "(deschis)"}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#d6e4f9]">
+                    <p>Durata: {Math.round(entry.durationMinutes / 60)} h</p>
+                    <p>Pauza: {entry.breakMinutes} min</p>
+                  </div>
+                  {entry.status === "SUBMITTED" ? (
+                    <form action={approveTimeEntry} className="mt-3">
+                      <input type="hidden" name="id" value={entry.id} />
+                      <Button type="submit" size="sm" className="w-full">
+                        Aproba
+                      </Button>
+                    </form>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto rounded-xl border border-[color:var(--border)] md:block">
               <HeroTable aria-label="Pontaj">
                 <HeroTable.Content>
                 <HeroTable.Header>
@@ -203,6 +247,7 @@ export default async function PontajPage({
                 </HeroTable.Body>
                 </HeroTable.Content>
               </HeroTable>
+            </div>
             </div>
           )}
         </Card>

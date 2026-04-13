@@ -54,16 +54,32 @@ export default async function WorkOrdersPage({
         deletedAt: null,
         ...(scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
       },
+      select: { id: true, title: true },
       orderBy: { title: "asc" },
     }),
-    prisma.user.findMany({ where: { isActive: true, deletedAt: null }, orderBy: { firstName: "asc" } }),
+    prisma.user.findMany({
+      where: { isActive: true, deletedAt: null },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: { firstName: "asc" },
+    }),
     prisma.team.findMany({
       where: scope.teamId ? { deletedAt: null, id: scope.teamId } : { deletedAt: null },
+      select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
     prisma.workOrder.findMany({
       where,
-      include: { project: true, responsible: true, team: true },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        dueDate: true,
+        priority: true,
+        status: true,
+        project: { select: { title: true } },
+        responsible: { select: { firstName: true, lastName: true } },
+        team: { select: { name: true } },
+      },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -147,7 +163,51 @@ export default async function WorkOrdersPage({
           {workOrders.length === 0 ? (
             <EmptyState title="Nu exista lucrari" description="Adauga primul ordin de lucru pentru santier." />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[color:var(--border)]">
+            <div>
+            <div className="space-y-3 md:hidden">
+              {workOrders.map((item) => (
+                <div key={item.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Link href={`/lucrari/${item.id}`} className="font-semibold text-[#c6dbff] hover:underline">
+                        {item.title}
+                      </Link>
+                      <p className="text-xs text-[#95a9c4]">{item.project.title}</p>
+                    </div>
+                    <Badge tone={item.status === "DONE" ? "success" : item.status === "BLOCKED" ? "danger" : item.status === "IN_PROGRESS" ? "info" : "neutral"}>
+                      {item.status}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-[#95a9c4]">{item.description?.slice(0, 120) || "-"}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#d6e4f9]">
+                    <p>Echipa: {item.team?.name || "-"}</p>
+                    <p>Termen: {item.dueDate ? formatDate(item.dueDate) : "-"}</p>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <form action={updateWorkOrderStatus} className="grid grid-cols-[1fr_auto] gap-2">
+                      <input type="hidden" name="id" value={item.id} />
+                      <select name="status" defaultValue={item.status} className="h-10 rounded-md px-2 text-sm">
+                        {Object.values(WorkOrderStatus).map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                      <Button variant="ghost" size="sm" type="submit">
+                        Salveaza
+                      </Button>
+                    </form>
+                    <form action={deleteWorkOrder}>
+                      <input type="hidden" name="id" value={item.id} />
+                      <Button variant="destructive" size="sm" type="submit" className="w-full">
+                        Sterge
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto rounded-xl border border-[color:var(--border)] md:block">
               <HeroTable aria-label="Tabel lucrari" className="bg-transparent">
                 <HeroTable.Content>
                 <HeroTable.Header>
@@ -207,6 +267,7 @@ export default async function WorkOrdersPage({
                 </HeroTable.Body>
                 </HeroTable.Content>
               </HeroTable>
+            </div>
             </div>
           )}
 

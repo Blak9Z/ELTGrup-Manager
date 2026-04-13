@@ -61,9 +61,19 @@ export default async function ProjectsPage({
   const [projects, total, clients] = await Promise.all([
     prisma.project.findMany({
       where,
-      include: {
-        client: true,
-        manager: true,
+      select: {
+        id: true,
+        code: true,
+        title: true,
+        siteAddress: true,
+        startDate: true,
+        endDate: true,
+        estimatedBudget: true,
+        contractValue: true,
+        progressPercent: true,
+        status: true,
+        client: { select: { name: true } },
+        manager: { select: { firstName: true, lastName: true } },
       },
       orderBy: { updatedAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -75,6 +85,7 @@ export default async function ProjectsPage({
         scope.projectIds === null
           ? { deletedAt: null }
           : { deletedAt: null, projects: { some: { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } } } },
+      select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -144,7 +155,53 @@ export default async function ProjectsPage({
           {projects.length === 0 ? (
             <EmptyState title="Nu exista proiecte" description="Adauga primul proiect pentru a incepe planificarea." />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[color:var(--border)]">
+            <div>
+            <div className="space-y-3 md:hidden">
+              {projects.map((project) => {
+                const status = mapStatus(project.status);
+                return (
+                  <div key={project.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#b9d4ff] hover:underline">
+                          {project.title}
+                        </Link>
+                        <p className="text-xs text-[#95a9c4]">{project.code}</p>
+                      </div>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </div>
+                    <p className="mt-2 text-xs text-[#95a9c4]">{project.client.name}</p>
+                    <p className="text-xs text-[#95a9c4]">{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Manager nealocat"}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#cfe0f6]">
+                      <p>Buget: {formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
+                      <p>Progres: {project.progressPercent}%</p>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <form action={updateProjectStatus} className="grid grid-cols-[1fr_auto] gap-2">
+                        <input type="hidden" name="id" value={project.id} />
+                        <select name="status" defaultValue={project.status} className="h-10 rounded-md px-2 text-sm">
+                          {Object.values(ProjectStatus).map((st) => (
+                            <option key={st} value={st}>
+                              {st}
+                            </option>
+                          ))}
+                        </select>
+                        <Button size="sm" variant="ghost" type="submit">
+                          Salveaza
+                        </Button>
+                      </form>
+                      <form action={deleteProject}>
+                        <input type="hidden" name="id" value={project.id} />
+                        <Button size="sm" variant="destructive" type="submit" className="w-full">
+                          Sterge
+                        </Button>
+                      </form>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hidden overflow-x-auto rounded-xl border border-[color:var(--border)] md:block">
               <HeroTable aria-label="Tabel proiecte" className="bg-transparent">
                 <HeroTable.Content>
                 <HeroTable.Header>
@@ -211,6 +268,7 @@ export default async function ProjectsPage({
                 </HeroTable.Body>
                 </HeroTable.Content>
               </HeroTable>
+            </div>
             </div>
           )}
           <div className="mt-4 flex items-center justify-between text-sm text-[#9cb0cb]">
