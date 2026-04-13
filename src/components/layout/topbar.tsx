@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Bell, Search } from "lucide-react";
-import { auth } from "@/src/lib/auth";
 import type { AppModule } from "@/src/lib/access-control";
-import { prisma } from "@/src/lib/prisma";
+import { getUnreadNotificationCount } from "@/src/lib/notifications";
 import { SignOutButton } from "@/src/components/auth/sign-out-button";
 import { Input } from "@/src/components/ui/input";
 
@@ -14,17 +13,15 @@ const mobileQuickLinks = [
   { module: "field" as AppModule, href: "/teren", label: "Teren" },
 ];
 
-export async function Topbar({ visibleModules }: { visibleModules: AppModule[] }) {
-  const session = await auth();
+export async function Topbar({
+  visibleModules,
+  user,
+}: {
+  visibleModules: AppModule[];
+  user: { id: string; name?: string | null };
+}) {
   const visibleSet = new Set(visibleModules);
-  const unreadNotifications = session?.user?.id
-    ? await prisma.notification.count({
-        where: {
-          userId: session.user.id,
-          isRead: false,
-        },
-      })
-    : 0;
+  const unreadNotifications = user.id ? await getUnreadNotificationCount(user.id) : 0;
 
   return (
     <header className="sticky top-0 z-20 border-b border-[color:var(--border)] bg-[rgba(6,11,22,0.9)] px-4 py-3 backdrop-blur lg:px-6">
@@ -53,7 +50,7 @@ export async function Topbar({ visibleModules }: { visibleModules: AppModule[] }
             </Link>
           ) : null}
           <div className="hidden text-right sm:block">
-            <p className="text-sm font-semibold text-[#edf3ff]">{session?.user?.name || "Utilizator ELTGRUP"}</p>
+            <p className="text-sm font-semibold text-[#edf3ff]">{user.name || "Utilizator ELTGRUP"}</p>
             <p className="text-xs text-[#9eb1cb]">Cont activ</p>
           </div>
           <SignOutButton />

@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen">
         <Sidebar visibleModules={visibleModules} />
         <div className="min-h-screen flex-1">
-          <Topbar visibleModules={visibleModules} />
+          <Topbar visibleModules={visibleModules} user={{ id: session.user.id, name: session.user.name }} />
           <main className="mx-auto w-full max-w-[1680px] p-4 lg:p-6">{children}</main>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { NotificationType, RoleKey } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/src/lib/prisma";
 
 export async function notifyUser(args: {
@@ -46,4 +47,20 @@ export async function notifyRoles(args: {
       actionUrl: args.actionUrl,
     })),
   });
+}
+
+const getUnreadNotificationCountCached = unstable_cache(
+  async (userId: string) =>
+    prisma.notification.count({
+      where: {
+        userId,
+        isRead: false,
+      },
+    }),
+  ["unread-notification-count"],
+  { revalidate: 15 },
+);
+
+export async function getUnreadNotificationCount(userId: string) {
+  return getUnreadNotificationCountCached(userId);
 }
