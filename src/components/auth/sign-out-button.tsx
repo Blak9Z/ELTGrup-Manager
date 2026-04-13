@@ -12,7 +12,7 @@ export function SignOutButton() {
       className="h-10 gap-2 px-3"
     >
       <LogOut className="h-4 w-4" />
-      Iesire
+      <span className="hidden sm:inline">Iesire</span>
     </Button>
   );
 }

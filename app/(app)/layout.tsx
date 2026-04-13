@@ -16,12 +16,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(1200px_900px_at_85%_-10%,rgba(53,97,185,0.16),transparent_52%),radial-gradient(1000px_720px_at_-10%_120%,rgba(42,74,138,0.2),transparent_46%),var(--background)] text-[color:var(--foreground)]">
-      <div className="flex min-h-screen">
+    <div className="min-h-screen overflow-x-clip bg-[var(--background)] text-[color:var(--foreground)]">
+      <div className="mx-auto min-h-screen w-full max-w-[1920px] md:grid md:grid-cols-[272px_minmax(0,1fr)]">
         <Sidebar visibleModules={visibleModules} />
-        <div className="min-h-screen flex-1">
+        <div className="min-h-screen min-w-0 border-l border-[var(--border)]/40 md:border-l">
           <Topbar visibleModules={visibleModules} user={{ id: session.user.id, name: session.user.name }} />
-          <main className="mx-auto w-full max-w-[1680px] p-4 lg:p-6">{children}</main>
+          <main className="mx-auto w-full max-w-[1600px] min-w-0 px-3 py-3 sm:px-4 sm:py-4 lg:px-7 lg:py-6">
+            <div className="min-w-0 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)] p-3 shadow-[0_20px_55px_-45px_rgba(0,0,0,0.95)] sm:p-5 lg:p-6">
+              {children}
+            </div>
+          </main>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { PermissionAction, PermissionResource, RoleKey } from "@prisma/client";
-import { hasPermission } from "@/src/lib/rbac";
+import { hasPermission, normalizeRoleKeys } from "@/src/lib/rbac";
 
 export type AppModule =
   | "dashboard"
@@ -64,19 +64,20 @@ export const moduleRoutePrefixes: Record<AppModule, string[]> = {
 };
 
 export function isPrivilegedUser(user: Pick<AuthUserLike, "roleKeys" | "email">) {
-  return user.roleKeys.some((role) => privilegedRoles.has(role as RoleKey));
+  return normalizeRoleKeys(user.roleKeys).some((role) => privilegedRoles.has(role));
 }
 
 export function canAccessModule(user: Pick<AuthUserLike, "roleKeys" | "email">, module: AppModule) {
   if (isPrivilegedUser(user)) return true;
 
   const policy = modulePolicies[module];
-  if (policy.roles && !user.roleKeys.some((role) => policy.roles!.includes(role as RoleKey))) {
+  const normalizedRoles = normalizeRoleKeys(user.roleKeys);
+  if (policy.roles && !normalizedRoles.some((role) => policy.roles!.includes(role))) {
     // role keys can come from JWT as strings
     return false;
   }
 
-  return hasPermission(user.roleKeys as RoleKey[], policy.resource, policy.action, user.email);
+  return hasPermission(normalizedRoles, policy.resource, policy.action, user.email);
 }
 
 export function getVisibleModules(user: Pick<AuthUserLike, "roleKeys" | "email">) {

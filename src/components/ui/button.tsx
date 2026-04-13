@@ -17,10 +17,10 @@ const sizeMap = {
 } as const;
 
 const variantClassMap: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  default: "bg-[linear-gradient(180deg,#3f73f2,#325fd0)] text-[#edf3ff] border border-[#3a66d8] hover:brightness-110",
-  secondary: "bg-[rgba(16,26,44,0.8)] text-[color:var(--foreground)] border border-[color:var(--border)] hover:border-[#355282]",
-  ghost: "bg-transparent text-[#d9e4f6] hover:bg-[rgba(53,82,130,0.24)]",
-  destructive: "bg-[linear-gradient(180deg,#c85865,#a5424d)] text-[#fff2f4] border border-[#a64a53] hover:brightness-105",
+  default: "border border-[#4e6f90] bg-[#2a4f73] text-[#eef4fb] hover:bg-[#346089]",
+  secondary: "border border-[#3a5068] bg-[#17273a] text-[color:var(--foreground)] hover:border-[#4e6987] hover:bg-[#1b2f46]",
+  ghost: "border border-transparent bg-transparent text-[#cfdceb] hover:border-[#3b526b] hover:bg-[#142336]",
+  destructive: "bg-[linear-gradient(180deg,#ce4a5c,#b63e4d)] text-[#fff6f7] border border-[#a93645] hover:brightness-105",
 };
 
 export function Button({ className, variant = "default", size = "default", ...props }: ButtonProps) {
@@ -31,7 +31,7 @@ export function Button({ className, variant = "default", size = "default", ...pr
       size={sizeMap[size]}
       isDisabled={disabled}
       className={cn(
-        "min-w-0 rounded-lg text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]",
+        "min-w-0 rounded-xl text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/50",
         variantClassMap[variant],
         className,
       )}

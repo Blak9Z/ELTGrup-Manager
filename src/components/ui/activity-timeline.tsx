@@ -29,9 +29,9 @@ export function ActivityTimeline({
 }) {
   if (events.length === 0) {
     return (
-      <div className="rounded-xl border border-[color:var(--border)] bg-[rgba(14,24,43,0.72)] p-4 text-sm">
-        <p className="font-semibold text-[#edf4ff]">{emptyTitle}</p>
-        <p className="mt-1 text-xs text-[#9fb2cd]">{emptyDescription}</p>
+      <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(9,24,41,0.86),rgba(8,18,31,0.86))] p-4 text-sm">
+        <p className="font-semibold text-[#f2f9ff]">{emptyTitle}</p>
+        <p className="mt-1 text-xs text-[#9fb1c5]">{emptyDescription}</p>
       </div>
     );
   }
@@ -39,9 +39,9 @@ export function ActivityTimeline({
   return (
     <div className="space-y-2">
       {events.map((event) => (
-        <div key={event.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(14,24,43,0.72)] p-3">
+        <div key={event.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(9,24,41,0.86),rgba(8,18,31,0.86))] p-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[#edf4ff]">{event.title}</p>
+            <p className="text-sm font-semibold text-[#f2f9ff]">{event.title}</p>
             <Badge tone={event.tone || "neutral"}>{event.category}</Badge>
           </div>
           {event.detail ? <p className="mt-1 text-xs text-[#b7c9e2]">{event.detail}</p> : null}

@@ -20,13 +20,13 @@ export function MaterialRequestForm({ projects, materials }: { projects: Option[
 
   return (
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2">
-      <select name="projectId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="projectId" required>
         <option value="">Proiect</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>{project.label}</option>
         ))}
       </select>
-      <select name="materialId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="materialId" required>
         <option value="">Material</option>
         {materials.map((material) => (
           <option key={material.id} value={material.id}>{material.label}</option>
@@ -60,24 +60,24 @@ export function StockMovementForm({
 
   return (
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2">
-      <select name="type" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="type" required>
         {Object.values(StockMovementType).map((type) => (
           <option key={type} value={type}>{type}</option>
         ))}
       </select>
-      <select name="warehouseId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="warehouseId" required>
         <option value="">Depozit</option>
         {warehouses.map((warehouse) => (
           <option key={warehouse.id} value={warehouse.id}>{warehouse.label}</option>
         ))}
       </select>
-      <select name="materialId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="materialId" required>
         <option value="">Material</option>
         {materials.map((material) => (
           <option key={material.id} value={material.id}>{material.label}</option>
         ))}
       </select>
-      <select name="projectId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="projectId">
         <option value="">Fara proiect</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>{project.label}</option>
@@ -127,7 +127,7 @@ export function MaterialInvoiceUploadForm({ projects }: { projects: Option[] }) 
 
   return (
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2">
-      <select name="projectId" required className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+      <select name="projectId" required>
         <option value="">Proiect</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>{project.label}</option>

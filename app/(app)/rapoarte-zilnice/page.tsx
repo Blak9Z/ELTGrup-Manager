@@ -140,10 +140,10 @@ export default async function RapoarteZilnicePage({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-base font-bold">{report.project.title}</p>
-                  <p className="text-xs text-[#9fb3ce]">Data: {formatDate(report.reportDate)} • Vreme: {report.weather || "-"}</p>
+                  <p className="text-xs text-[#9fb1c5]">Data: {formatDate(report.reportDate)} • Vreme: {report.weather || "-"}</p>
                   <p className="mt-2 text-sm text-[#dce7f9]">{report.workCompleted}</p>
-                  <p className="mt-1 text-xs text-[#9fb3ce]">Blocaje: {report.blockers || "N/A"}</p>
-                  <p className="mt-1 text-xs text-[#9fb3ce]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
+                  <p className="mt-1 text-xs text-[#9fb1c5]">Blocaje: {report.blockers || "N/A"}</p>
+                  <p className="mt-1 text-xs text-[#9fb1c5]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
                 </div>
                 <Link href={`/api/rapoarte-zilnice/${report.id}/pdf`}>
                   <Button size="sm" variant="secondary">Export PDF</Button>
@@ -152,7 +152,7 @@ export default async function RapoarteZilnicePage({
             </Card>
           ))}
         </div>
-        <div className="flex items-center justify-between text-sm text-[#9fb3ce]">
+        <div className="flex items-center justify-between text-sm text-[#9fb1c5]">
           <span>Pagina {page} din {totalPages}</span>
           <div className="flex gap-2">
             {page > 1 ? (

@@ -19,7 +19,27 @@ export default async function SetariPage() {
   return (
     <PermissionGuard resource="SETTINGS" action="VIEW">
       <div className="space-y-6">
-        <PageHeader title="Setari / Administrare" subtitle="Conturi utilizatori, roluri operationale si control acces pe functii" />
+        <PageHeader title="Setari / Administrare" subtitle="Identity & access control: conturi, roluri operationale, activare/dezactivare si audit de acces." />
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Utilizatori total</p>
+            <p className="mt-2 text-2xl font-semibold text-[#edf4fb]">{users.length}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Utilizatori activi</p>
+            <p className="mt-2 text-2xl font-semibold text-[#edf4fb]">{users.filter((u) => u.isActive).length}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Roluri disponibile</p>
+            <p className="mt-2 text-2xl font-semibold text-[#edf4fb]">{roles.length}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Super admini</p>
+            <p className="mt-2 text-2xl font-semibold text-[#edf4fb]">
+              {users.filter((u) => u.roles.some((r) => r.role.key === "SUPER_ADMIN")).length}
+            </p>
+          </div>
+        </section>
         <UserAdminPanel
           canAssignSuperAdmin={hasSuperAdminRole(session?.user?.roleKeys || [])}
           roles={roles.map((role) => ({ id: role.id, key: role.key, label: role.label }))}

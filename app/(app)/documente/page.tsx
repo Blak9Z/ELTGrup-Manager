@@ -1,7 +1,10 @@
 import { DocumentCategory } from "@prisma/client";
+import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
@@ -114,7 +117,9 @@ export default async function DocumentePage({
                 <option key={category} value={category}>{category}</option>
               ))}
             </select>
-            <button type="submit" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(16,27,47,0.88)] px-3 text-sm font-semibold text-[#dce7f9]">Filtreaza</button>
+            <Button type="submit" variant="secondary" className="h-10">
+              Filtreaza
+            </Button>
           </form>
           <form action={bulkDocumentsAction} className="mb-3 space-y-3">
             <div className="bulk-controls grid gap-2 md:grid-cols-3">
@@ -129,44 +134,52 @@ export default async function DocumentePage({
             <div className="grid gap-1 md:grid-cols-2 rounded-lg border border-[var(--border)] p-2">
               {docs.map((doc) => (
                 <label key={doc.id} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" name="ids" value={doc.id} />
+                  <input className="h-4 w-4" type="checkbox" name="ids" value={doc.id} />
                   <span>{doc.title}</span>
                 </label>
               ))}
             </div>
           </form>
-          <div className="grid gap-3 md:grid-cols-2">
-            {docs.map((doc) => (
-              <Card key={doc.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">{doc.title}</p>
-                    <p className="text-xs text-[#9fb3ce]">
-                      {doc.workOrder
-                        ? `Lucrare: ${doc.workOrder.title}`
-                        : doc.project?.title || doc.client?.name || "General"}
-                    </p>
+          {docs.length === 0 ? (
+            <EmptyState title="Nu exista documente pentru filtrele selectate" description="Incearca alte filtre sau adauga un document nou." />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {docs.map((doc) => (
+                <Card key={doc.id} className="space-y-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">{doc.title}</p>
+                      <p className="text-xs text-[#9fb1c5]">
+                        {doc.workOrder
+                          ? `Lucrare: ${doc.workOrder.title}`
+                          : doc.project?.title || doc.client?.name || "General"}
+                      </p>
+                    </div>
+                    <Badge tone={doc.expiresAt && doc.expiresAt < reminderThreshold ? "warning" : "neutral"}>{doc.category}</Badge>
                   </div>
-                  <Badge tone={doc.expiresAt && doc.expiresAt < reminderThreshold ? "warning" : "neutral"}>{doc.category}</Badge>
-                </div>
-                <p className="mt-2 text-xs text-[#9fb3ce]">Fisier: {doc.fileName} • Versiune {doc.version}</p>
-                <p className="mt-1 text-xs text-[#9fb3ce]">Path: {doc.storagePath}</p>
-                <p className="mt-1 text-xs text-[#9fb3ce]">Creat la: {formatDate(doc.createdAt)}</p>
-                <p className="mt-1 text-xs text-[#9fb3ce]">Tag-uri: {doc.tags.join(", ") || "-"}</p>
-                <a href={doc.storagePath} target="_blank" className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline">
-                  Deschide document
-                </a>
-              </Card>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between text-sm text-[#9fb3ce]">
+                  <p className="mt-2 text-xs text-[#9fb1c5]">Fisier: {doc.fileName} • Versiune {doc.version}</p>
+                  <p className="mt-1 text-xs text-[#9fb1c5] break-all">Path: {doc.storagePath}</p>
+                  <p className="mt-1 text-xs text-[#9fb1c5]">Creat la: {formatDate(doc.createdAt)}</p>
+                  <p className="mt-1 text-xs text-[#9fb1c5]">Tag-uri: {doc.tags.join(", ") || "-"}</p>
+                  <a href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline">
+                    Deschide document
+                  </a>
+                </Card>
+              ))}
+            </div>
+          )}
+          <div className="mt-4 flex items-center justify-between text-sm text-[#9fb1c5]">
             <span>Pagina {page} din {totalPages}</span>
             <div className="flex gap-2">
               {page > 1 ? (
-                <a className="rounded-md border border-[var(--border)] px-3 py-1" href={`/documente?page=${page - 1}&q=${encodeURIComponent(params.q || "")}&category=${params.category || ""}`}>Anterior</a>
+                <Link className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[#4f6d8f]" href={`/documente?page=${page - 1}&q=${encodeURIComponent(params.q || "")}&category=${params.category || ""}`}>
+                  Anterior
+                </Link>
               ) : null}
               {page < totalPages ? (
-                <a className="rounded-md border border-[var(--border)] px-3 py-1" href={`/documente?page=${page + 1}&q=${encodeURIComponent(params.q || "")}&category=${params.category || ""}`}>Urmator</a>
+                <Link className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[#4f6d8f]" href={`/documente?page=${page + 1}&q=${encodeURIComponent(params.q || "")}&category=${params.category || ""}`}>
+                  Urmator
+                </Link>
               ) : null}
             </div>
           </div>

@@ -2,7 +2,7 @@ import { PermissionAction, PermissionResource, RoleKey } from "@prisma/client";
 
 export type SessionUser = {
   id: string;
-  roleKeys: RoleKey[];
+  roleKeys: Array<RoleKey | string>;
   email?: string | null;
 };
 
@@ -92,16 +92,24 @@ const matrix: PermissionMap = {
 };
 
 export function hasSuperAdminRole(roleKeys: Array<RoleKey | string>) {
-  return roleKeys.includes(RoleKey.SUPER_ADMIN);
+  return normalizeRoleKeys(roleKeys).includes(RoleKey.SUPER_ADMIN);
+}
+
+export function normalizeRoleKeys(roleKeys: Array<RoleKey | string>) {
+  const validRoleSet = new Set(Object.values(RoleKey));
+  return roleKeys
+    .map((role) => `${role}`.trim())
+    .filter((role): role is RoleKey => validRoleSet.has(role as RoleKey));
 }
 
 export function hasPermission(
-  roles: RoleKey[],
+  roles: Array<RoleKey | string>,
   resource: PermissionResource,
   action: PermissionAction,
   userEmail?: string | null,
 ) {
   void userEmail;
-  if (hasSuperAdminRole(roles)) return true;
-  return roles.some((role) => matrix[role]?.[resource]?.includes(action));
+  const normalizedRoles = normalizeRoleKeys(roles);
+  if (hasSuperAdminRole(normalizedRoles)) return true;
+  return normalizedRoles.some((role) => matrix[role]?.[resource]?.includes(action));
 }

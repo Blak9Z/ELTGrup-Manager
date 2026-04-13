@@ -1,13 +1,13 @@
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import Link from "next/link";
 import { TimeEntryStatus } from "@prisma/client";
-import { Table as HeroTable } from "@heroui/react";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { Table, TD, TH } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, timeEntryScopeWhere } from "@/src/lib/access-scope";
@@ -131,7 +131,7 @@ export default async function PontajPage({
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-[#f0f5ff]">Adauga inregistrare pontaj</h2>
+          <h2 className="text-lg font-semibold text-[#f2f9ff]">Adauga inregistrare pontaj</h2>
           <PontajCreateForm
             projects={projects.map((project) => ({ id: project.id, label: project.title }))}
             workOrders={workOrders.map((item) => ({ id: item.id, label: item.title }))}
@@ -151,7 +151,7 @@ export default async function PontajPage({
               <div />
               <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pentru pontajele selectate?" />
             </div>
-            <div className="max-h-36 overflow-y-auto rounded-xl border border-[color:var(--border)] p-3">
+            <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)] p-3">
               <div className="grid gap-1 md:grid-cols-2">
                 {entries
                   .filter((item) => item.status === "SUBMITTED")
@@ -176,15 +176,15 @@ export default async function PontajPage({
             <div>
             <div className="space-y-3 md:hidden">
               {entries.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.9),rgba(8,19,32,0.9))] p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-[#e7f1ff]">{entry.user.firstName} {entry.user.lastName}</p>
-                      <p className="text-xs text-[#95a9c4]">{entry.project.title}</p>
+                      <p className="text-xs text-[#9fb9d7]">{entry.project.title}</p>
                     </div>
                     <Badge tone={entry.status === "APPROVED" ? "success" : entry.status === "REJECTED" ? "danger" : "warning"}>{entry.status}</Badge>
                   </div>
-                  <p className="mt-2 text-xs text-[#95a9c4]">{formatDateTime(entry.startAt)} {entry.endAt ? `- ${formatDateTime(entry.endAt)}` : "(deschis)"}</p>
+                  <p className="mt-2 text-xs text-[#9fb9d7]">{formatDateTime(entry.startAt)} {entry.endAt ? `- ${formatDateTime(entry.endAt)}` : "(deschis)"}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#d6e4f9]">
                     <p>Durata: {Math.round(entry.durationMinutes / 60)} h</p>
                     <p>Pauza: {entry.breakMinutes} min</p>
@@ -200,37 +200,38 @@ export default async function PontajPage({
                 </div>
               ))}
             </div>
-            <div className="hidden overflow-x-auto rounded-xl border border-[color:var(--border)] md:block">
-              <HeroTable aria-label="Pontaj">
-                <HeroTable.Content>
-                <HeroTable.Header>
-                  <HeroTable.Column>Data</HeroTable.Column>
-                  <HeroTable.Column>Angajat</HeroTable.Column>
-                  <HeroTable.Column>Proiect</HeroTable.Column>
-                  <HeroTable.Column>Lucrare</HeroTable.Column>
-                  <HeroTable.Column>Durata</HeroTable.Column>
-                  <HeroTable.Column>Pauza</HeroTable.Column>
-                  <HeroTable.Column>Status</HeroTable.Column>
-                  <HeroTable.Column>Aprobare</HeroTable.Column>
-                </HeroTable.Header>
-                <HeroTable.Body>
+            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] md:block">
+              <Table aria-label="Pontaj">
+                <thead>
+                  <tr>
+                    <TH>Data</TH>
+                    <TH>Angajat</TH>
+                    <TH>Proiect</TH>
+                    <TH>Lucrare</TH>
+                    <TH>Durata</TH>
+                    <TH>Pauza</TH>
+                    <TH>Status</TH>
+                    <TH>Aprobare</TH>
+                  </tr>
+                </thead>
+                <tbody>
                   {entries.map((entry) => (
-                    <HeroTable.Row key={entry.id}>
-                      <HeroTable.Cell>
+                    <tr key={entry.id}>
+                      <TD>
                         <p>{formatDateTime(entry.startAt)}</p>
-                        <p className="text-xs text-[#95a9c4]">{entry.endAt ? `Pana la ${formatDateTime(entry.endAt)}` : "Sesiune deschisa"}</p>
-                      </HeroTable.Cell>
-                      <HeroTable.Cell>
+                        <p className="text-xs text-[#9fb9d7]">{entry.endAt ? `Pana la ${formatDateTime(entry.endAt)}` : "Sesiune deschisa"}</p>
+                      </TD>
+                      <TD>
                         {entry.user.firstName} {entry.user.lastName}
-                      </HeroTable.Cell>
-                      <HeroTable.Cell>{entry.project.title}</HeroTable.Cell>
-                      <HeroTable.Cell>{entry.workOrder?.title || "-"}</HeroTable.Cell>
-                      <HeroTable.Cell>{Math.round(entry.durationMinutes / 60)} h</HeroTable.Cell>
-                      <HeroTable.Cell>{entry.breakMinutes} min</HeroTable.Cell>
-                      <HeroTable.Cell>
+                      </TD>
+                      <TD>{entry.project.title}</TD>
+                      <TD>{entry.workOrder?.title || "-"}</TD>
+                      <TD>{Math.round(entry.durationMinutes / 60)} h</TD>
+                      <TD>{entry.breakMinutes} min</TD>
+                      <TD>
                         <Badge tone={entry.status === "APPROVED" ? "success" : entry.status === "REJECTED" ? "danger" : "warning"}>{entry.status}</Badge>
-                      </HeroTable.Cell>
-                      <HeroTable.Cell>
+                      </TD>
+                      <TD>
                         {entry.status === "SUBMITTED" ? (
                           <form action={approveTimeEntry}>
                             <input type="hidden" name="id" value={entry.id} />
@@ -239,14 +240,13 @@ export default async function PontajPage({
                             </Button>
                           </form>
                         ) : (
-                          <span className="text-xs text-[#95a9c4]">{entry.approvedAt ? formatDate(entry.approvedAt) : "-"}</span>
+                          <span className="text-xs text-[#9fb9d7]">{entry.approvedAt ? formatDate(entry.approvedAt) : "-"}</span>
                         )}
-                      </HeroTable.Cell>
-                    </HeroTable.Row>
+                      </TD>
+                    </tr>
                   ))}
-                </HeroTable.Body>
-                </HeroTable.Content>
-              </HeroTable>
+                </tbody>
+              </Table>
             </div>
             </div>
           )}
@@ -257,12 +257,12 @@ export default async function PontajPage({
           </span>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Link className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]" href={`/pontaj?page=${page - 1}&status=${params.status || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
+              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]" href={`/pontaj?page=${page - 1}&status=${params.status || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
                 Anterior
               </Link>
             ) : null}
             {page < totalPages ? (
-              <Link className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]" href={`/pontaj?page=${page + 1}&status=${params.status || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
+              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]" href={`/pontaj?page=${page + 1}&status=${params.status || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
                 Urmator
               </Link>
             ) : null}

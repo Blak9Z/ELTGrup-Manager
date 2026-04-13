@@ -51,7 +51,7 @@ export function PontajCreateForm({
       <Input name="endTime" type="time" />
       <Input name="breakMinutes" type="number" placeholder="Pauza minute" defaultValue={0} />
       <Input name="note" placeholder="Observatii / geolocatie / blocaje" className="md:col-span-2 xl:col-span-4" />
-      <p className="md:col-span-2 xl:col-span-4 text-xs text-[#9fb2cd]">
+      <p className="md:col-span-2 xl:col-span-4 text-xs text-[#9fb1c5]">
         Daca ora de final nu este completata, sistemul seteaza automat finalul la 17:00 in aceeasi zi.
       </p>
       <div className="flex justify-end xl:col-span-4">

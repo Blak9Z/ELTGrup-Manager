@@ -362,6 +362,7 @@ model Project {
   @@index([status, managerId])
   @@index([clientId])
   @@index([startDate, endDate])
+  @@index([deletedAt, status])
 }
 
 model ProjectPhase {
@@ -423,6 +424,7 @@ model WorkOrder {
   @@index([projectId, status])
   @@index([teamId, startDate])
   @@index([dueDate, priority])
+  @@index([deletedAt, dueDate, status])
 }
 
 model TaskChecklistItem {
@@ -469,6 +471,7 @@ model TimeEntry {
   @@index([userId, startAt])
   @@index([projectId, status])
   @@index([userId, liveState, endAt])
+  @@index([projectId, endAt])
 }
 
 model Attendance {
@@ -545,6 +548,7 @@ model StockMovement {
 
   @@index([warehouseId, movedAt])
   @@index([materialId, type])
+  @@index([materialId, warehouseId, type, documentRef])
 }
 
 model MaterialRequest {

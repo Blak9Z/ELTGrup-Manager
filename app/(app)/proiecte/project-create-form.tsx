@@ -22,20 +22,21 @@ export function ProjectCreateForm({ clients }: { clients: ClientOption[] }) {
   }, [state]);
 
   return (
-    <form action={formAction} className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <form action={formAction} className="mt-4 space-y-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <Input name="title" placeholder="Nume proiect" required />
-      <select name="clientId" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm" required>
+      <select name="clientId" required>
         <option value="">Client</option>
         {clients.map((client) => (
           <option key={client.id} value={client.id}>{client.name}</option>
         ))}
       </select>
-      <select name="type" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm" defaultValue={ProjectType.COMMERCIAL}>
+      <select name="type" defaultValue={ProjectType.COMMERCIAL}>
         {Object.values(ProjectType).map((type) => (
           <option key={type} value={type}>{type}</option>
         ))}
       </select>
-      <select name="status" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm" defaultValue={ProjectStatus.PLANNED}>
+      <select name="status" defaultValue={ProjectStatus.PLANNED}>
         {Object.values(ProjectStatus).map((status) => (
           <option key={status} value={status}>{status}</option>
         ))}
@@ -45,6 +46,7 @@ export function ProjectCreateForm({ clients }: { clients: ClientOption[] }) {
       <Input name="estimatedBudget" placeholder="Buget estimat (RON)" type="number" required />
       <Input name="startDate" type="date" />
       <Input name="endDate" type="date" />
+      </div>
       <div className="md:col-span-2 xl:col-span-4 flex justify-end">
         <Button type="submit" disabled={pending}>{pending ? "Se salveaza..." : "Creeaza proiect"}</Button>
       </div>

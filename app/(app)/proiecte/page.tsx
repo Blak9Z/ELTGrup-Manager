@@ -1,5 +1,4 @@
 import { ProjectStatus } from "@prisma/client";
-import { Table as HeroTable } from "@heroui/react";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
@@ -8,6 +7,7 @@ import { Card } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { TD, TH, Table } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { auth } from "@/src/lib/auth";
 import { projectScopeWhere, resolveAccessScope } from "@/src/lib/access-scope";
@@ -94,10 +94,11 @@ export default async function ProjectsPage({
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
       <div className="space-y-6">
-        <PageHeader title="Proiecte" subtitle="Control complet pentru status, buget, progres si risc operational" />
+        <PageHeader title="Proiecte" subtitle="Portofoliu executie, costuri, status contractual si risc operational" />
 
         <Card>
-          <h2 className="text-lg font-semibold text-[#f0f5ff]">Proiect nou</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Create</p>
+          <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Proiect nou</h2>
           <ProjectCreateForm clients={clients} />
         </Card>
 
@@ -119,10 +120,10 @@ export default async function ProjectsPage({
               </select>
               <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi executia actiunii bulk pe proiectele selectate?" />
             </div>
-            <div className="max-h-36 overflow-y-auto rounded-xl border border-[color:var(--border)] p-3">
+            <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[#122133] p-3">
               <div className="grid gap-1 md:grid-cols-2">
                 {projects.map((project) => (
-                  <label key={project.id} className="flex items-center gap-2 text-sm text-[#d9e5f8]">
+                  <label key={project.id} className="flex items-center gap-2 text-sm text-[#d9e8fb]">
                     <input type="checkbox" name="ids" value={project.id} className="h-4 w-4" />
                     <span>
                       {project.code} - {project.title}
@@ -136,7 +137,8 @@ export default async function ProjectsPage({
         </Card>
 
         <Card>
-          <form className="mb-4 grid gap-3 md:grid-cols-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Filters</p>
+          <form className="mb-4 mt-2 grid gap-3 md:grid-cols-3">
             <Input name="q" placeholder="Filtru dupa nume proiect" defaultValue={query} />
             <input type="hidden" name="page" value="1" />
             <select name="status" defaultValue={statusFilter || ""}>
@@ -160,18 +162,18 @@ export default async function ProjectsPage({
               {projects.map((project) => {
                 const status = mapStatus(project.status);
                 return (
-                  <div key={project.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                  <div key={project.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#b9d4ff] hover:underline">
+                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#d6e9ff] hover:underline">
                           {project.title}
                         </Link>
-                        <p className="text-xs text-[#95a9c4]">{project.code}</p>
+                        <p className="text-xs text-[#9fb9d7]">{project.code}</p>
                       </div>
                       <Badge tone={status.tone}>{status.label}</Badge>
                     </div>
-                    <p className="mt-2 text-xs text-[#95a9c4]">{project.client.name}</p>
-                    <p className="text-xs text-[#95a9c4]">{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Manager nealocat"}</p>
+                    <p className="mt-2 text-xs text-[#9fb1c5]">{project.client.name}</p>
+                    <p className="text-xs text-[#9fb1c5]">{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Manager nealocat"}</p>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#cfe0f6]">
                       <p>Buget: {formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
                       <p>Progres: {project.progressPercent}%</p>
@@ -201,45 +203,46 @@ export default async function ProjectsPage({
                 );
               })}
             </div>
-            <div className="hidden overflow-x-auto rounded-xl border border-[color:var(--border)] md:block">
-              <HeroTable aria-label="Tabel proiecte" className="bg-transparent">
-                <HeroTable.Content>
-                <HeroTable.Header>
-                  <HeroTable.Column>COD</HeroTable.Column>
-                  <HeroTable.Column>PROIECT</HeroTable.Column>
-                  <HeroTable.Column>CLIENT</HeroTable.Column>
-                  <HeroTable.Column>MANAGER</HeroTable.Column>
-                  <HeroTable.Column>BUGET</HeroTable.Column>
-                  <HeroTable.Column>PROGRES</HeroTable.Column>
-                  <HeroTable.Column>STATUS</HeroTable.Column>
-                  <HeroTable.Column>ACTIUNI</HeroTable.Column>
-                </HeroTable.Header>
-                <HeroTable.Body>
+            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[#111c2d] md:block">
+              <Table>
+                <thead>
+                  <tr>
+                    <TH>COD</TH>
+                    <TH>PROIECT</TH>
+                    <TH>CLIENT</TH>
+                    <TH>MANAGER</TH>
+                    <TH>BUGET</TH>
+                    <TH>PROGRES</TH>
+                    <TH>STATUS</TH>
+                    <TH>ACTIUNI</TH>
+                  </tr>
+                </thead>
+                <tbody>
                   {projects.map((project) => {
                     const status = mapStatus(project.status);
                     return (
-                      <HeroTable.Row key={project.id}>
-                        <HeroTable.Cell>{project.code}</HeroTable.Cell>
-                        <HeroTable.Cell>
-                          <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#b9d4ff] hover:text-[#d9e7ff] hover:underline">
+                      <tr key={project.id}>
+                        <TD>{project.code}</TD>
+                        <TD>
+                          <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#d4e8ff] hover:text-[#f0f8ff] hover:underline">
                             {project.title}
                           </Link>
-                          <p className="text-xs text-[#95a9c4]">{project.siteAddress}</p>
-                          <p className="text-xs text-[#95a9c4]">
+                          <p className="text-xs text-[#9fb1c5]">{project.siteAddress}</p>
+                          <p className="text-xs text-[#9fb1c5]">
                             {project.startDate ? formatDate(project.startDate) : "-"} - {project.endDate ? formatDate(project.endDate) : "-"}
                           </p>
-                        </HeroTable.Cell>
-                        <HeroTable.Cell>{project.client.name}</HeroTable.Cell>
-                        <HeroTable.Cell>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</HeroTable.Cell>
-                        <HeroTable.Cell>
+                        </TD>
+                        <TD>{project.client.name}</TD>
+                        <TD>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</TD>
+                        <TD>
                           <p>{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
-                          <p className="text-xs text-[#95a9c4]">Contract: {formatCurrency(project.contractValue?.toString() || 0)}</p>
-                        </HeroTable.Cell>
-                        <HeroTable.Cell>{project.progressPercent}%</HeroTable.Cell>
-                        <HeroTable.Cell>
+                          <p className="text-xs text-[#9fb1c5]">Contract: {formatCurrency(project.contractValue?.toString() || 0)}</p>
+                        </TD>
+                        <TD>{project.progressPercent}%</TD>
+                        <TD>
                           <Badge tone={status.tone}>{status.label}</Badge>
-                        </HeroTable.Cell>
-                        <HeroTable.Cell>
+                        </TD>
+                        <TD>
                           <div className="flex gap-2">
                             <form action={updateProjectStatus}>
                               <input type="hidden" name="id" value={project.id} />
@@ -261,17 +264,16 @@ export default async function ProjectsPage({
                               </Button>
                             </form>
                           </div>
-                        </HeroTable.Cell>
-                      </HeroTable.Row>
+                        </TD>
+                      </tr>
                     );
                   })}
-                </HeroTable.Body>
-                </HeroTable.Content>
-              </HeroTable>
+                </tbody>
+              </Table>
             </div>
             </div>
           )}
-          <div className="mt-4 flex items-center justify-between text-sm text-[#9cb0cb]">
+          <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[var(--border)]/60 pt-4 text-sm text-[#9fb1c5] sm:flex-row">
             <span>
               Pagina {page} din {totalPages}
             </span>
@@ -279,7 +281,7 @@ export default async function ProjectsPage({
               {page > 1 ? (
                 <Link
                   href={`/proiecte?page=${page - 1}&q=${encodeURIComponent(query)}&status=${statusFilter || ""}`}
-                  className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]"
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]"
                 >
                   Anterior
                 </Link>
@@ -287,7 +289,7 @@ export default async function ProjectsPage({
               {page < totalPages ? (
                 <Link
                   href={`/proiecte?page=${page + 1}&q=${encodeURIComponent(query)}&status=${statusFilter || ""}`}
-                  className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]"
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]"
                 >
                   Urmator
                 </Link>

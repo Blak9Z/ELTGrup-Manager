@@ -13,9 +13,9 @@ import { prisma } from "@/src/lib/prisma";
 const costSchema = z.object({
   projectId: z.string().cuid(),
   type: z.nativeEnum(CostType),
-  description: z.string().min(2),
+  description: z.string().trim().min(2),
   amount: z.coerce.number().positive(),
-  occurredAt: z.string().min(1),
+  occurredAt: z.coerce.date(),
 });
 
 async function createCostEntryInternal(formData: FormData) {
@@ -38,7 +38,7 @@ async function createCostEntryInternal(formData: FormData) {
       type: parsed.data.type,
       description: parsed.data.description,
       amount: parsed.data.amount,
-      occurredAt: new Date(parsed.data.occurredAt),
+      occurredAt: parsed.data.occurredAt,
       approvedById: currentUser.id,
     },
   });

@@ -51,13 +51,13 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
           subtitle={`${workOrder.project.title} • ${workOrder.team?.name || "Fara echipa"} • Termen ${workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}`}
           actions={
             <div className="flex flex-wrap gap-2">
-              <Link href={`/calendar?projectId=${workOrder.projectId}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+              <Link href={`/calendar?projectId=${workOrder.projectId}`} className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
                 Calendar
               </Link>
-              <Link href={`/pontaj?projectId=${workOrder.projectId}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+              <Link href={`/pontaj?projectId=${workOrder.projectId}`} className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
                 Pontaj
               </Link>
-              <Link href={`/rapoarte-zilnice?projectId=${workOrder.projectId}&workOrderId=${workOrder.id}`} className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#3f6499]">
+              <Link href={`/rapoarte-zilnice?projectId=${workOrder.projectId}&workOrderId=${workOrder.id}`} className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
                 Raport zilnic
               </Link>
             </div>
@@ -66,23 +66,23 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card>
-            <p className="text-xs text-[#9fb2cd]">Status</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Status</p>
             <div className="mt-2">
               <Badge tone={workOrder.status === "DONE" ? "success" : workOrder.status === "BLOCKED" ? "danger" : "info"}>{workOrder.status}</Badge>
             </div>
           </Card>
           <Card>
-            <p className="text-xs text-[#9fb2cd]">Prioritate</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Prioritate</p>
             <p className="mt-2 font-semibold text-[#ecf2ff]">{workOrder.priority}</p>
           </Card>
           <Card>
-            <p className="text-xs text-[#9fb2cd]">Responsabil</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Responsabil</p>
             <p className="mt-2 font-semibold text-[#ecf2ff]">
               {workOrder.responsible ? `${workOrder.responsible.firstName} ${workOrder.responsible.lastName}` : "Nealocat"}
             </p>
           </Card>
           <Card>
-            <p className="text-xs text-[#9fb2cd]">Aprobare</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Aprobare</p>
             <p className="mt-2 text-sm text-[#ecf2ff]">
               {workOrder.approvedAt ? `Aprobata la ${formatDateTime(workOrder.approvedAt)}` : "In asteptare"}
             </p>
@@ -91,19 +91,19 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Detalii lucrarii</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Detalii lucrarii</h2>
             <div className="mt-3 space-y-2 text-sm text-[#d7e5f8]">
-              <p><span className="text-[#9fb2cd]">Locatie:</span> {workOrder.siteLocation || "-"}</p>
-              <p><span className="text-[#9fb2cd]">Start:</span> {workOrder.startDate ? formatDate(workOrder.startDate) : "-"}</p>
-              <p><span className="text-[#9fb2cd]">Termen:</span> {workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}</p>
-              <p><span className="text-[#9fb2cd]">Ore estimate:</span> {workOrder.estimatedHours?.toString() || "-"}</p>
-              <p><span className="text-[#9fb2cd]">Descriere:</span> {workOrder.description || "-"}</p>
+              <p><span className="text-[#9fb1c5]">Locatie:</span> {workOrder.siteLocation || "-"}</p>
+              <p><span className="text-[#9fb1c5]">Start:</span> {workOrder.startDate ? formatDate(workOrder.startDate) : "-"}</p>
+              <p><span className="text-[#9fb1c5]">Termen:</span> {workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}</p>
+              <p><span className="text-[#9fb1c5]">Ore estimate:</span> {workOrder.estimatedHours?.toString() || "-"}</p>
+              <p><span className="text-[#9fb1c5]">Descriere:</span> {workOrder.description || "-"}</p>
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Timeline lucrare</h2>
-            <p className="mt-1 text-xs text-[#9fb2cd]">Cronologie unificata: update-uri, documente, pontaj, rapoarte teren si audit.</p>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Timeline lucrare</h2>
+            <p className="mt-1 text-xs text-[#9fb1c5]">Cronologie unificata: update-uri, documente, pontaj, rapoarte teren si audit.</p>
             <div className="mt-3">
               <ActivityTimeline events={timeline} />
             </div>
@@ -112,37 +112,37 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
 
         <section className="grid gap-4 xl:grid-cols-3">
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Comentarii / update-uri</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Comentarii / update-uri</h2>
             <div className="mt-3 space-y-2">
               {workOrder.comments.map((comment) => (
-                <div key={comment.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(13,24,42,0.8)] p-3 text-sm">
+                <div key={comment.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm">
                   <p className="text-[#dbe8fb]">{comment.content}</p>
-                  <p className="mt-1 text-xs text-[#9fb2cd]">{comment.user.firstName} {comment.user.lastName} • {formatDateTime(comment.createdAt)}</p>
+                  <p className="mt-1 text-xs text-[#9fb1c5]">{comment.user.firstName} {comment.user.lastName} • {formatDateTime(comment.createdAt)}</p>
                 </div>
               ))}
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Documente / foto</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Documente / foto</h2>
             <div className="mt-3 space-y-2">
               {workOrder.documents.map((doc) => (
-                <a key={doc.id} href={doc.storagePath} target="_blank" className="block rounded-xl border border-[color:var(--border)] bg-[rgba(13,24,42,0.8)] p-3 text-sm hover:border-[#3b639d]">
+                <a key={doc.id} href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="block rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm hover:border-[#4f6d8f]">
                   <p className="font-semibold text-[#ecf3ff]">{doc.title}</p>
-                  <p className="text-xs text-[#9fb2cd]">{doc.category} • {doc.fileName}</p>
+                  <p className="text-xs text-[#9fb1c5]">{doc.category} • {doc.fileName}</p>
                 </a>
               ))}
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Aprobari si ore</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Aprobari si ore</h2>
             <div className="mt-3 space-y-2">
               {workOrder.timeEntries.map((entry) => (
-                <div key={entry.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(13,24,42,0.8)] p-3 text-sm">
+                <div key={entry.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm">
                   <p className="font-semibold text-[#ecf3ff]">{entry.user.firstName} {entry.user.lastName}</p>
-                  <p className="text-xs text-[#9fb2cd]">{formatDateTime(entry.startAt)} - {entry.endAt ? formatDateTime(entry.endAt) : "in curs"}</p>
-                  <p className="text-xs text-[#9fb2cd]">Status: {entry.status} • {Math.round(entry.durationMinutes / 60)}h</p>
+                  <p className="text-xs text-[#9fb1c5]">{formatDateTime(entry.startAt)} - {entry.endAt ? formatDateTime(entry.endAt) : "in curs"}</p>
+                  <p className="text-xs text-[#9fb1c5]">Status: {entry.status} • {Math.round(entry.durationMinutes / 60)}h</p>
                 </div>
               ))}
             </div>

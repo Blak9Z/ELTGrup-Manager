@@ -9,15 +9,15 @@ import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
 const clientSchema = z.object({
-  name: z.string().min(2),
-  type: z.string().min(2),
-  cui: z.string().optional(),
+  name: z.string().trim().min(2),
+  type: z.string().trim().min(2),
+  cui: z.string().trim().optional(),
   email: z.email().optional().or(z.literal("")),
-  phone: z.string().optional(),
-  billingAddress: z.string().optional(),
-  contactName: z.string().optional(),
+  phone: z.string().trim().optional(),
+  billingAddress: z.string().trim().optional(),
+  contactName: z.string().trim().optional(),
   contactEmail: z.email().optional().or(z.literal("")),
-  contactPhone: z.string().optional(),
+  contactPhone: z.string().trim().optional(),
 });
 
 async function createClientInternal(formData: FormData) {

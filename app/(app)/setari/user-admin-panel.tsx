@@ -53,8 +53,9 @@ export function UserAdminPanel({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-[color:var(--border)] bg-[rgba(15,26,45,0.75)] p-4">
-        <h2 className="text-lg font-semibold text-[#edf4ff]">Cont nou</h2>
+      <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[#8ea2b8]">Create Account</p>
+        <h2 className="mt-1 text-lg font-semibold text-[#f2f9ff]">Cont nou</h2>
         <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <Input name="firstName" placeholder="Prenume" required />
           <Input name="lastName" placeholder="Nume" required />
@@ -95,15 +96,16 @@ export function UserAdminPanel({
         </form>
       </section>
 
-      <section className="rounded-2xl border border-[color:var(--border)] bg-[rgba(15,26,45,0.75)] p-4">
-        <h2 className="text-lg font-semibold text-[#edf4ff]">Utilizatori si permisiuni</h2>
+      <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[#8ea2b8]">Access Matrix</p>
+        <h2 className="mt-1 text-lg font-semibold text-[#f2f9ff]">Utilizatori si permisiuni</h2>
         <div className="mt-3 space-y-3">
           {users.map((user) => (
-            <div key={user.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(12,22,39,0.85)] p-3">
+            <div key={user.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="font-semibold text-[#edf4ff]">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-[#9fb2cd]">{user.email}</p>
+                  <p className="font-semibold text-[#f2f9ff]">{user.firstName} {user.lastName}</p>
+                  <p className="text-xs text-[#9fb1c5]">{user.email}</p>
                 </div>
                 <Badge tone={user.isActive ? "success" : "danger"}>{user.isActive ? "Activ" : "Inactiv"}</Badge>
               </div>
@@ -112,12 +114,12 @@ export function UserAdminPanel({
                 <input type="hidden" name="userId" value={user.id} />
                 <div className="grid gap-2 md:grid-cols-2">
                   <label className="text-xs text-[#cfddf1]">
-                    <span className="mb-1 block uppercase tracking-[0.2em] text-[10px] text-[#9fb2cd]">Rol activ</span>
+                    <span className="mb-1 block uppercase tracking-[0.2em] text-[10px] text-[#9fb1c5]">Rol activ</span>
                     <select
                       name="roleKey"
                       defaultValue={resolveSingleRole(user)}
                       disabled={user.roleKeys.includes(RoleKey.SUPER_ADMIN) && !canAssignSuperAdmin}
-                      className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[#edf4ff]"
+                      className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[#f2f9ff]"
                     >
                       {orderedRoles
                         .filter((role) => {

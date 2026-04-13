@@ -1,6 +1,6 @@
 import { PermissionAction, PermissionResource } from "@prisma/client";
 import { auth } from "@/src/lib/auth";
-import { hasPermission } from "@/src/lib/rbac";
+import { hasPermission, normalizeRoleKeys } from "@/src/lib/rbac";
 
 export async function requirePermission(resource: PermissionResource, action: PermissionAction) {
   const session = await auth();
@@ -9,7 +9,12 @@ export async function requirePermission(resource: PermissionResource, action: Pe
     throw new Error("Sesiune invalida. Reautentificare necesara.");
   }
 
-  const allowed = hasPermission(session.user.roleKeys || [], resource, action, session.user.email);
+  const roleKeys = normalizeRoleKeys(session.user.roleKeys || []);
+  if (roleKeys.length === 0) {
+    throw new Error("Nu ai roluri valide asignate pentru aceasta actiune.");
+  }
+
+  const allowed = hasPermission(roleKeys, resource, action, session.user.email);
   if (!allowed) {
     throw new Error("Nu ai permisiunea necesara pentru aceasta actiune.");
   }

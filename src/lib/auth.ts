@@ -10,7 +10,7 @@ import { prisma } from "@/src/lib/prisma";
 const JWT_ROLE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const loginSchema = z.object({
-  email: z.email("Email invalid"),
+  email: z.string().trim().toLowerCase().email("Email invalid"),
   password: z.string().min(1, "Parola este obligatorie"),
 });
 
@@ -31,20 +31,29 @@ export const authOptions: NextAuthOptions = {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email.toLowerCase() },
-          include: { roles: { include: { role: true } } },
-        });
+        let user;
+        try {
+          user = await prisma.user.findFirst({
+            where: { email: { equals: parsed.data.email, mode: "insensitive" } },
+            include: { roles: { include: { role: true } } },
+          });
+        } catch {
+          throw new Error("AUTH_DB_UNAVAILABLE");
+        }
 
         if (!user || !user.isActive || user.deletedAt) return null;
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;
 
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() },
-        });
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+        } catch {
+          // login can continue even if last login timestamp cannot be updated
+        }
 
         const roleKeys = user.roles.map((r) => r.role.key) as RoleKey[];
 
@@ -71,15 +80,21 @@ export const authOptions: NextAuthOptions = {
       const shouldRefreshRoles = !lastSyncedAt || Date.now() - lastSyncedAt >= JWT_ROLE_SYNC_INTERVAL_MS;
 
       if (token.userId && shouldRefreshRoles) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.userId as string },
-          select: {
-            email: true,
-            isActive: true,
-            deletedAt: true,
-            roles: { include: { role: { select: { key: true } } } },
-          },
-        });
+        let dbUser;
+        try {
+          dbUser = await prisma.user.findUnique({
+            where: { id: token.userId as string },
+            select: {
+              email: true,
+              isActive: true,
+              deletedAt: true,
+              roles: { include: { role: { select: { key: true } } } },
+            },
+          });
+        } catch {
+          token.roleSyncedAt = Date.now();
+          return token;
+        }
 
         if (!dbUser || !dbUser.isActive || dbUser.deletedAt) {
           token.roleKeys = [];

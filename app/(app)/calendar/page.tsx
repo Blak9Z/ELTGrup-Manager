@@ -13,7 +13,7 @@ const PlanningBoard = dynamic(() => import("./planning-board").then((module) => 
   loading: () => (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
       {Array.from({ length: 7 }).map((_, index) => (
-        <div key={index} className="min-h-56 animate-pulse rounded-2xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.7)] p-3" />
+        <div key={index} className="min-h-56 animate-pulse rounded-2xl border border-[var(--border)] bg-[rgba(10,18,33,0.7)] p-3" />
       ))}
     </div>
   ),
@@ -93,10 +93,10 @@ export default async function CalendarPage({
     <PermissionGuard resource="TASKS" action="VIEW">
       <div className="space-y-6">
         <PageHeader title="Calendar operational" subtitle="Planificare saptamanala cu detectie conflicte si reprogramare directa" />
-        <Card>
-          <form className="mb-4 grid gap-3 md:grid-cols-4">
+        <Card className="space-y-4">
+          <form className="grid gap-3 md:grid-cols-4">
             <Input name="q" placeholder="Cauta lucrare" defaultValue={params.q || ""} />
-            <select name="projectId" defaultValue={params.projectId || ""}>
+            <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
               <option value="">Toate proiectele</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -104,7 +104,7 @@ export default async function CalendarPage({
                 </option>
               ))}
             </select>
-            <select name="teamId" defaultValue={params.teamId || ""}>
+            <select name="teamId" defaultValue={params.teamId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
               <option value="">Toate echipele</option>
               {teams.map((team) => (
                 <option key={team.id} value={team.id}>
@@ -117,9 +117,9 @@ export default async function CalendarPage({
             </Button>
           </form>
 
-          <form action={createCalendarTaskAction} className="mb-5 grid gap-3 rounded-xl border border-[color:var(--border)] bg-[rgba(12,22,39,0.8)] p-3 md:grid-cols-4">
+          <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 md:grid-cols-4">
             <Input name="title" placeholder="Adauga lucrare rapida in calendar" required />
-            <select name="projectId" required defaultValue="">
+            <select name="projectId" required defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
               <option value="" disabled>
                 Selecteaza proiect
               </option>
@@ -129,7 +129,7 @@ export default async function CalendarPage({
                 </option>
               ))}
             </select>
-            <select name="teamId" defaultValue="">
+            <select name="teamId" defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
               <option value="">Fara echipa</option>
               {teams.map((team) => (
                 <option key={team.id} value={team.id}>
@@ -138,7 +138,7 @@ export default async function CalendarPage({
               ))}
             </select>
             <div className="flex gap-2">
-              <select name="dayLabel" defaultValue="Luni">
+              <select name="dayLabel" defaultValue="Luni" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
                 {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
                   <option key={day} value={day}>
                     {day}

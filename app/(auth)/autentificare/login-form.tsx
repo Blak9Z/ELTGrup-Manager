@@ -20,7 +20,7 @@ export function LoginForm() {
     setError("");
 
     const result = await signIn("credentials", {
-      email,
+      email: email.trim().toLowerCase(),
       password,
       redirect: false,
     });
@@ -28,7 +28,11 @@ export function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Credentiale invalide. Verifica adresa de email si parola.");
+      setError(
+        result.error === "CredentialsSignin"
+          ? "Credentiale invalide. Verifica adresa de email si parola."
+          : "Autentificarea a esuat din cauza unei erori de server. Reincearca in cateva secunde.",
+      );
       return;
     }
 

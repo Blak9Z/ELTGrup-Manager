@@ -65,55 +65,55 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         <PageHeader
           title={client.name}
           subtitle={`${client.cui || "Fara CUI"} • ${client.email || "fara email"} • ${client.phone || "fara telefon"}`}
-          actions={<Link href="/clienti" className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 text-sm">Inapoi la clienti</Link>}
+          actions={<Link href="/clienti" className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">Inapoi la clienti</Link>}
         />
 
         <section className="grid gap-4 md:grid-cols-3">
           <Card>
-            <p className="text-xs text-[#9fb2cd]">Proiecte active</p>
-            <p className="mt-2 text-2xl font-semibold text-[#edf4ff]">{client.projects.length}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Proiecte active</p>
+            <p className="mt-2 text-2xl font-semibold text-[#f2f9ff]">{client.projects.length}</p>
           </Card>
           <Card>
-            <p className="text-xs text-[#9fb2cd]">Facturi totale</p>
-            <p className="mt-2 text-2xl font-semibold text-[#edf4ff]">{client.invoices.length}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Facturi totale</p>
+            <p className="mt-2 text-2xl font-semibold text-[#f2f9ff]">{client.invoices.length}</p>
           </Card>
           <Card>
-            <p className="text-xs text-[#9fb2cd]">Rest de incasat</p>
-            <p className="mt-2 text-2xl font-semibold text-[#edf4ff]">{formatCurrency(outstanding)}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Rest de incasat</p>
+            <p className="mt-2 text-2xl font-semibold text-[#f2f9ff]">{formatCurrency(outstanding)}</p>
           </Card>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Date generale</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Date generale</h2>
             <div className="mt-3 space-y-1 text-sm text-[#d8e5f8]">
-              <p><span className="text-[#9fb2cd]">Tip:</span> {client.type}</p>
-              <p><span className="text-[#9fb2cd]">CUI:</span> {client.cui || "-"}</p>
-              <p><span className="text-[#9fb2cd]">Nr. inreg.:</span> {client.registrationNumber || "-"}</p>
-              <p><span className="text-[#9fb2cd]">Adresa facturare:</span> {client.billingAddress || "-"}</p>
-              <p><span className="text-[#9fb2cd]">Note:</span> {client.notes || "-"}</p>
+              <p><span className="text-[#9fb1c5]">Tip:</span> {client.type}</p>
+              <p><span className="text-[#9fb1c5]">CUI:</span> {client.cui || "-"}</p>
+              <p><span className="text-[#9fb1c5]">Nr. inreg.:</span> {client.registrationNumber || "-"}</p>
+              <p><span className="text-[#9fb1c5]">Adresa facturare:</span> {client.billingAddress || "-"}</p>
+              <p><span className="text-[#9fb1c5]">Note:</span> {client.notes || "-"}</p>
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Contacte</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Contacte</h2>
             <div className="mt-3 space-y-2">
               {client.contacts.map((contact) => (
-                <div key={contact.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(12,22,39,0.85)] p-3 text-sm">
-                  <p className="font-semibold text-[#edf4ff]">{contact.fullName}</p>
-                  <p className="text-xs text-[#9fb2cd]">{contact.roleTitle || "-"} • {contact.email || "-"} • {contact.phone || "-"}</p>
+                <div key={contact.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm">
+                  <p className="font-semibold text-[#f2f9ff]">{contact.fullName}</p>
+                  <p className="text-xs text-[#9fb1c5]">{contact.roleTitle || "-"} • {contact.email || "-"} • {contact.phone || "-"}</p>
                 </div>
               ))}
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Documente</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Documente</h2>
             <div className="mt-3 space-y-2">
               {client.documents.map((doc) => (
-                <a key={doc.id} href={doc.storagePath} target="_blank" className="block rounded-xl border border-[color:var(--border)] bg-[rgba(12,22,39,0.85)] p-3 text-sm hover:border-[#3b639d]">
-                  <p className="font-semibold text-[#edf4ff]">{doc.title}</p>
-                  <p className="text-xs text-[#9fb2cd]">{doc.category} • {doc.fileName}</p>
+                <a key={doc.id} href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="block rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm hover:border-[#4f6d8f]">
+                  <p className="font-semibold text-[#f2f9ff]">{doc.title}</p>
+                  <p className="text-xs text-[#9fb1c5]">{doc.category} • {doc.fileName}</p>
                 </a>
               ))}
             </div>
@@ -122,25 +122,25 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Proiecte</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Proiecte</h2>
             <div className="mt-3 space-y-2">
               {client.projects.map((project) => (
-                <Link key={project.id} href={`/proiecte/${project.id}`} className="block rounded-xl border border-[color:var(--border)] bg-[rgba(12,22,39,0.85)] p-3 text-sm hover:border-[#3b639d]">
-                  <p className="font-semibold text-[#edf4ff]">{project.title}</p>
-                  <p className="text-xs text-[#9fb2cd]">{project.code} • {project.status} • Progres {project.progressPercent}%</p>
+                <Link key={project.id} href={`/proiecte/${project.id}`} className="block rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm hover:border-[#4f6d8f]">
+                  <p className="font-semibold text-[#f2f9ff]">{project.title}</p>
+                  <p className="text-xs text-[#9fb1c5]">{project.code} • {project.status} • Progres {project.progressPercent}%</p>
                 </Link>
               ))}
             </div>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#edf4ff]">Facturi</h2>
+            <h2 className="text-lg font-semibold text-[#f2f9ff]">Facturi</h2>
             <div className="mt-3 space-y-2">
               {client.invoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(12,22,39,0.85)] p-3 text-sm">
-                  <p className="font-semibold text-[#edf4ff]">{invoice.invoiceNumber}</p>
-                  <p className="text-xs text-[#9fb2cd]">{formatDate(invoice.issueDate)} • Scadenta {formatDate(invoice.dueDate)} • {invoice.status}</p>
-                  <p className="text-xs text-[#9fb2cd]">Total {formatCurrency(invoice.totalAmount.toString())} • Achitat {formatCurrency(invoice.paidAmount.toString())}</p>
+                <div key={invoice.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm">
+                  <p className="font-semibold text-[#f2f9ff]">{invoice.invoiceNumber}</p>
+                  <p className="text-xs text-[#9fb1c5]">{formatDate(invoice.issueDate)} • Scadenta {formatDate(invoice.dueDate)} • {invoice.status}</p>
+                  <p className="text-xs text-[#9fb1c5]">Total {formatCurrency(invoice.totalAmount.toString())} • Achitat {formatCurrency(invoice.paidAmount.toString())}</p>
                 </div>
               ))}
             </div>

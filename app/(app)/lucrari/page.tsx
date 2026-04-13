@@ -1,5 +1,4 @@
 import { WorkOrderStatus } from "@prisma/client";
-import { Table as HeroTable } from "@heroui/react";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
@@ -8,6 +7,7 @@ import { Card } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { TD, TH, Table } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
@@ -92,10 +92,11 @@ export default async function WorkOrdersPage({
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
       <div className="space-y-6">
-        <PageHeader title="Lucrari si ordine de lucru" subtitle="Planificare, executie, control progres si urmarire blocaje" />
+        <PageHeader title="Lucrari si ordine de lucru" subtitle="Coordonare executie santier, blocaje, termene si aprobari de operare" />
 
         <Card>
-          <h2 className="text-lg font-semibold text-[#f0f5ff]">Creare ordin de lucru</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Create</p>
+          <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Creare ordin de lucru</h2>
           <WorkOrderCreateForm
             projects={projects.map((project) => ({ id: project.id, label: project.title }))}
             users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
@@ -121,7 +122,7 @@ export default async function WorkOrdersPage({
               </select>
               <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pe lucrarile selectate?" />
             </div>
-            <div className="max-h-36 overflow-y-auto rounded-xl border border-[color:var(--border)] p-3">
+            <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[#122133] p-3">
               <div className="grid gap-1 md:grid-cols-2">
                 {workOrders.map((item) => (
                   <label key={item.id} className="flex items-center gap-2 text-sm text-[#dce7f9]">
@@ -136,7 +137,8 @@ export default async function WorkOrdersPage({
         </Card>
 
         <Card>
-          <form className="mb-4 grid gap-3 md:grid-cols-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Filters</p>
+          <form className="mb-4 mt-2 grid gap-3 md:grid-cols-4">
             <input type="hidden" name="page" value="1" />
             <Input name="q" placeholder="Cauta lucrare" defaultValue={q} />
             <select name="status" defaultValue={params.status || ""}>
@@ -166,19 +168,19 @@ export default async function WorkOrdersPage({
             <div>
             <div className="space-y-3 md:hidden">
               {workOrders.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <Link href={`/lucrari/${item.id}`} className="font-semibold text-[#c6dbff] hover:underline">
+                      <Link href={`/lucrari/${item.id}`} className="font-semibold text-[#d6e9ff] hover:underline">
                         {item.title}
                       </Link>
-                      <p className="text-xs text-[#95a9c4]">{item.project.title}</p>
-                    </div>
+                    <p className="text-xs text-[#9fb1c5]">{item.project.title}</p>
+                  </div>
                     <Badge tone={item.status === "DONE" ? "success" : item.status === "BLOCKED" ? "danger" : item.status === "IN_PROGRESS" ? "info" : "neutral"}>
                       {item.status}
                     </Badge>
                   </div>
-                  <p className="mt-2 text-xs text-[#95a9c4]">{item.description?.slice(0, 120) || "-"}</p>
+                  <p className="mt-2 text-xs text-[#9fb1c5]">{item.description?.slice(0, 120) || "-"}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#d6e4f9]">
                     <p>Echipa: {item.team?.name || "-"}</p>
                     <p>Termen: {item.dueDate ? formatDate(item.dueDate) : "-"}</p>
@@ -207,39 +209,40 @@ export default async function WorkOrdersPage({
                 </div>
               ))}
             </div>
-            <div className="hidden overflow-x-auto rounded-xl border border-[color:var(--border)] md:block">
-              <HeroTable aria-label="Tabel lucrari" className="bg-transparent">
-                <HeroTable.Content>
-                <HeroTable.Header>
-                  <HeroTable.Column>TITLU</HeroTable.Column>
-                  <HeroTable.Column>PROIECT</HeroTable.Column>
-                  <HeroTable.Column>RESPONSABIL</HeroTable.Column>
-                  <HeroTable.Column>ECHIPA</HeroTable.Column>
-                  <HeroTable.Column>TERMEN</HeroTable.Column>
-                  <HeroTable.Column>PRIORITATE</HeroTable.Column>
-                  <HeroTable.Column>STATUS</HeroTable.Column>
-                  <HeroTable.Column>ACTIUNI</HeroTable.Column>
-                </HeroTable.Header>
-                <HeroTable.Body>
+            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[#111c2d] md:block">
+              <Table>
+                <thead>
+                  <tr>
+                    <TH>TITLU</TH>
+                    <TH>PROIECT</TH>
+                    <TH>RESPONSABIL</TH>
+                    <TH>ECHIPA</TH>
+                    <TH>TERMEN</TH>
+                    <TH>PRIORITATE</TH>
+                    <TH>STATUS</TH>
+                    <TH>ACTIUNI</TH>
+                  </tr>
+                </thead>
+                <tbody>
                   {workOrders.map((item) => (
-                    <HeroTable.Row key={item.id}>
-                      <HeroTable.Cell>
-                        <Link href={`/lucrari/${item.id}`} className="font-semibold text-[#c6dbff] hover:underline">
+                    <tr key={item.id}>
+                      <TD>
+                        <Link href={`/lucrari/${item.id}`} className="font-semibold text-[#d6e9ff] hover:underline">
                           {item.title}
                         </Link>
-                        <p className="text-xs text-[#95a9c4]">{item.description?.slice(0, 92) || "-"}</p>
-                      </HeroTable.Cell>
-                      <HeroTable.Cell>{item.project.title}</HeroTable.Cell>
-                      <HeroTable.Cell>{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "Nealocat"}</HeroTable.Cell>
-                      <HeroTable.Cell>{item.team?.name || "-"}</HeroTable.Cell>
-                      <HeroTable.Cell>{item.dueDate ? formatDate(item.dueDate) : "-"}</HeroTable.Cell>
-                      <HeroTable.Cell>
+                        <p className="text-xs text-[#9fb1c5]">{item.description?.slice(0, 92) || "-"}</p>
+                      </TD>
+                      <TD>{item.project.title}</TD>
+                      <TD>{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "Nealocat"}</TD>
+                      <TD>{item.team?.name || "-"}</TD>
+                      <TD>{item.dueDate ? formatDate(item.dueDate) : "-"}</TD>
+                      <TD>
                         <Badge tone={item.priority === "CRITICAL" ? "danger" : item.priority === "HIGH" ? "warning" : "neutral"}>{item.priority}</Badge>
-                      </HeroTable.Cell>
-                      <HeroTable.Cell>
+                      </TD>
+                      <TD>
                         <Badge tone={item.status === "DONE" ? "success" : item.status === "BLOCKED" ? "danger" : item.status === "IN_PROGRESS" ? "info" : "neutral"}>{item.status}</Badge>
-                      </HeroTable.Cell>
-                      <HeroTable.Cell>
+                      </TD>
+                      <TD>
                         <div className="flex gap-2">
                           <form action={updateWorkOrderStatus}>
                             <input type="hidden" name="id" value={item.id} />
@@ -261,30 +264,29 @@ export default async function WorkOrdersPage({
                             </Button>
                           </form>
                         </div>
-                      </HeroTable.Cell>
-                    </HeroTable.Row>
+                      </TD>
+                    </tr>
                   ))}
-                </HeroTable.Body>
-                </HeroTable.Content>
-              </HeroTable>
+                </tbody>
+              </Table>
             </div>
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-between text-sm text-[#9cb0cb]">
+          <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[var(--border)]/60 pt-4 text-sm text-[#9fb1c5] sm:flex-row">
             <span>
               Pagina {page} din {totalPages}
             </span>
             <div className="flex gap-2">
               {page > 1 ? (
-                <a className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]" href={`/lucrari?page=${page - 1}&q=${encodeURIComponent(q)}&status=${params.status || ""}&projectId=${params.projectId || ""}`}>
+                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]" href={`/lucrari?page=${page - 1}&q=${encodeURIComponent(q)}&status=${params.status || ""}&projectId=${params.projectId || ""}`}>
                   Anterior
-                </a>
+                </Link>
               ) : null}
               {page < totalPages ? (
-                <a className="rounded-lg border border-[color:var(--border)] px-3 py-1.5 hover:border-[#3f6499]" href={`/lucrari?page=${page + 1}&q=${encodeURIComponent(q)}&status=${params.status || ""}&projectId=${params.projectId || ""}`}>
+                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]" href={`/lucrari?page=${page + 1}&q=${encodeURIComponent(q)}&status=${params.status || ""}&projectId=${params.projectId || ""}`}>
                   Urmator
-                </a>
+                </Link>
               ) : null}
             </div>
           </div>

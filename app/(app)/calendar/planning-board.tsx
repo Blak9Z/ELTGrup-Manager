@@ -34,7 +34,7 @@ const weekdays = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Dumi
 function cardTone(priority: string) {
   if (priority === "CRITICAL") return "border-[#7d3a45] bg-[rgba(98,42,50,0.42)]";
   if (priority === "HIGH") return "border-[#82683c] bg-[rgba(109,84,42,0.3)]";
-  return "border-[color:var(--border)] bg-[rgba(17,29,50,0.9)]";
+  return "border-[var(--border)] bg-[rgba(17,29,50,0.9)]";
 }
 
 function DraggableTaskCard({ task }: { task: Task }) {
@@ -77,7 +77,7 @@ function DayColumn({ day, tasks, conflicts }: { day: string; tasks: Task[]; conf
         "min-h-56 rounded-2xl border p-3 transition",
         isOver
           ? "border-[#4f79ba] bg-[rgba(31,52,86,0.42)]"
-          : "border-[color:var(--border)] bg-[rgba(10,18,33,0.84)]",
+          : "border-[var(--border)] bg-[rgba(10,18,33,0.84)]",
       ].join(" ")}
     >
       <div className="mb-2 flex items-center justify-between">
@@ -105,24 +105,33 @@ export function PlanningBoard({ initialTasks }: { initialTasks: Task[] }) {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  const tasksByDay = useMemo(() => {
-    return weekdays.reduce<Record<string, Task[]>>((acc, day) => {
-      acc[day] = tasks.filter((task) => task.day === day);
+  const { tasksByDay, conflictsByDay } = useMemo(() => {
+    const grouped = weekdays.reduce<Record<string, Task[]>>((acc, day) => {
+      acc[day] = [];
       return acc;
     }, {});
-  }, [tasks]);
 
-  const conflictsByDay = useMemo(() => {
-    const output: Record<string, number> = {};
-    for (const day of weekdays) {
-      const dayTasks = tasksByDay[day] ?? [];
-      const duplicateTeams = dayTasks.filter(
-        (item, index) => dayTasks.findIndex((candidate) => candidate.team === item.team) !== index,
-      );
-      output[day] = duplicateTeams.length;
+    for (const task of tasks) {
+      const dayKey = weekdays.includes(task.day) ? task.day : "Luni";
+      grouped[dayKey].push(task);
     }
-    return output;
-  }, [tasksByDay]);
+
+    const conflicts: Record<string, number> = {};
+    for (const day of weekdays) {
+      const teamFrequency = new Map<string, number>();
+      for (const task of grouped[day]) {
+        teamFrequency.set(task.team, (teamFrequency.get(task.team) || 0) + 1);
+      }
+
+      let conflictCount = 0;
+      for (const teamCount of teamFrequency.values()) {
+        if (teamCount > 1) conflictCount += teamCount - 1;
+      }
+      conflicts[day] = conflictCount;
+    }
+
+    return { tasksByDay: grouped, conflictsByDay: conflicts };
+  }, [tasks]);
 
   function parseDayToOffset(day: string) {
     const index = weekdays.indexOf(day);
@@ -179,7 +188,7 @@ export function PlanningBoard({ initialTasks }: { initialTasks: Task[] }) {
 
   return (
     <div>
-      <div className="mb-3 text-xs text-[#9fb2cd]">
+      <div className="mb-3 text-xs text-[#9fb1c5]">
         {isPending ? "Se salveaza replanificarea..." : "Trage o lucrare intre zile pentru a actualiza programul saptamanii."}
       </div>
       {error ? <p className="mb-3 text-xs font-medium text-[#ffb7bf]">{error}</p> : null}

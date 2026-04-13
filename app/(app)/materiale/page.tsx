@@ -122,12 +122,14 @@ export default async function MaterialePage({
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-extrabold">Catalog materiale</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Catalog</p>
+            <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Catalog materiale</h2>
             <MaterialCreateForm />
           </Card>
 
           <Card>
-            <h2 className="text-lg font-extrabold">Cerere materiale</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Requests</p>
+            <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Cerere materiale</h2>
             <MaterialRequestForm
               projects={projects.map((project) => ({ id: project.id, label: project.title }))}
               materials={materials.map((material) => ({ id: material.id, label: material.name }))}
@@ -135,7 +137,8 @@ export default async function MaterialePage({
           </Card>
 
           <Card>
-            <h2 className="text-lg font-extrabold">Miscare de stoc</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Stock Flow</p>
+            <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Miscare de stoc</h2>
             {canManageStockAndInvoices ? (
               <StockMovementForm
                 projects={projects.map((project) => ({ id: project.id, label: project.title }))}
@@ -143,22 +146,23 @@ export default async function MaterialePage({
                 warehouses={warehouses.map((warehouse) => ({ id: warehouse.id, label: warehouse.name }))}
               />
             ) : (
-              <p className="mt-3 text-sm text-[#9fb3ce]">Disponibil doar pentru rolurile Admin, Sef Santier si Financiar.</p>
+              <p className="mt-3 text-sm text-[#9fb1c5]">Disponibil doar pentru rolurile Admin, Sef Santier si Financiar.</p>
             )}
           </Card>
 
           <Card>
-            <h2 className="text-lg font-extrabold">Facturi materiale</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Invoices</p>
+            <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Facturi materiale</h2>
             {canManageStockAndInvoices ? (
               <MaterialInvoiceUploadForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
             ) : (
-              <p className="mt-3 text-sm text-[#9fb3ce]">Incarcarea facturilor este disponibila doar pentru Admin, Sef Santier si Financiar.</p>
+              <p className="mt-3 text-sm text-[#9fb1c5]">Incarcarea facturilor este disponibila doar pentru Admin, Sef Santier si Financiar.</p>
             )}
             <div className="mt-3 space-y-2">
               {materialInvoices.map((doc) => (
-                <a key={doc.id} href={doc.storagePath} target="_blank" className="block rounded-lg border border-[var(--border)] p-3 text-sm hover:border-[#4a74b0]">
+                <a key={doc.id} href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="block rounded-lg border border-[var(--border)] p-3 text-sm hover:border-[#4f6d8f]">
                   <p className="font-semibold">{doc.title}</p>
-                  <p className="text-xs text-[#9fb3ce]">{doc.project?.title || "General"} • {doc.fileName}</p>
+                  <p className="text-xs text-[#9fb1c5]">{doc.project?.title || "General"} • {doc.fileName}</p>
                 </a>
               ))}
             </div>
@@ -166,7 +170,8 @@ export default async function MaterialePage({
         </section>
 
         <Card>
-          <form className="mb-3 grid gap-3 md:grid-cols-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Filters</p>
+          <form className="mb-3 mt-2 grid gap-3 md:grid-cols-3">
             <input type="hidden" name="page" value="1" />
             <Input name="q" defaultValue={params.q || ""} placeholder="Cauta material" />
             <select name="status" defaultValue={params.status || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
@@ -187,11 +192,11 @@ export default async function MaterialePage({
                 const stock = stockByMaterial.get(material.id) || 0;
                 const min = Number(material.minStockLevel || 0);
                 return (
-                  <div key={material.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(10,18,33,0.86)] p-3">
+                  <div key={material.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-[#e8f2ff]">{material.name}</p>
-                        <p className="text-xs text-[#95a9c4]">{material.code} • {material.unitOfMeasure}</p>
+                        <p className="text-xs text-[#9fb1c5]">{material.code} • {material.unitOfMeasure}</p>
                       </div>
                       {stock <= min ? <Badge tone="danger">Stoc scazut</Badge> : <Badge tone="success">OK</Badge>}
                     </div>
@@ -203,7 +208,7 @@ export default async function MaterialePage({
                 );
               })}
             </div>
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[#111c2d] md:block">
               <Table>
                 <thead><tr><TH>Cod</TH><TH>Material</TH><TH>UM</TH><TH>Stoc curent</TH><TH>Cost intern</TH><TH>Alerte</TH></tr></thead>
                 <tbody>
@@ -226,17 +231,18 @@ export default async function MaterialePage({
             </div>
             </div>
           )}
-          <div className="mt-3 flex items-center justify-between text-sm text-[#9fb3ce]">
+          <div className="mt-3 flex items-center justify-between text-sm text-[#9fb1c5]">
             <span>Pagina {page} din {totalPages}</span>
             <div className="flex gap-2">
-              {page > 1 ? <Link className="rounded-md border border-[var(--border)] px-3 py-1" href={`/materiale?page=${page - 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Anterior</Link> : null}
-              {page < totalPages ? <Link className="rounded-md border border-[var(--border)] px-3 py-1" href={`/materiale?page=${page + 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Urmator</Link> : null}
+              {page > 1 ? <Link className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[#4f6d8f]" href={`/materiale?page=${page - 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Anterior</Link> : null}
+              {page < totalPages ? <Link className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[#4f6d8f]" href={`/materiale?page=${page + 1}&q=${encodeURIComponent(params.q || "")}&status=${params.status || ""}`}>Urmator</Link> : null}
             </div>
           </div>
         </Card>
 
         <Card className="bulk-zone">
-          <h2 className="text-lg font-extrabold">Cereri materiale recente</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Approval Queue</p>
+          <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Cereri materiale recente</h2>
           <form action={bulkMaterialRequestsAction} className="mt-3 space-y-3">
             <div className="bulk-controls grid gap-2 md:grid-cols-3">
               <select name="operation" defaultValue="APPROVE" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
@@ -257,12 +263,12 @@ export default async function MaterialePage({
           </form>
           <div className="mt-3 space-y-2">
             {requests.map((request) => (
-              <div key={request.id} className="rounded-lg border border-[var(--border)] bg-[rgba(14,24,43,0.72)] p-3 text-sm">
+              <div key={request.id} className="rounded-lg border border-[var(--border)] bg-[#132235] p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{request.project.title} • {request.material.name} • {request.quantity.toString()} {request.material.unitOfMeasure}</span>
                   <Badge tone={request.status === "PENDING" ? "warning" : request.status === "APPROVED" ? "success" : request.status === "REJECTED" ? "danger" : "neutral"}>{request.status}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-[#9fb3ce]">Solicitant: {request.requestedBy.firstName} {request.requestedBy.lastName}</p>
+                <p className="mt-1 text-xs text-[#9fb1c5]">Solicitant: {request.requestedBy.firstName} {request.requestedBy.lastName}</p>
                 {request.status === "PENDING" ? (
                   <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto_auto]">
                     {canManageStockAndInvoices ? (
@@ -283,7 +289,7 @@ export default async function MaterialePage({
                         <Button size="sm" type="submit" disabled={warehouses.length === 0}>Aproba + emite stoc</Button>
                       </form>
                     ) : (
-                      <div className="text-xs text-[#9fb3ce]">Emiterea din stoc este restrictionata.</div>
+                      <div className="text-xs text-[#9fb1c5]">Emiterea din stoc este restrictionata.</div>
                     )}
                     <form action={approveMaterialRequest}>
                       <input type="hidden" name="id" value={request.id} />

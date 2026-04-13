@@ -10,12 +10,13 @@ import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import { uploadDocumentFile } from "@/src/lib/storage";
+import { calculateAvailableStock } from "@/src/lib/inventory";
 
 const requestSchema = z.object({
   projectId: z.string().cuid(),
   materialId: z.string().cuid(),
   quantity: z.coerce.number().positive(),
-  note: z.string().max(500).optional(),
+  note: z.string().trim().max(500).optional(),
 });
 
 const movementSchema = z.object({
@@ -24,7 +25,7 @@ const movementSchema = z.object({
   projectId: z.string().cuid().optional(),
   quantity: z.coerce.number().positive(),
   type: z.nativeEnum(StockMovementType),
-  note: z.string().max(500).optional(),
+  note: z.string().trim().max(500).optional(),
 });
 
 const approveAndIssueSchema = z.object({
@@ -33,13 +34,13 @@ const approveAndIssueSchema = z.object({
 });
 
 const createMaterialSchema = z.object({
-  code: z.string().min(2),
-  name: z.string().min(2),
-  unitOfMeasure: z.string().min(1),
-  category: z.string().optional(),
+  code: z.string().trim().min(2),
+  name: z.string().trim().min(2),
+  unitOfMeasure: z.string().trim().min(1),
+  category: z.string().trim().optional(),
   internalCost: z.coerce.number().min(0).optional(),
   minStockLevel: z.coerce.number().min(0).optional(),
-  supplierName: z.string().optional(),
+  supplierName: z.string().trim().optional(),
 });
 
 const stockAndInvoiceAllowedRoles = new Set<RoleKey>([
@@ -191,14 +192,28 @@ export async function approveAndIssueMaterialRequest(formData: FormData) {
     throw new Error("Cererea are deja o emitere de stoc inregistrata.");
   }
 
-  const warehouseMovements = await prisma.stockMovement.findMany({
-    where: { materialId: request.materialId, warehouseId: parsed.data.warehouseId },
-    select: { type: true, quantity: true },
-  });
-  const availableStock = warehouseMovements.reduce((sum, move) => {
-    if (move.type === StockMovementType.OUT || move.type === StockMovementType.WASTE) return sum - Number(move.quantity);
-    return sum + Number(move.quantity);
-  }, 0);
+  const [incomingStock, outgoingStock] = await Promise.all([
+    prisma.stockMovement.aggregate({
+      where: {
+        materialId: request.materialId,
+        warehouseId: parsed.data.warehouseId,
+        type: { in: [StockMovementType.IN, StockMovementType.TRANSFER, StockMovementType.RETURN, StockMovementType.ADJUSTMENT] },
+      },
+      _sum: { quantity: true },
+    }),
+    prisma.stockMovement.aggregate({
+      where: {
+        materialId: request.materialId,
+        warehouseId: parsed.data.warehouseId,
+        type: { in: [StockMovementType.OUT, StockMovementType.WASTE] },
+      },
+      _sum: { quantity: true },
+    }),
+  ]);
+  const availableStock = calculateAvailableStock(
+    Number(incomingStock._sum.quantity || 0),
+    Number(outgoingStock._sum.quantity || 0),
+  );
   const requestedQty = Number(request.quantity);
   if (availableStock < requestedQty) {
     throw new Error(`Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${requestedQty.toFixed(2)}).`);
@@ -380,7 +395,7 @@ export async function createMaterialAction(
 
     await prisma.material.create({
       data: {
-        code: parsed.data.code,
+        code: parsed.data.code.toUpperCase(),
         name: parsed.data.name,
         unitOfMeasure: parsed.data.unitOfMeasure,
         category: parsed.data.category,

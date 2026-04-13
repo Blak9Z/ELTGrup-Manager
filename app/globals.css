@@ -2,19 +2,19 @@
 @import "@heroui/react/styles";
 
 :root {
-  --background: #060b16;
-  --surface: #0d1526;
-  --surface-2: #111b31;
-  --surface-3: #152440;
-  --border: #24324a;
-  --foreground: #e6edf7;
-  --muted: #9cafc6;
-  --accent: #2f64d6;
-  --accent-strong: #3d78ff;
-  --danger: #d95f6a;
-  --success: #45b97f;
-  --warning: #d5aa45;
-  --info: #5fa0ff;
+  --background: #0a121d;
+  --surface: #101a28;
+  --surface-2: #142233;
+  --surface-3: #1a2d43;
+  --border: #2f435b;
+  --foreground: #e6edf5;
+  --muted: #9bacbf;
+  --accent: #3d7ca5;
+  --accent-strong: #4f99c7;
+  --danger: #c55362;
+  --success: #3e9b71;
+  --warning: #c4922c;
+  --info: #4a86c2;
 }
 
 @theme inline {
@@ -30,10 +30,38 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: var(--font-geist-sans), "Public Sans", "Segoe UI", sans-serif;
   line-height: 1.45;
+  letter-spacing: 0.01em;
+  overflow-x: clip;
+}
+
+html {
+  overflow-x: clip;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: linear-gradient(180deg, #2d5f84, #234867) padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(7, 18, 30, 0.72);
 }
 
 a {
@@ -49,22 +77,22 @@ button {
 
 select,
 input[type="file"] {
-  height: 2.5rem;
+  height: 2.75rem;
   width: 100%;
-  border-radius: 0.625rem;
-  border: 1px solid var(--border);
-  background: rgba(16, 27, 47, 0.85);
+  border-radius: 0.875rem;
+  border: 1px solid #31465f;
+  background: #111f2f;
   color: var(--foreground);
-  padding: 0 0.75rem;
-  font-size: 0.875rem;
+  padding: 0 0.875rem;
+  font-size: 0.9rem;
   outline: none;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 
 select:focus,
 input[type="file"]:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(61, 120, 255, 0.25);
+  border-color: #4f7297;
+  box-shadow: 0 0 0 3px rgba(61, 124, 165, 0.28);
 }
 
 input[type="file"]::file-selector-button {
@@ -77,17 +105,21 @@ input[type="file"]::file-selector-button {
 }
 
 label {
-  color: #c8d4e8;
+  color: #bfd2e8;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
 }
 
 ::selection {
-  background: rgba(61, 120, 255, 0.28);
-  color: #f3f7ff;
+  background: rgba(32, 162, 210, 0.24);
+  color: #f5fbff;
 }
 
 .bulk-zone details > summary {
   cursor: pointer;
-  color: #9fb3ce;
+  color: #9cb8d4;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -100,4 +132,14 @@ label {
 
 .bulk-zone:has(input[name="ids"]:checked) .bulk-controls {
   display: grid;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table tr td,
+table tr th {
+  border-color: #2d435b;
 }
