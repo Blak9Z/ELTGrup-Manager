@@ -46,7 +46,14 @@ export default async function TerenPage() {
         ...workOrderScopeWhere(userContext, scope),
         status: { in: ["TODO", "IN_PROGRESS", "BLOCKED"] },
       },
-      include: { project: true },
+      select: {
+        id: true,
+        projectId: true,
+        title: true,
+        status: true,
+        priority: true,
+        project: { select: { title: true } },
+      },
       orderBy: { dueDate: "asc" },
       take: 20,
     }),
@@ -56,7 +63,13 @@ export default async function TerenPage() {
         endAt: null,
         liveState: { in: ["RUNNING", "PAUSED"] },
       },
-      include: { project: true, workOrder: true },
+      select: {
+        id: true,
+        startAt: true,
+        liveState: true,
+        project: { select: { title: true } },
+        workOrder: { select: { title: true } },
+      },
       orderBy: { startAt: "desc" },
     }),
     prisma.attendance.findUnique({
@@ -77,7 +90,14 @@ export default async function TerenPage() {
         scope.projectIds === null
           ? {}
           : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
-      include: { project: true, workOrder: true },
+      select: {
+        id: true,
+        createdAt: true,
+        workCompleted: true,
+        blockers: true,
+        project: { select: { title: true } },
+        workOrder: { select: { title: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: 25,
     }),
@@ -143,12 +163,12 @@ export default async function TerenPage() {
               <p>Check-out: {attendance?.checkOutAt ? formatDateTime(attendance.checkOutAt) : "-"}</p>
             </div>
             <div className="mt-3 space-y-2">
-              <form action={checkInOnSite} className="grid grid-cols-3 gap-2">
+              <form action={checkInOnSite} className="grid gap-2 sm:grid-cols-3">
                 <Input name="latitude" placeholder="Lat" className="h-11" />
                 <Input name="longitude" placeholder="Long" className="h-11" />
                 <Button type="submit" className="h-11">Check-in</Button>
               </form>
-              <form action={checkOutOnSite} className="grid grid-cols-3 gap-2">
+              <form action={checkOutOnSite} className="grid gap-2 sm:grid-cols-3">
                 <Input name="latitude" placeholder="Lat" className="h-11" />
                 <Input name="longitude" placeholder="Long" className="h-11" />
                 <Button type="submit" variant="secondary" className="h-11">Check-out</Button>

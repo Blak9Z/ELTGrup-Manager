@@ -12,9 +12,11 @@ import { DailyReportCreateForm } from "./daily-report-create-form";
 export default async function RapoarteZilnicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ projectId?: string; workOrderId?: string }>;
+  searchParams: Promise<{ projectId?: string; workOrderId?: string; page?: string }>;
 }) {
   const params = await searchParams;
+  const page = Math.max(1, Number(params.page || "1"));
+  const pageSize = 20;
   const session = await auth();
   const scope = session?.user
     ? await resolveAccessScope({
@@ -40,7 +42,7 @@ export default async function RapoarteZilnicePage({
           workOrderId: params.workOrderId || undefined,
         };
 
-  const [projects, workOrders, reports] = await Promise.all([
+  const [projects, workOrders, reports, totalReports] = await Promise.all([
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
       select: { id: true, title: true },
@@ -50,15 +52,28 @@ export default async function RapoarteZilnicePage({
       where: workOrdersWhere,
       select: { id: true, title: true },
       orderBy: { title: "asc" },
-      take: 150,
+      take: 100,
     }),
     prisma.dailySiteReport.findMany({
       where: reportsWhere,
-      include: { project: true, workOrder: true, createdBy: true },
+      select: {
+        id: true,
+        reportDate: true,
+        weather: true,
+        workCompleted: true,
+        blockers: true,
+        workersCount: true,
+        createdBy: { select: { firstName: true, lastName: true } },
+        project: { select: { title: true } },
+        workOrder: { select: { title: true } },
+      },
       orderBy: { reportDate: "desc" },
-      take: 60,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
+    prisma.dailySiteReport.count({ where: reportsWhere }),
   ]);
+  const totalPages = Math.max(1, Math.ceil(totalReports / pageSize));
   const blockersCount = reports.filter((item) => Boolean(item.blockers)).length;
   const totalWorkers = reports.reduce((sum, item) => sum + item.workersCount, 0);
 
@@ -68,6 +83,7 @@ export default async function RapoarteZilnicePage({
         <PageHeader title="Rapoarte zilnice de santier" subtitle="Vreme, prezenta, progres lucrari, blocaje, SSM, poze si semnaturi" />
         <Card>
           <form className="grid gap-3 md:grid-cols-3">
+            <input type="hidden" name="page" value="1" />
             <select name="projectId" defaultValue={selectedProjectId || ""} className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
               <option value="">Toate proiectele</option>
               {projects.map((project) => (
@@ -135,6 +151,27 @@ export default async function RapoarteZilnicePage({
               </div>
             </Card>
           ))}
+        </div>
+        <div className="flex items-center justify-between text-sm text-[#9fb3ce]">
+          <span>Pagina {page} din {totalPages}</span>
+          <div className="flex gap-2">
+            {page > 1 ? (
+              <Link
+                href={`/rapoarte-zilnice?page=${page - 1}&projectId=${selectedProjectId || ""}&workOrderId=${params.workOrderId || ""}`}
+                className="rounded-md border border-[var(--border)] px-3 py-1"
+              >
+                Anterior
+              </Link>
+            ) : null}
+            {page < totalPages ? (
+              <Link
+                href={`/rapoarte-zilnice?page=${page + 1}&projectId=${selectedProjectId || ""}&workOrderId=${params.workOrderId || ""}`}
+                className="rounded-md border border-[var(--border)] px-3 py-1"
+              >
+                Urmator
+              </Link>
+            ) : null}
+          </div>
         </div>
       </div>
     </PermissionGuard>

@@ -40,7 +40,14 @@ export default async function FinanciarPage({
   const [invoices, totalInvoices, costs, projects] = await Promise.all([
     prisma.invoice.findMany({
       where: invoiceWhere,
-      include: { project: true, client: true },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        totalAmount: true,
+        status: true,
+        project: { select: { id: true, title: true } },
+        client: { select: { name: true } },
+      },
       orderBy: { dueDate: "asc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -53,11 +60,25 @@ export default async function FinanciarPage({
     }),
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
-      include: { costs: true, invoices: true },
+      select: { id: true, title: true },
       take: 25,
       orderBy: { title: "asc" },
     }),
   ]);
+  const [projectCostSums, projectInvoiceSums] = await Promise.all([
+    prisma.costEntry.groupBy({
+      by: ["projectId"],
+      where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter! },
+      _sum: { amount: true },
+    }),
+    prisma.invoice.groupBy({
+      by: ["projectId"],
+      where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter! },
+      _sum: { totalAmount: true },
+    }),
+  ]);
+  const costByProject = new Map(projectCostSums.map((item) => [item.projectId, Number(item._sum.amount || 0)]));
+  const invoicedByProject = new Map(projectInvoiceSums.map((item) => [item.projectId, Number(item._sum.totalAmount || 0)]));
   const totalPages = Math.max(1, Math.ceil(totalInvoices / pageSize));
 
   return (
@@ -134,8 +155,8 @@ export default async function FinanciarPage({
           <h2 className="text-lg font-semibold text-[#eef4ff]">Cashflow si marja estimata pe proiect</h2>
           <div className="mt-3 space-y-2">
             {projects.map((project) => {
-              const costTotal = project.costs.reduce((sum, item) => sum + Number(item.amount), 0);
-              const invoiced = project.invoices.reduce((sum, item) => sum + Number(item.totalAmount), 0);
+              const costTotal = costByProject.get(project.id) || 0;
+              const invoiced = invoicedByProject.get(project.id) || 0;
               const margin = invoiced - costTotal;
               return (
                 <div key={project.id} className="rounded-xl border border-[color:var(--border)] bg-[rgba(12,21,38,0.78)] p-3 text-sm text-[#dde8f8]">
