@@ -49,10 +49,43 @@ const stockAndInvoiceAllowedRoles = new Set<RoleKey>([
   RoleKey.SITE_MANAGER,
   RoleKey.ACCOUNTANT,
 ]);
+const incomingStockTypes: StockMovementType[] = [
+  StockMovementType.IN,
+  StockMovementType.TRANSFER,
+  StockMovementType.RETURN,
+  StockMovementType.ADJUSTMENT,
+];
+const outgoingStockTypes: StockMovementType[] = [StockMovementType.OUT, StockMovementType.WASTE];
 
 function ensureStockAndInvoiceAccess(roleKeys: RoleKey[]) {
   if (roleKeys.some((role) => stockAndInvoiceAllowedRoles.has(role))) return;
   throw new Error("Doar Admin, Sef Santier sau Financiar pot opera miscari de stoc si facturi materiale.");
+}
+
+async function getAvailableWarehouseStock(materialId: string, warehouseId: string) {
+  const [incomingStock, outgoingStock] = await Promise.all([
+    prisma.stockMovement.aggregate({
+      where: {
+        materialId,
+        warehouseId,
+        type: { in: incomingStockTypes },
+      },
+      _sum: { quantity: true },
+    }),
+    prisma.stockMovement.aggregate({
+      where: {
+        materialId,
+        warehouseId,
+        type: { in: outgoingStockTypes },
+      },
+      _sum: { quantity: true },
+    }),
+  ]);
+
+  return calculateAvailableStock(
+    Number(incomingStock._sum?.quantity || 0),
+    Number(outgoingStock._sum?.quantity || 0),
+  );
 }
 
 async function createMaterialRequestInternal(formData: FormData) {
@@ -117,7 +150,8 @@ export async function approveMaterialRequest(formData: FormData) {
 
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
-  if (!Object.values(MaterialRequestStatus).includes(status as MaterialRequestStatus)) {
+  const allowedStatuses: MaterialRequestStatus[] = [MaterialRequestStatus.APPROVED, MaterialRequestStatus.REJECTED];
+  if (!allowedStatuses.includes(status as MaterialRequestStatus)) {
     throw new Error("Status invalid");
   }
 
@@ -192,28 +226,7 @@ export async function approveAndIssueMaterialRequest(formData: FormData) {
     throw new Error("Cererea are deja o emitere de stoc inregistrata.");
   }
 
-  const [incomingStock, outgoingStock] = await Promise.all([
-    prisma.stockMovement.aggregate({
-      where: {
-        materialId: request.materialId,
-        warehouseId: parsed.data.warehouseId,
-        type: { in: [StockMovementType.IN, StockMovementType.TRANSFER, StockMovementType.RETURN, StockMovementType.ADJUSTMENT] },
-      },
-      _sum: { quantity: true },
-    }),
-    prisma.stockMovement.aggregate({
-      where: {
-        materialId: request.materialId,
-        warehouseId: parsed.data.warehouseId,
-        type: { in: [StockMovementType.OUT, StockMovementType.WASTE] },
-      },
-      _sum: { quantity: true },
-    }),
-  ]);
-  const availableStock = calculateAvailableStock(
-    Number(incomingStock._sum.quantity || 0),
-    Number(outgoingStock._sum.quantity || 0),
-  );
+  const availableStock = await getAvailableWarehouseStock(request.materialId, parsed.data.warehouseId);
   const requestedQty = Number(request.quantity);
   if (availableStock < requestedQty) {
     throw new Error(`Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${requestedQty.toFixed(2)}).`);
@@ -223,7 +236,7 @@ export async function approveAndIssueMaterialRequest(formData: FormData) {
   await prisma.$transaction(async (tx) => {
     await tx.materialRequest.update({
       where: { id: request.id },
-      data: { status: MaterialRequestStatus.APPROVED, approvedAt: now, approvedById: currentUser.id },
+      data: { status: MaterialRequestStatus.ISSUED, approvedAt: now, approvedById: currentUser.id },
     });
 
     const movement = await tx.stockMovement.create({
@@ -305,6 +318,14 @@ async function createStockMovementInternal(formData: FormData) {
   if (!parsed.success) throw parsed.error;
   if (parsed.data.projectId) {
     await assertProjectAccess(currentUser, parsed.data.projectId);
+  }
+  if (parsed.data.type === StockMovementType.OUT || parsed.data.type === StockMovementType.WASTE) {
+    const availableStock = await getAvailableWarehouseStock(parsed.data.materialId, parsed.data.warehouseId);
+    if (availableStock < parsed.data.quantity) {
+      throw new Error(
+        `Stoc insuficient in depozit (disponibil ${availableStock.toFixed(2)}, necesar ${parsed.data.quantity.toFixed(2)}).`,
+      );
+    }
   }
 
   const movement = await prisma.stockMovement.create({

@@ -2,70 +2,112 @@
 @import "@heroui/react/styles";
 
 :root {
-  --background: #0a121d;
-  --surface: #101a28;
-  --surface-2: #142233;
-  --surface-3: #1a2d43;
-  --border: #2f435b;
-  --foreground: #e6edf5;
-  --muted: #9bacbf;
-  --accent: #3d7ca5;
-  --accent-strong: #4f99c7;
-  --danger: #c55362;
-  --success: #3e9b71;
-  --warning: #c4922c;
-  --info: #4a86c2;
+  --background: #0b1118;
+  --shell: #0e141d;
+  --surface: #141d28;
+  --surface-2: #192432;
+  --surface-3: #223143;
+  --surface-card: #111a25;
+  --border: #2b3a4b;
+  --border-strong: #40556d;
+  --foreground: #edf1f7;
+  --muted: #98a8bc;
+  --muted-strong: #b3c0d0;
+  --accent: #507ba9;
+  --accent-strong: #5f8ec1;
+  --danger: #be5f6f;
+  --success: #4f9c76;
+  --warning: #b88e43;
+  --info: #5e86be;
+  --shadow-panel: 0 24px 52px -36px rgba(4, 8, 15, 0.85);
+  --shadow-float: 0 18px 34px -24px rgba(0, 0, 0, 0.74);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ibm-sans);
+  --font-mono: var(--font-ibm-mono);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
 body {
-  margin: 0;
-  min-height: 100vh;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), "Public Sans", "Segoe UI", sans-serif;
-  line-height: 1.45;
-  letter-spacing: 0.01em;
+  min-height: 100%;
   overflow-x: clip;
 }
 
-html {
-  overflow-x: clip;
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 560px at -8% -10%, rgba(79, 121, 168, 0.16), transparent 58%),
+    radial-gradient(920px 420px at 105% -6%, rgba(76, 117, 158, 0.12), transparent 62%),
+    linear-gradient(180deg, #0b1118 0%, #0a1017 100%);
+  color: var(--foreground);
+  font-family: var(--font-ibm-sans), "IBM Plex Sans", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  letter-spacing: 0.004em;
+  text-rendering: geometricPrecision;
 }
 
 h1,
 h2,
 h3 {
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  margin: 0;
+  color: #f3f7fd;
+}
+
+p {
+  margin: 0;
+}
+
+.page-stack {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.page-kpis {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.panel-muted {
+  border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
+  background: color-mix(in oklab, var(--surface-card) 84%, #0f1722 16%);
+  box-shadow: var(--shadow-panel);
+}
+
+.field-label {
+  color: var(--muted-strong);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 
 ::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 2px solid transparent;
-  background: linear-gradient(180deg, #2d5f84, #234867) padding-box;
+  background: linear-gradient(180deg, #3f5c7d, #2f445c) padding-box;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(7, 18, 30, 0.72);
+  background: rgba(8, 16, 24, 0.66);
 }
 
 a {
   color: inherit;
+  text-decoration: none;
 }
 
 input,
@@ -77,13 +119,13 @@ button {
 
 select,
 input[type="file"] {
-  height: 2.75rem;
+  height: 2.55rem;
   width: 100%;
-  border-radius: 0.875rem;
-  border: 1px solid #31465f;
-  background: #111f2f;
+  border-radius: 0.7rem;
+  border: 1px solid #314152;
+  background: #101824;
   color: var(--foreground);
-  padding: 0 0.875rem;
+  padding: 0 0.8rem;
   font-size: 0.9rem;
   outline: none;
   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
@@ -91,38 +133,38 @@ input[type="file"] {
 
 select:focus,
 input[type="file"]:focus {
-  border-color: #4f7297;
-  box-shadow: 0 0 0 3px rgba(61, 124, 165, 0.28);
+  border-color: #607d9f;
+  box-shadow: 0 0 0 3px rgba(80, 123, 169, 0.22);
 }
 
 input[type="file"]::file-selector-button {
-  margin-right: 0.5rem;
+  margin-right: 0.45rem;
   border: 0;
   border-right: 1px solid var(--border);
   background: transparent;
   color: var(--muted);
-  padding-right: 0.75rem;
+  padding-right: 0.65rem;
 }
 
 label {
-  color: #bfd2e8;
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
+  color: var(--muted-strong);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 600;
 }
 
 ::selection {
-  background: rgba(32, 162, 210, 0.24);
-  color: #f5fbff;
+  background: rgba(70, 116, 167, 0.28);
+  color: #f6fbff;
 }
 
 .bulk-zone details > summary {
   cursor: pointer;
-  color: #9cb8d4;
-  font-size: 0.78rem;
+  color: var(--muted-strong);
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -141,5 +183,5 @@ table {
 
 table tr td,
 table tr th {
-  border-color: #2d435b;
+  border-color: #2c3b4c;
 }

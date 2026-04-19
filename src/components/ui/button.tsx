@@ -17,10 +17,14 @@ const sizeMap = {
 } as const;
 
 const variantClassMap: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  default: "border border-[#4e6f90] bg-[#2a4f73] text-[#eef4fb] hover:bg-[#346089]",
-  secondary: "border border-[#3a5068] bg-[#17273a] text-[color:var(--foreground)] hover:border-[#4e6987] hover:bg-[#1b2f46]",
-  ghost: "border border-transparent bg-transparent text-[#cfdceb] hover:border-[#3b526b] hover:bg-[#142336]",
-  destructive: "bg-[linear-gradient(180deg,#ce4a5c,#b63e4d)] text-[#fff6f7] border border-[#a93645] hover:brightness-105",
+  default:
+    "border border-[#5f7f9f] bg-[linear-gradient(180deg,#4b6f95,#3f617f)] text-[#eef5ff] shadow-[0_10px_18px_-14px_rgba(66,105,144,0.8)] hover:border-[#7a9bbc] hover:bg-[linear-gradient(180deg,#547ba4,#456b8e)]",
+  secondary:
+    "border border-[var(--border)] bg-[var(--surface-card)] text-[var(--foreground)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]",
+  ghost:
+    "border border-transparent bg-transparent text-[var(--muted-strong)] hover:border-[var(--border)] hover:bg-[var(--surface-card)] hover:text-[var(--foreground)]",
+  destructive:
+    "border border-[#8b3140] bg-[linear-gradient(180deg,#ba5362,#9f3d4b)] text-[#fff6f8] shadow-[0_10px_18px_-14px_rgba(170,66,83,0.85)] hover:border-[#a34755] hover:bg-[linear-gradient(180deg,#c15b6a,#a54553)]",
 };
 
 export function Button({ className, variant = "default", size = "default", ...props }: ButtonProps) {
@@ -31,7 +35,7 @@ export function Button({ className, variant = "default", size = "default", ...pr
       size={sizeMap[size]}
       isDisabled={disabled}
       className={cn(
-        "min-w-0 rounded-xl text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/50",
+        "min-w-0 rounded-lg text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40",
         variantClassMap[variant],
         className,
       )}

@@ -22,6 +22,11 @@ const createQuickTaskSchema = z.object({
   dayLabel: z.enum(["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"]),
   teamId: z.string().cuid().optional(),
 });
+const updateScheduleSchema = z.object({
+  id: z.string().cuid(),
+  dayLabel: z.enum(["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"]),
+  startDateIso: z.string().optional(),
+});
 
 function dateForWeekday(dayLabel: string) {
   const weekdays = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"];
@@ -37,14 +42,16 @@ function dateForWeekday(dayLabel: string) {
 
 export async function updateWorkOrderScheduleAction(input: { id: string; dayLabel: string; startDateIso: string }) {
   const currentUser = await requirePermission("TASKS", "UPDATE");
-  await assertWorkOrderAccess(currentUser, input.id);
+  const parsed = updateScheduleSchema.safeParse(input);
+  if (!parsed.success) throw new Error("Date invalide pentru replanificare.");
+  await assertWorkOrderAccess(currentUser, parsed.data.id);
 
-  const nextStart = new Date(input.startDateIso);
+  const nextStart = dateForWeekday(parsed.data.dayLabel);
   const nextDue = new Date(nextStart);
   nextDue.setHours(17, 0, 0, 0);
 
   const updated = await prisma.workOrder.update({
-    where: { id: input.id },
+    where: { id: parsed.data.id },
     data: {
       startDate: nextStart,
       dueDate: nextDue,

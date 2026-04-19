@@ -3,7 +3,7 @@
 import { DocumentCategory } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
+import { assertClientAccess, assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState } from "@/src/lib/action-state";
 import { requirePermission } from "@/src/lib/permissions";
@@ -44,9 +44,12 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
     if (parsed.data.projectId) {
       await assertProjectAccess(currentUser, parsed.data.projectId);
     }
+    if (parsed.data.clientId) {
+      await assertClientAccess(currentUser, parsed.data.clientId);
+    }
     let effectiveProjectId = parsed.data.projectId;
     if (parsed.data.workOrderId) {
-      await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
+      await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
       const workOrder = await prisma.workOrder.findUnique({
         where: { id: parsed.data.workOrderId, deletedAt: null },
         select: { projectId: true, title: true },

@@ -55,16 +55,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           subtitle={`${project.code} • ${project.client.name} • ${project.siteAddress}`}
           actions={
             <div className="flex flex-wrap gap-2">
-              <Link href={`/calendar?projectId=${project.id}`} className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
+              <Link href={`/calendar?projectId=${project.id}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-sm font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
                 Calendar
               </Link>
-              <Link href={`/pontaj?projectId=${project.id}`} className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
+              <Link href={`/pontaj?projectId=${project.id}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-sm font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
                 Pontaj
               </Link>
-              <Link href={`/rapoarte-zilnice?projectId=${project.id}`} className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
+              <Link href={`/rapoarte-zilnice?projectId=${project.id}`} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-sm font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
                 Rapoarte
               </Link>
-              <Link href="/proiecte" className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-sm font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
+              <Link href="/proiecte" className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-sm font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
                 Inapoi
               </Link>
             </div>
@@ -73,32 +73,32 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Status</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Status</p>
             <div className="mt-2">
               <Badge tone={project.status === "ACTIVE" ? "success" : project.status === "BLOCKED" ? "danger" : "neutral"}>{project.status}</Badge>
             </div>
           </Card>
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Buget estimat</p>
-            <p className="mt-2 text-xl font-semibold text-[#f2f7ff]">{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Buget estimat</p>
+            <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
           </Card>
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Cost real</p>
-            <p className="mt-2 text-xl font-semibold text-[#f2f7ff]">{formatCurrency(totalCost)}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Cost real</p>
+            <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(totalCost)}</p>
           </Card>
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#9fb1c5]">Facturat</p>
-            <p className="mt-2 text-xl font-semibold text-[#f2f7ff]">{formatCurrency(totalInvoiced)}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Facturat</p>
+            <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
           </Card>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
           <Card className="xl:col-span-2">
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Lucrari active</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Lucrari active</h2>
             <div className="mt-3 space-y-2">
               {project.workOrders.map((task) => (
-                <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm">
-                  <p className="font-semibold text-[#ecf2ff]">{task.title}</p>
+                <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                  <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
                   <p className="text-xs text-[#a0b3ce]">
                     Status {task.status} • Prioritate {task.priority} • Termen {task.dueDate ? formatDate(task.dueDate) : "-"}
                   </p>
@@ -108,11 +108,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Faze proiect</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Faze proiect</h2>
             <div className="mt-3 space-y-2">
               {project.phases.map((phase) => (
-                <div key={phase.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm">
-                  <p className="font-semibold text-[#ecf2ff]">
+                <div key={phase.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                  <p className="font-semibold text-[var(--foreground)]">
                     {phase.position}. {phase.title}
                   </p>
                   <p className="text-xs text-[#a0b3ce]">{phase.completed ? "Finalizata" : "In progres"}</p>
@@ -124,11 +124,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Consum materiale</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Consum materiale</h2>
             <div className="mt-3 space-y-2 text-sm">
               {project.materialUsage.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
-                  <p className="font-semibold text-[#ecf2ff]">{item.material.name}</p>
+                <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <p className="font-semibold text-[var(--foreground)]">{item.material.name}</p>
                   <p className="text-xs text-[#a0b3ce]">
                     Consum: {item.quantityUsed.toString()} {item.material.unitOfMeasure}
                   </p>
@@ -137,11 +137,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </Card>
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Facturi</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Facturi</h2>
             <div className="mt-3 space-y-2 text-sm">
               {project.invoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
-                  <p className="font-semibold text-[#ecf2ff]">{invoice.invoiceNumber}</p>
+                <div key={invoice.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <p className="font-semibold text-[var(--foreground)]">{invoice.invoiceNumber}</p>
                   <p className="text-xs text-[#a0b3ce]">
                     {formatCurrency(invoice.totalAmount.toString())} • Scadenta {formatDate(invoice.dueDate)} • {invoice.status}
                   </p>
@@ -153,11 +153,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Documente proiect</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Documente proiect</h2>
             <div className="mt-3 space-y-2 text-sm">
               {project.documents.map((doc) => (
-                <div key={doc.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
-                  <p className="font-semibold text-[#ecf2ff]">{doc.title}</p>
+                <div key={doc.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <p className="font-semibold text-[var(--foreground)]">{doc.title}</p>
                   <p className="text-xs text-[#a0b3ce]">
                     {doc.category} • {doc.fileName}
                   </p>
@@ -166,11 +166,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </Card>
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Rapoarte zilnice</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Rapoarte zilnice</h2>
             <div className="mt-3 space-y-2 text-sm">
               {project.dailyReports.map((report) => (
-                <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
-                  <p className="font-semibold text-[#ecf2ff]">{formatDate(report.reportDate)}</p>
+                <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <p className="font-semibold text-[var(--foreground)]">{formatDate(report.reportDate)}</p>
                   <p className="text-xs text-[#a0b3ce]">{report.workCompleted}</p>
                 </div>
               ))}
@@ -179,11 +179,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </section>
 
         <Card>
-          <h2 className="text-lg font-semibold text-[#f2f9ff]">Subcontractori</h2>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Subcontractori</h2>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {project.subcontractors.map((assignment) => (
-              <div key={assignment.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-sm">
-                <p className="font-semibold text-[#ecf2ff]">{assignment.subcontractor.name}</p>
+              <div key={assignment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                <p className="font-semibold text-[var(--foreground)]">{assignment.subcontractor.name}</p>
                 <p className="text-xs text-[#a0b3ce]">Status {assignment.status} • Contract {assignment.contractRef || "-"}</p>
               </div>
             ))}
@@ -191,8 +191,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </Card>
 
         <Card>
-          <h2 className="text-lg font-semibold text-[#f2f9ff]">Timeline proiect (operational)</h2>
-          <p className="mt-1 text-xs text-[#9fb1c5]">Un singur fir cronologic pentru update-uri, documente, costuri, materiale, lucrari si facturi.</p>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Timeline proiect (operational)</h2>
+          <p className="mt-1 text-xs text-[var(--muted)]">Un singur fir cronologic pentru update-uri, documente, costuri, materiale, lucrari si facturi.</p>
           <div className="mt-3">
             <ActivityTimeline events={timeline} />
           </div>

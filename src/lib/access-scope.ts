@@ -116,15 +116,21 @@ export async function assertProjectAccess(user: AuthUserLike, projectId: string)
   }
 }
 
-export async function assertWorkOrderAccess(user: AuthUserLike, workOrderId: string) {
+export async function assertWorkOrderAccess(
+  user: AuthUserLike,
+  workOrderId: string,
+  options?: { projectId?: string },
+) {
   const scope = await resolveAccessScope(user);
-  if (scope.projectIds === null) return;
-
   const workOrder = await prisma.workOrder.findUnique({
     where: { id: workOrderId },
     select: { id: true, projectId: true, responsibleId: true, teamId: true },
   });
   if (!workOrder) throw new Error("Lucrare inexistenta.");
+  if (options?.projectId && workOrder.projectId !== options.projectId) {
+    throw new Error("Lucrarea selectata nu apartine proiectului selectat.");
+  }
+  if (scope.projectIds === null) return;
   if (!scope.projectIds.includes(workOrder.projectId)) throw new Error("Nu ai acces la lucrarea selectata.");
 
   if (user.roleKeys.includes(RoleKey.WORKER)) {

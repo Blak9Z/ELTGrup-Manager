@@ -115,13 +115,13 @@ export default async function TerenPage() {
           subtitle="Coordonare santier in timp real: prezenta, pontaj live, raportare progres, evidenta blocaje si dovada foto."
           actions={
             <div className="flex flex-wrap gap-2">
-              <Link href="/pontaj" className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
+              <Link href="/pontaj" className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
                 Pontaj complet
               </Link>
-              <Link href="/calendar" className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
+              <Link href="/calendar" className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
                 Calendar echipe
               </Link>
-              <Link href="/rapoarte-zilnice" className="rounded-xl border border-[var(--border)] bg-[#152538] px-3 py-1.5 text-xs font-semibold text-[#d8e6fb] hover:border-[#4f6d8f]">
+              <Link href="/rapoarte-zilnice" className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
                 Rapoarte zilnice
               </Link>
             </div>
@@ -130,32 +130,32 @@ export default async function TerenPage() {
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Taskuri active</p>
-            <p className="mt-2 text-2xl font-semibold text-[#f2f9ff]">{tasks.length}</p>
-            <p className="mt-1 text-xs text-[#9fb1c5]">lucrari deschise in zona ta</p>
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Taskuri active</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{tasks.length}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">lucrari deschise in zona ta</p>
           </Card>
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Rapoarte cu blocaje</p>
-            <p className="mt-2 text-2xl font-semibold text-[#f2f9ff]">{reportsWithBlockers}</p>
-            <p className="mt-1 text-xs text-[#9fb1c5]">interventie prioritara</p>
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Rapoarte cu blocaje</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{reportsWithBlockers}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">interventie prioritara</p>
           </Card>
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Taskuri critice</p>
-            <p className="mt-2 text-2xl font-semibold text-[#f2f9ff]">{highPriorityTasks}</p>
-            <p className="mt-1 text-xs text-[#9fb1c5]">prioritate HIGH / CRITICAL</p>
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Taskuri critice</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{highPriorityTasks}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">prioritate HIGH / CRITICAL</p>
           </Card>
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.1em] text-[#8ea2b8]">Taskuri blocate</p>
-            <p className="mt-2 text-2xl font-semibold text-[#f2f9ff]">{blockedTasks}</p>
-            <p className="mt-1 text-xs text-[#9fb1c5]">status BLOCKED</p>
+            <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Taskuri blocate</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{blockedTasks}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">status BLOCKED</p>
           </Card>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[1fr_1.2fr_1fr]">
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8ea2b8]">Shift Command</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#f2f9ff]">Prezenta si pontaj live</h2>
-            <div className="mt-3 rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3 text-xs text-[#9fb1c5]">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Shift Command</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Prezenta si pontaj live</h2>
+            <div className="mt-3 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-xs text-[var(--muted)]">
               <p>Check-in: {attendance?.checkInAt ? formatDateTime(attendance.checkInAt) : "-"}</p>
               <p>Check-out: {attendance?.checkOutAt ? formatDateTime(attendance.checkOutAt) : "-"}</p>
             </div>
@@ -173,12 +173,12 @@ export default async function TerenPage() {
               </form>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#8ea2b8]">Pontaj activ</p>
-              <p className="mt-1 text-sm font-semibold text-[#f2f9ff]">
+            <div className="mt-4 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Pontaj activ</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
                 {activeEntry ? `${activeEntry.workOrder?.title || "General"}` : "Fara pontaj activ"}
               </p>
-              <p className="text-xs text-[#9fb1c5]">
+              <p className="text-xs text-[var(--muted)]">
                 {activeEntry ? `${activeEntry.project.title} • start ${formatDateTime(activeEntry.startAt)}` : "Porneste pontajul din Task Pulse"}
               </p>
               {activeEntry ? (
@@ -207,8 +207,8 @@ export default async function TerenPage() {
           </Card>
 
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8ea2b8]">Field Update Composer</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#f2f9ff]">Raport operational rapid</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Field Update Composer</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Raport operational rapid</h2>
             <form action={createFieldUpdate} className="mt-3 space-y-3">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
@@ -259,18 +259,18 @@ export default async function TerenPage() {
           </Card>
 
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8ea2b8]">Task Pulse</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#f2f9ff]">Actiuni rapide pe lucrari</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Task Pulse</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Actiuni rapide pe lucrari</h2>
             <div className="mt-3 space-y-3">
               {tasks.length === 0 ? (
-                <p className="text-sm text-[#9fb1c5]">Nu exista lucrari active pentru tine in acest moment.</p>
+                <p className="text-sm text-[var(--muted)]">Nu exista lucrari active pentru tine in acest moment.</p>
               ) : (
                 tasks.slice(0, 8).map((task) => (
-                  <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
+                  <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-sm font-semibold text-[#f2f9ff]">{task.title}</p>
-                        <p className="text-xs text-[#9fb1c5]">{task.project.title}</p>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">{task.title}</p>
+                        <p className="text-xs text-[var(--muted)]">{task.project.title}</p>
                       </div>
                       <Badge tone={task.status === "BLOCKED" ? "danger" : task.priority === "CRITICAL" ? "warning" : "neutral"}>
                         {task.priority}
@@ -291,13 +291,13 @@ export default async function TerenPage() {
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8ea2b8]">Field Evidence</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#f2f9ff]">Foto progres pe lucrari</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Field Evidence</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Foto progres pe lucrari</h2>
             <div className="mt-3 space-y-3">
               {tasks.map((task) => (
-                <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
-                  <p className="font-semibold text-[#f2f9ff]">{task.title}</p>
-                  <p className="text-xs text-[#9fb1c5]">{task.project.title} • {task.status} • {task.priority}</p>
+                <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
+                  <p className="text-xs text-[var(--muted)]">{task.project.title} • {task.status} • {task.priority}</p>
 
                   <form action={uploadTaskPhoto} className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
                     <input type="hidden" name="workOrderId" value={task.id} />
@@ -312,15 +312,15 @@ export default async function TerenPage() {
           </Card>
 
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[#8ea2b8]">Update Feed</p>
-            <h2 className="mt-1 text-lg font-semibold text-[#f2f9ff]">Ultimele rapoarte teren</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Update Feed</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele rapoarte teren</h2>
             <div className="mt-3 space-y-2">
               {reports.map((report) => (
-                <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[#132235] p-3">
-                  <p className="text-sm font-semibold text-[#f2f9ff]">{report.project.title}</p>
-                  <p className="text-xs text-[#9fb1c5]">{formatDateTime(report.createdAt)} • {report.workOrder?.title || "General"}</p>
-                  <p className="mt-1 text-sm text-[#dbe8fb]">{report.workCompleted}</p>
-                  <p className="text-xs text-[#9fb1c5]">Blocaje: {report.blockers || "-"}</p>
+                <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">{report.project.title}</p>
+                  <p className="text-xs text-[var(--muted)]">{formatDateTime(report.createdAt)} • {report.workOrder?.title || "General"}</p>
+                  <p className="mt-1 text-sm text-[var(--muted-strong)]">{report.workCompleted}</p>
+                  <p className="text-xs text-[var(--muted)]">Blocaje: {report.blockers || "-"}</p>
                 </div>
               ))}
             </div>

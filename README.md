@@ -1,101 +1,55 @@
 # ELTGRUP Manager
 
-**Platforma operationala pentru constructii si echipe de teren**
+Platforma de operare pentru echipe de constructii: proiecte, lucrari, calendar, pontaj, teren, materiale, documente, clienti, subcontractori, financiar, analitice si notificari.
 
-Aplicatie web full-stack pentru management operational in constructii: proiecte, lucrari, planificare, pontaj, materiale, documente, subcontractori, clienti, financiar si analitice.
+## Ce rezolva
+
+Aplicatia acopera fluxul complet de executie:
+
+1. `Proiect -> Lucrari -> Calendar -> Pontaj -> Rapoarte teren`
+2. `Cerere materiale -> Aprobare -> Emitere stoc -> Cost proiect`
+3. `Documente -> Asociere pe proiect/lucrare/client -> Audit trail`
+4. `Facturi si costuri -> Vizibilitate marja -> Export operational`
+
+Toate modulele sunt filtrate dupa rol + acces in scope (proiect/echipa), cu verificari atat in UI cat si in server actions.
+
+## Module principale
+
+- Panou (`/panou`)
+- Proiecte (`/proiecte`)
+- Lucrari (`/lucrari`)
+- Calendar (`/calendar`)
+- Pontaj (`/pontaj`)
+- Teren (`/teren`)
+- Materiale (`/materiale`)
+- Documente (`/documente`)
+- Clienti (`/clienti`)
+- Rapoarte zilnice (`/rapoarte-zilnice`)
+- Subcontractori (`/subcontractori`)
+- Financiar (`/financiar`)
+- Analitice (`/analitice`)
+- Notificari (`/notificari`)
+- Setari / utilizatori / roluri (`/setari`)
 
 ## Stack tehnic
 
 - Next.js 16 (App Router)
-- TypeScript
-- Tailwind CSS 4
+- React 19 + TypeScript
 - Prisma ORM + PostgreSQL
-- NextAuth (Credentials)
-- Zod + React Hook Form (pregatit pentru extindere)
-- TanStack Table (dependinta pregatita)
-- Zustand (dependinta pregatita)
-- Recharts
-- PDF export (`pdf-lib`)
-- Docker + docker-compose
+- NextAuth (credentials)
+- Zod (validare server actions)
+- Tailwind CSS
+- Vitest + ESLint
+- `pdf-lib` pentru export PDF
+- Upload documente: S3 compatibil sau fallback local
 
-## Fluxuri operationale E2E
+## Cerinte
 
-Aplicatia este organizata pe fluxuri de lucru reale, nu pe pagini izolate:
+- Node.js 20+
+- npm 10+
+- PostgreSQL (local, Docker sau Supabase)
 
-### 1) Project workflow
-
-`Proiect -> Work Orders -> Calendar -> Pontaj -> Rapoarte zilnice -> Timeline proiect`
-
-- proiectele centralizeaza costuri, facturi, materiale, documente, rapoarte
-- lucrarile apar in calendar si in pontaj
-- pontajul aprobat si update-urile de teren se reflecta in detalii proiect/lucrare
-- pagina de detaliu proiect + pagina de detaliu lucrare au timeline unificat (audit + documente + costuri + rapoarte + pontaj)
-
-### 2) Materials workflow
-
-`Catalog materiale -> Cerere -> Aprobare/Respingere -> Miscare stoc -> Cost proiect`
-
-- cererile au status operational + notificari
-- miscarile de stoc genereaza consum proiect
-- iesirile/waste pe proiect genereaza cost entry material in modul financiar
-- analiticele compara consumul fata de aprobare/plan
-
-### 3) Documents workflow
-
-`Upload -> Asociere entitate -> Vizualizare -> Audit`
-
-- upload document cu asociere la proiect, lucrare (work order) sau client
-- documentele apar in modulele relevante (`/documente`, detalii proiect, detalii lucrare)
-- fiecare upload este auditat in `ActivityLog`
-
-## Roluri disponibile
-
-- Super Admin
-- Administrator
-- Project Manager
-- Site Manager / Sef de santier
-- Office / Backoffice
-- Worker / Technician
-- Accountant
-- Client Viewer
-- Subcontractor
-
-## Entitati Prisma
-
-Schema include entitatile cerute:
-
-- `User`, `Role`, `Permission`, `Team`, `WorkerProfile`
-- `Client`, `ClientContact`
-- `Project`, `ProjectPhase`, `WorkOrder`, `TaskChecklistItem`
-- `TimeEntry`, `Attendance`
-- `Material`, `Warehouse`, `StockMovement`, `MaterialRequest`, `ProjectMaterialUsage`
-- `Equipment`, `EquipmentAssignment`
-- `Subcontractor`, `SubcontractorAssignment`
-- `Document`, `Invoice`, `CostEntry`
-- `DailySiteReport`, `Notification`, `Comment`, `ActivityLog`
-
-Include: enum-uri operationale, indexuri, audit fields, soft delete (`deletedAt`) pe modelele relevante.
-
-## Seed demo ELT Grup
-
-Seed-ul creeaza date realiste in romana:
-
-- ELT Grup context operational
-- 10 utilizatori cu roluri diferite
-- 12 proiecte
-- 50 lucrari
-- 200 intrari pontaj
-- 100 miscari de stoc
-- 20 rapoarte zilnice
-- 15 facturi
-- subcontractori, echipe, depozite, echipamente, documente, notificari
-
-Cont admin principal:
-
-- Email: `eduard@eltgrup.com`
-- Parola: `eltgrup`
-
-## Setup local
+## Setup local rapid
 
 1. Instaleaza dependintele:
 
@@ -103,19 +57,15 @@ Cont admin principal:
 npm install
 ```
 
-2. Configureaza mediul:
+2. Creeaza fisierul de configurare:
 
 ```bash
 cp .env.example .env
 ```
 
-### Setup Supabase (recomandat)
+3. Completeaza variabilele obligatorii (vezi sectiunea de mai jos).
 
-1. In Supabase Dashboard -> Project Settings -> Database -> Connection string:
-- copiaza `Transaction pooler` in `DATABASE_URL`
-- copiaza `Direct connection` in `DIRECT_URL`
-
-2. Ruleaza migrari + seed:
+4. Genereaza client Prisma, ruleaza migrari si seed:
 
 ```bash
 npm run db:generate
@@ -123,92 +73,118 @@ npm run db:migrate -- --name init
 npm run db:seed
 ```
 
-3. (Optional, doar local) Porneste PostgreSQL cu docker-compose:
-
-```bash
-docker compose up -d db
-```
-
-4. Ruleaza migrarile si seed:
-
-```bash
-npm run db:generate
-npm run db:migrate -- --name init
-npm run db:seed
-```
-
-5. Ruleaza aplicatia:
+5. Porneste aplicatia:
 
 ```bash
 npm run dev
 ```
 
-Aplicatia va fi disponibila la `http://localhost:3000`.
+Aplicatia este disponibila la `http://localhost:3000`.
 
-## Docker (app + db)
+## Variabile de mediu importante
+
+Minim necesar:
+
+- `DATABASE_URL` - conexiune aplicatie (pooler recomandat in Supabase)
+- `DIRECT_URL` - conexiune directa pentru migrari Prisma
+- `NEXTAUTH_SECRET` - secret semnare sesiuni
+- `NEXTAUTH_URL` - URL-ul public al aplicatiei
+
+Optional pentru upload S3 compatibil:
+
+- `STORAGE_ENDPOINT`
+- `STORAGE_ACCESS_KEY`
+- `STORAGE_SECRET_KEY`
+- `STORAGE_BUCKET`
+
+Daca variabilele de storage lipsesc, upload-ul merge pe fallback local in `public/uploads`.
+
+## Cont seed (demo)
+
+- Email: `eduard@eltgrup.com`
+- Parola: `eltgrup`
+
+## Scripturi utile
 
 ```bash
-docker compose up --build
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run test:run
+npm run test:coverage
+npm run db:generate
+npm run db:migrate -- --name <nume>
+npm run db:seed
 ```
+
+## Calitate / productie
+
+Pipeline minim recomandat in CI:
+
+```bash
+npx tsc --noEmit
+npm run lint
+npm run test:run
+npm run build
+```
+
+## Deploy live (Vercel)
+
+Repository-ul este deja link-uit la proiectul Vercel `eltgrupmanager`.
+
+Deploy productie din branch-ul curent:
+
+```bash
+vercel --prod
+```
+
+sau cu npx:
+
+```bash
+npx vercel --prod
+```
+
+Pentru productie cu Prisma:
+
+1. Asigura `DATABASE_URL` + `DIRECT_URL` in Vercel Project Settings.
+2. Ruleaza migrarile in productie cu:
+
+```bash
+npx prisma migrate deploy
+```
+
+3. Verifica dupa deploy:
+- login
+- acces pe module in functie de rol
+- creare/actualizare date pe fluxurile critice (lucrari, pontaj, materiale, facturi)
+- exporturi CSV/PDF
 
 ## Structura proiect
 
 ```txt
 app/
-  (auth)/autentificare
-  (app)/panou
-  (app)/proiecte
-  (app)/lucrari
-  (app)/calendar
-  (app)/pontaj
-  (app)/teren
-  (app)/materiale
-  (app)/documente
-  (app)/clienti
-  (app)/rapoarte-zilnice
-  (app)/notificari
-  (app)/echipamente
-  (app)/subcontractori
-  (app)/financiar
-  (app)/analitice
-  (app)/setari
-  api/auth/[...nextauth]
-  api/rapoarte-zilnice/[id]/pdf
+  (app)/...module UI + actions
+  api/...exporturi si endpoint-uri
+src/
+  components/...
+  lib/...auth, rbac, scope, utilitare
+  modules/...componente dashboard
 prisma/
   schema.prisma
   seed.ts
-src/
-  lib/
-  components/
-  modules/
 proxy.ts
 ```
 
-## Capturi ecran (produs real)
-
-Adauga capturi reale in `docs/screenshots/` si referentiaza-le aici:
-
-- `dashboard.png`
-- `project-timeline.png`
-- `work-order-timeline.png`
-- `materials-flow.png`
-- `documents-linking.png`
-- `analytics-actionable.png`
-
-## Securitate si conformitate
+## Securitate si acces
 
 - Rute protejate in `proxy.ts`
-- Verificare sesiune in layout server-side
-- Parole hashuite (`bcryptjs`)
-- RBAC la nivel de pagina si action
-- verificari de permisiuni pe endpoint-uri API sensibile
-- Validare input cu Zod
-- Audit model in baza de date (`ActivityLog`)
-- notificari generate din actiuni reale (asignare, aprobare, intarziere, status factura)
-- Fara secrete hardcodate, configurare prin variabile de mediu
+- Validare permisiuni prin RBAC (`src/lib/rbac.ts`)
+- Scope dinamic pe proiect/echipa (`src/lib/access-scope.ts`)
+- Verificari server-side in toate actiunile sensibile
+- Audit operational in `ActivityLog`
 
-## Observatii / asumptii
+## Note
 
-- Upload fisiere este functional prin `Document.storagePath` (S3 compatibil sau fallback local).
-- `EFATURA_ENABLED` ramane un feature-flag tehnic pentru integrare externa ulterioara.
-- Calendarul DnD este operational in UI; extinderea de mutare prin drag-and-drop poate fi izolata in actiune dedicata daca se doreste schimbarea de status direct din board.
+- Aplicatia este construita pentru operare reala (nu demo static).
+- Cand extinzi modulele, mentine regula: validare + permisiune + scope + audit pentru fiecare mutatie de date.

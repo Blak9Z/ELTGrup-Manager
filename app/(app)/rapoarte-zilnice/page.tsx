@@ -5,6 +5,8 @@ import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
+import { parsePositiveIntParam } from "@/src/lib/query-params";
+import { hasPermission } from "@/src/lib/rbac";
 import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { DailyReportCreateForm } from "./daily-report-create-form";
@@ -15,9 +17,13 @@ export default async function RapoarteZilnicePage({
   searchParams: Promise<{ projectId?: string; workOrderId?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, Number(params.page || "1"));
+  const page = parsePositiveIntParam(params.page);
   const pageSize = 20;
   const session = await auth();
+  const roleKeys = session?.user?.roleKeys || [];
+  const userEmail = session?.user?.email || null;
+  const canCreate = hasPermission(roleKeys, "REPORTS", "CREATE", userEmail);
+  const canExport = hasPermission(roleKeys, "REPORTS", "EXPORT", userEmail);
   const scope = session?.user
     ? await resolveAccessScope({
         id: session.user.id,
@@ -103,11 +109,13 @@ export default async function RapoarteZilnicePage({
             <Button type="submit" variant="secondary">Filtreaza</Button>
           </form>
         </Card>
-        <div className="flex justify-end">
-          <Link href="/api/export/rapoarte">
-            <Button variant="secondary">Export CSV Rapoarte</Button>
-          </Link>
-        </div>
+        {canExport ? (
+          <div className="flex justify-end">
+            <Link href="/api/export/rapoarte">
+              <Button variant="secondary">Export CSV Rapoarte</Button>
+            </Link>
+          </div>
+        ) : null}
 
         <section className="grid gap-3 md:grid-cols-3">
           <Card>
@@ -124,15 +132,17 @@ export default async function RapoarteZilnicePage({
           </Card>
         </section>
 
-        <Card>
-          <h2 className="text-lg font-extrabold">Raport nou</h2>
-          <DailyReportCreateForm
-            projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-            workOrders={workOrders.map((workOrder) => ({ id: workOrder.id, label: workOrder.title }))}
-            defaultProjectId={selectedProjectId}
-            defaultWorkOrderId={params.workOrderId}
-          />
-        </Card>
+        {canCreate ? (
+          <Card>
+            <h2 className="text-lg font-extrabold">Raport nou</h2>
+            <DailyReportCreateForm
+              projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+              workOrders={workOrders.map((workOrder) => ({ id: workOrder.id, label: workOrder.title }))}
+              defaultProjectId={selectedProjectId}
+              defaultWorkOrderId={params.workOrderId}
+            />
+          </Card>
+        ) : null}
 
         <div className="space-y-3">
           {reports.map((report) => (
@@ -140,10 +150,10 @@ export default async function RapoarteZilnicePage({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-base font-bold">{report.project.title}</p>
-                  <p className="text-xs text-[#9fb1c5]">Data: {formatDate(report.reportDate)} • Vreme: {report.weather || "-"}</p>
-                  <p className="mt-2 text-sm text-[#dce7f9]">{report.workCompleted}</p>
-                  <p className="mt-1 text-xs text-[#9fb1c5]">Blocaje: {report.blockers || "N/A"}</p>
-                  <p className="mt-1 text-xs text-[#9fb1c5]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
+                  <p className="text-xs text-[var(--muted)]">Data: {formatDate(report.reportDate)} • Vreme: {report.weather || "-"}</p>
+                  <p className="mt-2 text-sm text-[var(--muted-strong)]">{report.workCompleted}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Blocaje: {report.blockers || "N/A"}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
                 </div>
                 <Link href={`/api/rapoarte-zilnice/${report.id}/pdf`}>
                   <Button size="sm" variant="secondary">Export PDF</Button>
@@ -152,7 +162,7 @@ export default async function RapoarteZilnicePage({
             </Card>
           ))}
         </div>
-        <div className="flex items-center justify-between text-sm text-[#9fb1c5]">
+        <div className="flex items-center justify-between text-sm text-[var(--muted)]">
           <span>Pagina {page} din {totalPages}</span>
           <div className="flex gap-2">
             {page > 1 ? (

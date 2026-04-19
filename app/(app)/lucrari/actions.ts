@@ -4,7 +4,7 @@ import { NotificationType, TaskPriority, WorkOrderStatus } from "@prisma/client"
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
-import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
+import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
 import { ActionState } from "@/src/lib/action-state";
 import { notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
@@ -35,6 +35,10 @@ const createWorkOrderSchema = z.object({
 const rescheduleSchema = z.object({
   id: z.string().cuid(),
   startDate: z.string().min(1),
+});
+const updateStatusSchema = z.object({
+  id: z.string().cuid(),
+  status: z.nativeEnum(WorkOrderStatus),
 });
 
 async function createWorkOrderInternal(formData: FormData) {
@@ -115,9 +119,12 @@ export async function createWorkOrderAction(
 
 export async function updateWorkOrderStatus(formData: FormData) {
   const currentUser = await requirePermission("TASKS", "UPDATE");
-
-  const id = String(formData.get("id"));
-  const status = formData.get("status") as WorkOrderStatus;
+  const parsed = updateStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) throw new Error("Date invalide pentru actualizarea statusului.");
+  const { id, status } = parsed.data;
   await assertWorkOrderAccess(currentUser, id);
 
   const before = await prisma.workOrder.findUnique({
@@ -243,7 +250,11 @@ export async function bulkWorkOrdersAction(formData: FormData) {
     const allowedIds = new Set(
       (
         await prisma.workOrder.findMany({
-          where: { id: { in: parsed.data.ids }, projectId: { in: scope.projectIds } },
+          where: {
+            id: { in: parsed.data.ids },
+            deletedAt: null,
+            ...workOrderScopeWhere(actor, scope),
+          },
           select: { id: true },
         })
       ).map((item) => item.id),

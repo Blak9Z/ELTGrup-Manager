@@ -7,6 +7,8 @@ import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
+import { parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { hasPermission } from "@/src/lib/rbac";
 import { formatCurrency } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { updateInvoiceStatus } from "./actions";
@@ -15,10 +17,11 @@ import { CostEntryForm } from "./cost-entry-form";
 export default async function FinanciarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: InvoiceStatus; projectId?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; projectId?: string }>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, Number(params.page || "1"));
+  const page = parsePositiveIntParam(params.page);
+  const statusFilter = parseEnumParam(params.status, Object.values(InvoiceStatus));
   const pageSize = 15;
   const session = await auth();
   const scope = session?.user
@@ -28,9 +31,14 @@ export default async function FinanciarPage({
         roleKeys: session.user.roleKeys || [],
       })
     : { projectIds: null, teamId: null };
+  const roleKeys = session?.user?.roleKeys || [];
+  const userEmail = session?.user?.email || null;
+  const canCreateCost = hasPermission(roleKeys, "INVOICES", "CREATE", userEmail);
+  const canUpdateInvoice = hasPermission(roleKeys, "INVOICES", "UPDATE", userEmail);
+  const canExportInvoices = hasPermission(roleKeys, "INVOICES", "EXPORT", userEmail);
   const scopedProjectFilter = scope.projectIds === null ? undefined : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
   const invoiceWhere = {
-    status: params.status || undefined,
+    status: statusFilter,
     ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }),
     ...(params.projectId
       ? { projectId: scope.projectIds === null || scope.projectIds.includes(params.projectId) ? params.projectId : "__none__" }
@@ -61,7 +69,6 @@ export default async function FinanciarPage({
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
       select: { id: true, title: true },
-      take: 25,
       orderBy: { title: "asc" },
     }),
   ]);
@@ -85,32 +92,36 @@ export default async function FinanciarPage({
     <PermissionGuard resource="INVOICES" action="VIEW">
       <div className="space-y-6">
         <PageHeader title="Financiar operational" subtitle="Buget proiect, costuri reale, TVA, creante, status facturi, marja estimata" />
-        <div className="flex justify-end">
-          <Link href="/api/export/financiar">
-            <Button variant="secondary">Export CSV Financiar</Button>
-          </Link>
-        </div>
+        {canExportInvoices ? (
+          <div className="flex justify-end">
+            <Link href="/api/export/financiar">
+              <Button variant="secondary">Export CSV Financiar</Button>
+            </Link>
+          </div>
+        ) : null}
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {costs.map((cost) => (
             <Card key={cost.type}>
-              <p className="text-[11px] uppercase tracking-[0.1em] text-[#9fb1c5]">Cost {cost.type}</p>
-              <p className="mt-2 text-2xl font-semibold text-[#edf4fb]">{formatCurrency(cost._sum.amount?.toString() || 0)}</p>
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Cost {cost.type}</p>
+              <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{formatCurrency(cost._sum.amount?.toString() || 0)}</p>
             </Card>
           ))}
         </section>
 
-        <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Costs</p>
-          <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Adauga cost operational</h2>
-          <CostEntryForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
-        </Card>
+        {canCreateCost ? (
+          <Card>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Costs</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Adauga cost operational</h2>
+            <CostEntryForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+          </Card>
+        ) : null}
 
         <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Invoices</p>
-          <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Facturi si incasari</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Invoices</p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Facturi si incasari</h2>
           <form className="mt-3 grid gap-3 md:grid-cols-3">
             <input type="hidden" name="page" value="1" />
-            <select name="status" defaultValue={params.status || ""}>
+            <select name="status" defaultValue={statusFilter || ""}>
               <option value="">Toate statusurile</option>
               {Object.values(InvoiceStatus).map((status) => (
                 <option key={status} value={status}>{status}</option>
@@ -125,50 +136,52 @@ export default async function FinanciarPage({
             <Button type="submit" variant="secondary">Filtreaza</Button>
           </form>
           {invoices.length === 0 ? (
-            <p className="mt-3 text-sm text-[#9fb1c5]">Nu exista facturi pentru filtrele curente.</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">Nu exista facturi pentru filtrele curente.</p>
           ) : (
             <div className="mt-3 space-y-2">
               {invoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-xl border border-[var(--border)] bg-[#132235] p-3 text-sm text-[#dee8f8]">
+                <div key={invoice.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[#dee8f8]">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">{invoice.invoiceNumber} • {invoice.project.title} • {invoice.client.name}</span>
-                    <span className="font-semibold text-[#f2f9ff]">{formatCurrency(invoice.totalAmount.toString())}</span>
+                    <span className="font-semibold text-[var(--foreground)]">{formatCurrency(invoice.totalAmount.toString())}</span>
                     <Badge tone={invoice.status === "OVERDUE" ? "danger" : invoice.status === "PAID" ? "success" : "warning"}>{invoice.status}</Badge>
                   </div>
-                  <form action={updateInvoiceStatus} className="mt-2 flex items-center gap-2">
-                    <input type="hidden" name="id" value={invoice.id} />
-                    <select name="status" defaultValue={invoice.status} className="h-9 w-auto min-w-[180px] rounded-md px-2 text-xs">
-                      {Object.values(InvoiceStatus).map((status) => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                    <Button type="submit" size="sm" variant="secondary">Actualizeaza status</Button>
-                  </form>
+                  {canUpdateInvoice ? (
+                    <form action={updateInvoiceStatus} className="mt-2 flex items-center gap-2">
+                      <input type="hidden" name="id" value={invoice.id} />
+                      <select name="status" defaultValue={invoice.status} className="h-9 w-auto min-w-[180px] rounded-md px-2 text-xs">
+                        {Object.values(InvoiceStatus).map((status) => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                      <Button type="submit" size="sm" variant="secondary">Actualizeaza status</Button>
+                    </form>
+                  ) : null}
                 </div>
               ))}
             </div>
           )}
-          <div className="mt-3 flex items-center justify-between text-sm text-[#9fb1c5]">
+          <div className="mt-3 flex items-center justify-between text-sm text-[var(--muted)]">
             <span>Pagina {page} din {totalPages}</span>
             <div className="flex gap-2">
-              {page > 1 ? <Link href={`/financiar?page=${page - 1}&status=${params.status || ""}&projectId=${params.projectId || ""}`} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[#4f6d8f]">Anterior</Link> : null}
-              {page < totalPages ? <Link href={`/financiar?page=${page + 1}&status=${params.status || ""}&projectId=${params.projectId || ""}`} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[#4f6d8f]">Urmator</Link> : null}
+              {page > 1 ? <Link href={`/financiar?page=${page - 1}&status=${statusFilter || ""}&projectId=${params.projectId || ""}`} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Anterior</Link> : null}
+              {page < totalPages ? <Link href={`/financiar?page=${page + 1}&status=${statusFilter || ""}&projectId=${params.projectId || ""}`} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Urmator</Link> : null}
             </div>
           </div>
         </Card>
 
         <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Margins</p>
-          <h2 className="mt-1 text-lg font-semibold text-[#eef8ff]">Cashflow si marja estimata pe proiect</h2>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Margins</p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Cashflow si marja estimata pe proiect</h2>
           <div className="mt-3 space-y-2">
             {projects.map((project) => {
               const costTotal = costByProject.get(project.id) || 0;
               const invoiced = invoicedByProject.get(project.id) || 0;
               const margin = invoiced - costTotal;
               return (
-                <div key={project.id} className="rounded-xl border border-[var(--border)] bg-[#132235] p-3 text-sm text-[#dde8f8]">
-                  <p className="font-semibold text-[#f2f9ff]">{project.title}</p>
-                  <p className="text-xs text-[#9fb1c5]">Cost: {formatCurrency(costTotal)} • Facturat: {formatCurrency(invoiced)} • Marja: {formatCurrency(margin)}</p>
+                <div key={project.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[#dde8f8]">
+                  <p className="font-semibold text-[var(--foreground)]">{project.title}</p>
+                  <p className="text-xs text-[var(--muted)]">Cost: {formatCurrency(costTotal)} • Facturat: {formatCurrency(invoiced)} • Marja: {formatCurrency(margin)}</p>
                 </div>
               );
             })}

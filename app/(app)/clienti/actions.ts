@@ -20,6 +20,11 @@ const clientSchema = z.object({
   contactPhone: z.string().trim().optional(),
 });
 
+const addClientNoteSchema = z.object({
+  id: z.string().cuid(),
+  note: z.string().trim().min(1).max(2000),
+});
+
 async function createClientInternal(formData: FormData) {
   const currentUser = await requirePermission("PROJECTS", "CREATE");
 
@@ -82,9 +87,12 @@ export async function createClientAction(_: ActionState, formData: FormData): Pr
 export async function addClientNote(formData: FormData) {
   const currentUser = await requirePermission("PROJECTS", "UPDATE");
 
-  const id = String(formData.get("id"));
-  const note = String(formData.get("note") || "").trim();
-  if (!note) throw new Error("Nota este obligatorie");
+  const parsed = addClientNoteSchema.safeParse({
+    id: formData.get("id"),
+    note: formData.get("note"),
+  });
+  if (!parsed.success) throw new Error("Nota este obligatorie");
+  const { id, note } = parsed.data;
   await assertClientAccess(currentUser, id);
 
   const client = await prisma.client.findUnique({ where: { id }, select: { notes: true } });

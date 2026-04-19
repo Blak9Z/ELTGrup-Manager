@@ -7,6 +7,7 @@ import { PageHeader } from "@/src/components/ui/page-header";
 import { Textarea } from "@/src/components/ui/textarea";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
+import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 import { addClientNote } from "./actions";
 import { ClientCreateForm } from "./client-create-form";
@@ -20,6 +21,10 @@ export default async function ClientiPage() {
         roleKeys: session.user.roleKeys || [],
       })
     : { projectIds: null, teamId: null };
+  const roleKeys = session?.user?.roleKeys || [];
+  const userEmail = session?.user?.email || null;
+  const canCreate = hasPermission(roleKeys, "PROJECTS", "CREATE", userEmail);
+  const canUpdate = hasPermission(roleKeys, "PROJECTS", "UPDATE", userEmail);
   const clients = await prisma.client.findMany({
     where:
       scope.projectIds === null
@@ -42,10 +47,12 @@ export default async function ClientiPage() {
       <div className="space-y-6">
         <PageHeader title="CRM Clienti" subtitle="Date companie, contacte, proiecte, note operationale si istoric" />
 
-        <Card>
-          <h2 className="text-lg font-extrabold">Adauga client</h2>
-          <ClientCreateForm />
-        </Card>
+        {canCreate ? (
+          <Card>
+            <h2 className="text-lg font-extrabold">Adauga client</h2>
+            <ClientCreateForm />
+          </Card>
+        ) : null}
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {clients.map((client) => (
@@ -55,24 +62,26 @@ export default async function ClientiPage() {
                   <Link href={`/clienti/${client.id}`} className="text-base font-bold text-[#c8dcff] hover:underline">
                     {client.name}
                   </Link>
-                  <p className="text-xs text-[#9fb1c5]">{client.cui || "Fara CUI"}</p>
+                  <p className="text-xs text-[var(--muted)]">{client.cui || "Fara CUI"}</p>
                 </div>
                 <Badge tone="neutral">CRM</Badge>
               </div>
-              <p className="text-sm text-[#dce7f9] break-words">{client.email || "-"} • {client.phone || "-"}</p>
-              <div className="grid grid-cols-2 gap-2 text-xs text-[#9fb1c5]">
+              <p className="text-sm text-[var(--muted-strong)] break-words">{client.email || "-"} • {client.phone || "-"}</p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted)]">
                 <p>Proiecte: {client._count.projects}</p>
                 <p>Contacte: {client._count.contacts}</p>
               </div>
-              <p className="text-xs text-[#9fb1c5]">Note curente: {client.notes || "-"}</p>
+              <p className="text-xs text-[var(--muted)]">Note curente: {client.notes || "-"}</p>
 
-              <form action={addClientNote} className="mt-3 space-y-2">
-                <input type="hidden" name="id" value={client.id} />
-                <Textarea name="note" rows={2} placeholder="Adauga nota operationala" />
-                <Button type="submit" size="sm" variant="secondary">
-                  Salveaza nota
-                </Button>
-              </form>
+              {canUpdate ? (
+                <form action={addClientNote} className="mt-3 space-y-2">
+                  <input type="hidden" name="id" value={client.id} />
+                  <Textarea name="note" rows={2} placeholder="Adauga nota operationala" />
+                  <Button type="submit" size="sm" variant="secondary">
+                    Salveaza nota
+                  </Button>
+                </form>
+              ) : null}
             </Card>
           ))}
         </div>

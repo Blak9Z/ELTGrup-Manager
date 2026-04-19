@@ -11,6 +11,8 @@ import { Table, TD, TH } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, timeEntryScopeWhere } from "@/src/lib/access-scope";
+import { parseDateParam, parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { hasPermission } from "@/src/lib/rbac";
 import { formatDate, formatDateTime } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { approveTimeEntry, bulkTimeEntriesAction } from "./actions";
@@ -19,10 +21,14 @@ import { PontajCreateForm } from "./pontaj-create-form";
 export default async function PontajPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: TimeEntryStatus; projectId?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; projectId?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, Number(params.page || "1"));
+  const page = parsePositiveIntParam(params.page);
+  const statusFilter = parseEnumParam(params.status, Object.values(TimeEntryStatus));
+  const fromDate = parseDateParam(params.from);
+  const toDate = params.to ? parseDateParam(`${params.to}T23:59:59`) : undefined;
+  const startAtFilter = fromDate || toDate ? { gte: fromDate, lte: toDate } : undefined;
   const pageSize = 20;
   const session = await auth();
   const scope = session?.user
@@ -35,17 +41,21 @@ export default async function PontajPage({
   const userContext = session?.user
     ? { id: session.user.id, email: session.user.email, roleKeys: session.user.roleKeys || [] }
     : { id: "", email: null, roleKeys: [] };
+  const roleKeys = userContext.roleKeys || [];
+  const canManageTeamPontaj = userContext.roleKeys.some((role) =>
+    ["SUPER_ADMIN", "ADMINISTRATOR", "PROJECT_MANAGER", "SITE_MANAGER", "BACKOFFICE"].includes(role),
+  );
+  const canCreate = hasPermission(roleKeys, "TIME_TRACKING", "CREATE", userContext.email);
+  const canApprove = hasPermission(roleKeys, "TIME_TRACKING", "APPROVE", userContext.email);
+  const canExport = hasPermission(roleKeys, "TIME_TRACKING", "EXPORT", userContext.email);
   const where = {
     ...timeEntryScopeWhere(userContext, scope),
     projectId:
       params.projectId && (scope.projectIds === null || scope.projectIds.includes(params.projectId))
         ? params.projectId
         : undefined,
-    status: params.status || undefined,
-    startAt: {
-      gte: params.from ? new Date(params.from) : undefined,
-      lte: params.to ? new Date(`${params.to}T23:59:59`) : undefined,
-    },
+    status: statusFilter,
+    startAt: startAtFilter,
   };
 
   const [projects, workOrders, users, entries, total] = await Promise.all([
@@ -67,7 +77,9 @@ export default async function PontajPage({
       take: 100,
     }),
     prisma.user.findMany({
-      where: { isActive: true, deletedAt: null },
+      where: canManageTeamPontaj
+        ? { isActive: true, deletedAt: null }
+        : { id: userContext.id, isActive: true, deletedAt: null },
       select: { id: true, firstName: true, lastName: true },
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     }),
@@ -97,11 +109,13 @@ export default async function PontajPage({
     <PermissionGuard resource="TIME_TRACKING" action="VIEW">
       <div className="space-y-6">
         <PageHeader title="Pontaj si timp lucrat" subtitle="Inregistrare, aprobare si export ore pentru payroll operational" />
-        <div className="flex justify-end">
-          <Link href="/api/export/pontaj">
-            <Button variant="secondary">Export CSV Pontaj</Button>
-          </Link>
-        </div>
+        {canExport ? (
+          <div className="flex justify-end">
+            <Link href="/api/export/pontaj">
+              <Button variant="secondary">Export CSV Pontaj</Button>
+            </Link>
+          </div>
+        ) : null}
 
         <Card>
           <form className="grid gap-3 md:grid-cols-5">
@@ -114,7 +128,7 @@ export default async function PontajPage({
                 </option>
               ))}
             </select>
-            <select name="status" defaultValue={params.status || ""}>
+            <select name="status" defaultValue={statusFilter || ""}>
               <option value="">Toate statusurile</option>
               {Object.values(TimeEntryStatus).map((status) => (
                 <option key={status} value={status}>
@@ -130,44 +144,49 @@ export default async function PontajPage({
           </form>
         </Card>
 
-        <Card>
-          <h2 className="text-lg font-semibold text-[#f2f9ff]">Adauga inregistrare pontaj</h2>
-          <PontajCreateForm
-            projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-            workOrders={workOrders.map((item) => ({ id: item.id, label: item.title }))}
-            users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
-          />
-        </Card>
+        {canCreate ? (
+          <Card>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Adauga inregistrare pontaj</h2>
+            <PontajCreateForm
+              projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+              workOrders={workOrders.map((item) => ({ id: item.id, label: item.title }))}
+              users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
+              canSelectUser={canManageTeamPontaj}
+            />
+          </Card>
+        ) : null}
 
-        <Card className="bulk-zone">
-          <details>
-            <summary>Actiuni bulk pontaj</summary>
-            <form action={bulkTimeEntriesAction} className="mt-3 space-y-3">
-            <div className="bulk-controls grid gap-2 md:grid-cols-3">
-              <select name="operation" defaultValue="APPROVE">
-                <option value="APPROVE">Aproba selectie</option>
-                <option value="REJECT">Respinge selectie</option>
-              </select>
-              <div />
-              <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pentru pontajele selectate?" />
-            </div>
-            <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)] p-3">
-              <div className="grid gap-1 md:grid-cols-2">
-                {entries
-                  .filter((item) => item.status === "SUBMITTED")
-                  .map((entry) => (
-                    <label key={entry.id} className="flex items-center gap-2 text-sm text-[#dce7f9]">
-                      <input type="checkbox" name="ids" value={entry.id} className="h-4 w-4" />
-                      <span>
-                        {entry.user.firstName} {entry.user.lastName} - {entry.project.title}
-                      </span>
-                    </label>
-                  ))}
+        {canApprove ? (
+          <Card className="bulk-zone">
+            <details>
+              <summary>Actiuni bulk pontaj</summary>
+              <form action={bulkTimeEntriesAction} className="mt-3 space-y-3">
+              <div className="bulk-controls grid gap-2 md:grid-cols-3">
+                <select name="operation" defaultValue="APPROVE">
+                  <option value="APPROVE">Aproba selectie</option>
+                  <option value="REJECT">Respinge selectie</option>
+                </select>
+                <div />
+                <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pentru pontajele selectate?" />
               </div>
-            </div>
-            </form>
-          </details>
-        </Card>
+              <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)] p-3">
+                <div className="grid gap-1 md:grid-cols-2">
+                  {entries
+                    .filter((item) => item.status === "SUBMITTED")
+                    .map((entry) => (
+                      <label key={entry.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
+                        <input type="checkbox" name="ids" value={entry.id} className="h-4 w-4" />
+                        <span>
+                          {entry.user.firstName} {entry.user.lastName} - {entry.project.title}
+                        </span>
+                      </label>
+                    ))}
+                </div>
+              </div>
+              </form>
+            </details>
+          </Card>
+        ) : null}
 
         <Card>
           {entries.length === 0 ? (
@@ -185,11 +204,11 @@ export default async function PontajPage({
                     <Badge tone={entry.status === "APPROVED" ? "success" : entry.status === "REJECTED" ? "danger" : "warning"}>{entry.status}</Badge>
                   </div>
                   <p className="mt-2 text-xs text-[#9fb9d7]">{formatDateTime(entry.startAt)} {entry.endAt ? `- ${formatDateTime(entry.endAt)}` : "(deschis)"}</p>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#d6e4f9]">
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--muted-strong)]">
                     <p>Durata: {Math.round(entry.durationMinutes / 60)} h</p>
                     <p>Pauza: {entry.breakMinutes} min</p>
                   </div>
-                  {entry.status === "SUBMITTED" ? (
+                  {entry.status === "SUBMITTED" && canApprove ? (
                     <form action={approveTimeEntry} className="mt-3">
                       <input type="hidden" name="id" value={entry.id} />
                       <Button type="submit" size="sm" className="w-full">
@@ -232,7 +251,7 @@ export default async function PontajPage({
                         <Badge tone={entry.status === "APPROVED" ? "success" : entry.status === "REJECTED" ? "danger" : "warning"}>{entry.status}</Badge>
                       </TD>
                       <TD>
-                        {entry.status === "SUBMITTED" ? (
+                        {entry.status === "SUBMITTED" && canApprove ? (
                           <form action={approveTimeEntry}>
                             <input type="hidden" name="id" value={entry.id} />
                             <Button type="submit" size="sm">
@@ -257,12 +276,12 @@ export default async function PontajPage({
           </span>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]" href={`/pontaj?page=${page - 1}&status=${params.status || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
+              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={`/pontaj?page=${page - 1}&status=${statusFilter || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
                 Anterior
               </Link>
             ) : null}
             {page < totalPages ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[#4f6d8f]" href={`/pontaj?page=${page + 1}&status=${params.status || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
+              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={`/pontaj?page=${page + 1}&status=${statusFilter || ""}&projectId=${params.projectId || ""}&from=${params.from || ""}&to=${params.to || ""}`}>
                 Urmator
               </Link>
             ) : null}

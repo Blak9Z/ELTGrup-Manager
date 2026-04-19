@@ -55,7 +55,7 @@ async function createTimeEntryInternal(formData: FormData) {
   if (!parsed.success) throw parsed.error;
   await assertProjectAccess(currentUser, parsed.data.projectId);
   if (parsed.data.workOrderId) {
-    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
+    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
   }
 
   const startAt =
@@ -77,12 +77,10 @@ async function createTimeEntryInternal(formData: FormData) {
     currentUser.roleKeys.some((role) =>
       ["SUPER_ADMIN", "ADMINISTRATOR", "PROJECT_MANAGER", "SITE_MANAGER", "BACKOFFICE"].includes(role),
     );
-
-  if (!canManageTeamPontaj) {
-    throw new Error("Pontajul poate fi introdus doar de ingineri/manageri de proiect.");
-  }
-
   const targetUserId = parsed.data.userId || currentUser.id;
+  if (!canManageTeamPontaj && targetUserId !== currentUser.id) {
+    throw new Error("Poti adauga pontaj doar pentru contul tau.");
+  }
 
   const computedEndAt = endAt || (() => {
     const fallback = new Date(startAt);
@@ -92,6 +90,17 @@ async function createTimeEntryInternal(formData: FormData) {
     }
     return fallback;
   })();
+  if (computedEndAt < startAt) {
+    throw new Error("Ora de final trebuie sa fie dupa ora de start.");
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { id: true, isActive: true, deletedAt: true },
+  });
+  if (!targetUser || !targetUser.isActive || targetUser.deletedAt) {
+    throw new Error("Utilizatorul selectat nu este activ.");
+  }
 
   const durationMinutes = Math.max(
     0,

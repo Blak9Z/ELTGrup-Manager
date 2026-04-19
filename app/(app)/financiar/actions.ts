@@ -18,6 +18,11 @@ const costSchema = z.object({
   occurredAt: z.coerce.date(),
 });
 
+const updateInvoiceStatusSchema = z.object({
+  id: z.string().cuid(),
+  status: z.nativeEnum(InvoiceStatus),
+});
+
 async function createCostEntryInternal(formData: FormData) {
   const currentUser = await requirePermission("INVOICES", "CREATE");
 
@@ -66,22 +71,26 @@ export async function createCostEntryAction(_: ActionState, formData: FormData):
 
 export async function updateInvoiceStatus(formData: FormData) {
   const currentUser = await requirePermission("INVOICES", "UPDATE");
-  const id = String(formData.get("id"));
-  const status = String(formData.get("status"));
+  const parsed = updateInvoiceStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) throw new Error("Status factura invalid");
+  const { id, status } = parsed.data;
 
-  if (!Object.values(InvoiceStatus).includes(status as InvoiceStatus)) {
-    throw new Error("Status factura invalid");
-  }
-
-  const current = await prisma.invoice.findUnique({ where: { id }, select: { projectId: true } });
+  const current = await prisma.invoice.findUnique({
+    where: { id },
+    select: { projectId: true, totalAmount: true, paidAmount: true },
+  });
   if (!current) throw new Error("Factura inexistenta.");
   await assertProjectAccess(currentUser, current.projectId);
 
   const updated = await prisma.invoice.update({
     where: { id },
     data: {
-      status: status as InvoiceStatus,
+      status,
       paidAt: status === InvoiceStatus.PAID ? new Date() : null,
+      paidAmount: status === InvoiceStatus.PAID ? current.totalAmount : current.paidAmount,
     },
   });
 

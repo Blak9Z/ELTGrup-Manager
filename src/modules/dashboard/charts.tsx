@@ -9,23 +9,23 @@ export function ProductivityChart({ data }: { data: { name: string; ore: number 
         <AreaChart data={data} margin={{ left: 8, right: 8, top: 10, bottom: 0 }}>
           <defs>
             <linearGradient id="oreGradient" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="5%" stopColor="#4e8dff" stopOpacity={0.5} />
-              <stop offset="95%" stopColor="#4e8dff" stopOpacity={0.02} />
+              <stop offset="5%" stopColor="#6a93c6" stopOpacity={0.46} />
+              <stop offset="95%" stopColor="#6a93c6" stopOpacity={0.03} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="#273852" strokeDasharray="4 4" />
-          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#9db1ce" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 12, fill: "#9db1ce" }} axisLine={false} tickLine={false} />
+          <CartesianGrid stroke="#2f4154" strokeDasharray="4 4" />
+          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#9baec4" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 12, fill: "#9baec4" }} axisLine={false} tickLine={false} />
           <Tooltip
             contentStyle={{
-              background: "#0f1a2f",
-              border: "1px solid #2a4167",
-              color: "#e7eefb",
-              borderRadius: "12px",
+              background: "#151f2a",
+              border: "1px solid #33465a",
+              color: "#ecf2fb",
+              borderRadius: "10px",
             }}
-            labelStyle={{ color: "#e7eefb", fontWeight: 600 }}
+            labelStyle={{ color: "#ecf2fb", fontWeight: 600 }}
           />
-          <Area type="monotone" dataKey="ore" stroke="#4e8dff" fill="url(#oreGradient)" strokeWidth={2} />
+          <Area type="monotone" dataKey="ore" stroke="#6a93c6" fill="url(#oreGradient)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

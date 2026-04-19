@@ -209,6 +209,9 @@ export async function updateUserRolesAction(formData: FormData) {
 
   const targetHasSuperAdmin = target.roles.some((item) => item.role.key === RoleKey.SUPER_ADMIN);
   const actorHasSuperAdmin = hasSuperAdminRole(actor.roleKeys || []);
+  if (targetHasSuperAdmin && !actorHasSuperAdmin) {
+    throw new Error("Doar un utilizator cu rol SUPER_ADMIN poate modifica rolul unui alt SUPER_ADMIN.");
+  }
 
   if (targetHasSuperAdmin && parsed.data.roleKey !== RoleKey.SUPER_ADMIN) {
     const activeSuperAdminCount = await countActiveSuperAdmins();
@@ -266,6 +269,10 @@ export async function toggleUserActiveAction(formData: FormData) {
   if (!target) throw new Error("Utilizator inexistent.");
 
   const targetHasSuperAdmin = target.roles.some((item) => item.role.key === RoleKey.SUPER_ADMIN);
+  const actorHasSuperAdmin = hasSuperAdminRole(actor.roleKeys || []);
+  if (targetHasSuperAdmin && !actorHasSuperAdmin) {
+    throw new Error("Doar un utilizator cu rol SUPER_ADMIN poate activa/dezactiva un SUPER_ADMIN.");
+  }
   if (targetHasSuperAdmin && target.isActive) {
     const activeSuperAdminCount = await countActiveSuperAdmins();
     if (activeSuperAdminCount <= 1) {
@@ -280,6 +287,15 @@ export async function toggleUserActiveAction(formData: FormData) {
   }
 
   await prisma.user.update({ where: { id: target.id }, data: { isActive: !target.isActive } });
+
+  await logActivity({
+    userId: actor.id,
+    entityType: "USER",
+    entityId: target.id,
+    action: "USER_ACTIVE_TOGGLED",
+    diff: { previousIsActive: target.isActive, nextIsActive: !target.isActive },
+  });
+
   revalidatePath("/setari");
 }
 
@@ -297,6 +313,10 @@ export async function deleteUserAction(formData: FormData) {
     throw new Error("Nu iti poti sterge propriul cont.");
   }
   const targetHasSuperAdmin = target.roles.some((item) => item.role.key === RoleKey.SUPER_ADMIN);
+  const actorHasSuperAdmin = hasSuperAdminRole(actor.roleKeys || []);
+  if (targetHasSuperAdmin && !actorHasSuperAdmin) {
+    throw new Error("Doar un utilizator cu rol SUPER_ADMIN poate sterge un alt SUPER_ADMIN.");
+  }
   if (targetHasSuperAdmin) {
     const activeSuperAdminCount = await countActiveSuperAdmins();
     if (activeSuperAdminCount <= 1) {
@@ -321,6 +341,14 @@ export async function deleteUserAction(formData: FormData) {
         email: buildDeletedEmail(target.email, target.id),
       },
     });
+  });
+
+  await logActivity({
+    userId: actor.id,
+    entityType: "USER",
+    entityId: target.id,
+    action: "USER_DELETED",
+    diff: { targetEmail: target.email, deletedAt: deletedAt.toISOString() },
   });
 
   revalidatePath("/setari");

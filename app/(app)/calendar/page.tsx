@@ -6,6 +6,7 @@ import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
+import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 import { createCalendarTaskAction } from "./actions";
 
@@ -36,6 +37,7 @@ export default async function CalendarPage({
   const userContext = session?.user
     ? { id: session.user.id, email: session.user.email, roleKeys: session.user.roleKeys || [] }
     : { id: "", email: null, roleKeys: [] };
+  const canCreate = hasPermission(userContext.roleKeys || [], "TASKS", "CREATE", userContext.email);
 
   const [projects, teams, workOrders] = await Promise.all([
     prisma.project.findMany({
@@ -96,7 +98,7 @@ export default async function CalendarPage({
         <Card className="space-y-4">
           <form className="grid gap-3 md:grid-cols-4">
             <Input name="q" placeholder="Cauta lucrare" defaultValue={params.q || ""} />
-            <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
+            <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
               <option value="">Toate proiectele</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -104,7 +106,7 @@ export default async function CalendarPage({
                 </option>
               ))}
             </select>
-            <select name="teamId" defaultValue={params.teamId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
+            <select name="teamId" defaultValue={params.teamId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
               <option value="">Toate echipele</option>
               {teams.map((team) => (
                 <option key={team.id} value={team.id}>
@@ -117,39 +119,41 @@ export default async function CalendarPage({
             </Button>
           </form>
 
-          <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 md:grid-cols-4">
-            <Input name="title" placeholder="Adauga lucrare rapida in calendar" required />
-            <select name="projectId" required defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
-              <option value="" disabled>
-                Selecteaza proiect
-              </option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.title}
+          {canCreate ? (
+            <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 md:grid-cols-4">
+              <Input name="title" placeholder="Adauga lucrare rapida in calendar" required />
+              <select name="projectId" required defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
+                <option value="" disabled>
+                  Selecteaza proiect
                 </option>
-              ))}
-            </select>
-            <select name="teamId" defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
-              <option value="">Fara echipa</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <select name="dayLabel" defaultValue="Luni" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[#dce7f9]">
-                {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
-                  <option key={day} value={day}>
-                    {day}
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.title}
                   </option>
                 ))}
               </select>
-              <Button type="submit" className="h-10">
-                Adauga
-              </Button>
-            </div>
-          </form>
+              <select name="teamId" defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
+                <option value="">Fara echipa</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <select name="dayLabel" defaultValue="Luni" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
+                  {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" className="h-10">
+                  Adauga
+                </Button>
+              </div>
+            </form>
+          ) : null}
 
           <PlanningBoard initialTasks={tasks} />
         </Card>

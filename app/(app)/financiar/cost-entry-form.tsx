@@ -20,7 +20,7 @@ export function CostEntryForm({ projects }: { projects: Option[] }) {
 
   return (
     <form action={formAction} className="mt-3 space-y-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8ea2b8]">Cost Registration</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Cost Registration</p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="space-y-1">
           <label>Proiect</label>

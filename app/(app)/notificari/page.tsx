@@ -51,16 +51,16 @@ export default async function NotificariPage() {
         {notifications.length === 0 ? (
           <Card>
             <p className="text-sm font-semibold">Nu exista notificari.</p>
-            <p className="text-xs text-[#9fb1c5]">Notificarile operationale vor aparea aici cand exista schimbari relevante.</p>
+            <p className="text-xs text-[var(--muted)]">Notificarile operationale vor aparea aici cand exista schimbari relevante.</p>
           </Card>
         ) : null}
         {notifications.map((notification) => (
           <Card key={notification.id} className={notification.isRead ? "opacity-80" : "border-[#4a6785] bg-[#15273b]"}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="font-semibold text-[#edf4fb]">{notification.title}</p>
-                <p className="text-sm text-[#9fb1c5]">{notification.message}</p>
-                <p className="mt-1 text-xs text-[#9fb1c5]">{formatDateTime(notification.createdAt)}</p>
+                <p className="font-semibold text-[var(--foreground)]">{notification.title}</p>
+                <p className="text-sm text-[var(--muted)]">{notification.message}</p>
+                <p className="mt-1 text-xs text-[var(--muted)]">{formatDateTime(notification.createdAt)}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {notification.actionUrl ? (
                     <Link href={notification.actionUrl} className="text-xs font-semibold text-[#c6d9ee] hover:underline">
@@ -70,7 +70,7 @@ export default async function NotificariPage() {
                   {!notification.isRead ? (
                     <form action={markNotificationRead}>
                       <input type="hidden" name="id" value={notification.id} />
-                      <button className="text-xs font-semibold text-[#dce7f9] hover:underline" type="submit">Marcheaza citit</button>
+                      <button className="text-xs font-semibold text-[var(--muted-strong)] hover:underline" type="submit">Marcheaza citit</button>
                     </form>
                   ) : null}
                 </div>

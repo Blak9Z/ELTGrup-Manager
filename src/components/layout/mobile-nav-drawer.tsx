@@ -1,65 +1,81 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Drawer, DrawerBody, DrawerContent, DrawerHeader, Button } from '@heroui/react';
-import { Menu } from 'lucide-react';
-import type { AppModule } from '@/src/lib/access-control';
-import { navItems, navSections } from '@/src/components/layout/navigation-config';
-import { cn } from '@/src/lib/utils';
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
+import { Menu, X } from "lucide-react";
+import type { AppModule } from "@/src/lib/access-control";
+import { Button } from "@/src/components/ui/button";
+import { navItems, navSections } from "@/src/components/layout/navigation-config";
+import { cn } from "@/src/lib/utils";
 
 export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[] }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-
   const visibleSet = useMemo(() => new Set(visibleModules), [visibleModules]);
 
   return (
     <>
       <Button
         isIconOnly
-        variant='secondary'
-        className='h-10 w-10 rounded-xl border border-[#30465d] bg-[#0f1c2d] text-[#d3e0ef] lg:hidden'
+        variant="secondary"
+        className="h-10 w-10 rounded-lg border-[var(--border)] bg-[var(--surface-card)] lg:hidden"
         onPress={() => setOpen(true)}
-        aria-label='Deschide navigatia'
+        aria-label="Deschide meniul"
       >
-        <Menu className='h-5 w-5' />
+        <Menu className="h-5 w-5" />
       </Button>
 
       <Drawer isOpen={open} onOpenChange={setOpen}>
-        <DrawerContent>
-          <DrawerHeader className='border-b border-[#2f455c] bg-[#0b1421] text-[#e7f2ff]'>ELTGRUP Manager</DrawerHeader>
-          <DrawerBody className='gap-4 bg-[#0b1421] py-4 text-[#e7f2ff]'>
+        <DrawerContent className="max-w-[320px] border-r border-[var(--border)] bg-[var(--shell)] text-[var(--foreground)]">
+          <DrawerHeader className="flex items-center justify-between border-b border-[var(--border)] py-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">ELTGRUP Manager</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">Navigatie</p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] text-[var(--muted-strong)]"
+              onClick={() => setOpen(false)}
+              aria-label="Inchide meniul"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DrawerHeader>
+
+          <DrawerBody className="gap-4 py-4">
             {navSections.map((section) => {
               const sectionItems = navItems.filter((item) => item.section === section && visibleSet.has(item.module));
               if (!sectionItems.length) return null;
+
               return (
-                <div key={section} className='space-y-2'>
-                  <p className='px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#86a7c9]'>{section}</p>
-                  <div className='space-y-1'>
+                <section key={section}>
+                  <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{section}</p>
+                  <div className="mt-2 space-y-1">
                     {sectionItems.map((item) => {
                       const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                       const Icon = item.icon;
+
                       return (
                         <Link
                           key={item.href}
                           href={item.href}
                           onClick={() => setOpen(false)}
                           className={cn(
-                            'flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm',
+                            "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition",
                             active
-                              ? 'border-[#3f5772] bg-[#122334] text-[#edf8ff]'
-                              : 'border-transparent text-[#b0c8e1] hover:border-[#2e4259] hover:bg-[#111f31]',
+                              ? "border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--foreground)]"
+                              : "border-transparent text-[var(--muted-strong)] hover:border-[var(--border)] hover:bg-[var(--surface-card)]",
                           )}
                         >
-                          <Icon className='h-4 w-4' />
+                          <Icon className={cn("h-4 w-4", active ? "text-[#aac4e2]" : "text-[#8098b5]")} />
                           <span>{item.label}</span>
                         </Link>
                       );
                     })}
                   </div>
-                </div>
+                </section>
               );
             })}
           </DrawerBody>

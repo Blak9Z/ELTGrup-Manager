@@ -53,7 +53,7 @@ function DraggableTaskCard({ task }: { task: Task }) {
       {...attributes}
       className={`touch-none cursor-grab rounded-xl border p-2.5 text-xs shadow-[0_10px_25px_-18px_rgba(0,0,0,0.85)] transition hover:border-[#4e73aa] active:cursor-grabbing ${cardTone(task.priority)}`}
     >
-      <p className="font-semibold text-[#ecf3ff]">{task.title}</p>
+      <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
       <p className="text-[#a8bbd6]">{task.project}</p>
       <div className="mt-1 flex justify-between text-[11px] text-[#90a5c2]">
         <span>{task.team}</span>
@@ -188,7 +188,7 @@ export function PlanningBoard({ initialTasks }: { initialTasks: Task[] }) {
 
   return (
     <div>
-      <div className="mb-3 text-xs text-[#9fb1c5]">
+      <div className="mb-3 text-xs text-[var(--muted)]">
         {isPending ? "Se salveaza replanificarea..." : "Trage o lucrare intre zile pentru a actualiza programul saptamanii."}
       </div>
       {error ? <p className="mb-3 text-xs font-medium text-[#ffb7bf]">{error}</p> : null}

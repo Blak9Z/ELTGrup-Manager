@@ -1,4 +1,4 @@
-import { NotificationType, RoleKey } from "@prisma/client";
+import { NotificationType, Prisma, RoleKey } from "@prisma/client";
 import { prisma } from "@/src/lib/prisma";
 
 type NotificationPayload = {
@@ -67,10 +67,20 @@ export async function notifyRoles(args: {
 }
 
 export async function getUnreadNotificationCount(userId: string) {
-  return prisma.notification.count({
-    where: {
-      userId,
-      isRead: false,
-    },
-  });
+  try {
+    return await prisma.notification.count({
+      where: {
+        userId,
+        isRead: false,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2024") {
+      console.warn(`[notifications] Pool timeout while counting unread notifications for user ${userId}. Returning 0.`);
+      return 0;
+    }
+
+    console.error("[notifications] Failed to count unread notifications.", error);
+    return 0;
+  }
 }

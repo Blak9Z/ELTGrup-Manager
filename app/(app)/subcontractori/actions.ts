@@ -8,13 +8,15 @@ import { assertSubcontractorAccess } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
+const subcontractorStatusSchema = z.enum(["IN_VERIFICARE", "APROBAT", "RESPINS", "SUSPENDAT"]);
+
 const subcontractorSchema = z.object({
   name: z.string().min(2),
   cui: z.string().optional(),
   contactName: z.string().optional(),
   email: z.email().optional().or(z.literal("")),
   phone: z.string().optional(),
-  approvalStatus: z.string().min(2),
+  approvalStatus: subcontractorStatusSchema,
 });
 
 async function createSubcontractorInternal(formData: FormData) {
@@ -64,13 +66,22 @@ export async function createSubcontractorAction(_: ActionState, formData: FormDa
 
 export async function updateSubcontractorStatus(formData: FormData) {
   const currentUser = await requirePermission("TASKS", "UPDATE");
-  const id = String(formData.get("id"));
-  const status = String(formData.get("approvalStatus"));
+  const parsed = z
+    .object({
+      id: z.string().cuid(),
+      approvalStatus: subcontractorStatusSchema,
+    })
+    .safeParse({
+      id: formData.get("id"),
+      approvalStatus: formData.get("approvalStatus"),
+    });
+  if (!parsed.success) throw new Error("Status subcontractor invalid.");
+  const { id, approvalStatus } = parsed.data;
   await assertSubcontractorAccess(currentUser, id);
 
   await prisma.subcontractor.update({
     where: { id },
-    data: { approvalStatus: status },
+    data: { approvalStatus },
   });
 
   await logActivity({
@@ -78,7 +89,7 @@ export async function updateSubcontractorStatus(formData: FormData) {
     entityType: "SUBCONTRACTOR",
     entityId: id,
     action: "SUBCONTRACTOR_STATUS_UPDATED",
-    diff: { status },
+    diff: { status: approvalStatus },
   });
 
   revalidatePath("/subcontractori");
@@ -91,7 +102,7 @@ const updateSubcontractorSchema = z.object({
   contactName: z.string().optional(),
   email: z.email().optional().or(z.literal("")),
   phone: z.string().optional(),
-  approvalStatus: z.string().min(2),
+  approvalStatus: subcontractorStatusSchema,
 });
 
 export async function updateSubcontractorAction(formData: FormData) {

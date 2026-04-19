@@ -1,6 +1,6 @@
 "use server";
 
-import { NotificationType, ProjectStatus, ProjectType, RoleKey } from "@prisma/client";
+import { NotificationType, Prisma, ProjectStatus, ProjectType, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
@@ -29,6 +29,29 @@ const createProjectSchema = z.object({
   contractValue: z.coerce.number().min(0),
   estimatedBudget: z.coerce.number().min(0),
 });
+const updateProjectStatusSchema = z.object({
+  id: z.string().cuid(),
+  status: z.nativeEnum(ProjectStatus),
+});
+
+async function getNextProjectCode() {
+  const year = new Date().getFullYear();
+  const prefix = `ELT-${year}-`;
+  const codes = await prisma.project.findMany({
+    where: { code: { startsWith: prefix } },
+    select: { code: true },
+  });
+
+  let maxSequence = 0;
+  for (const item of codes) {
+    const maybeSequence = Number(item.code.slice(prefix.length));
+    if (Number.isInteger(maybeSequence) && maybeSequence > maxSequence) {
+      maxSequence = maybeSequence;
+    }
+  }
+
+  return `${prefix}${String(maxSequence + 1).padStart(3, "0")}`;
+}
 
 async function createProjectInternal(formData: FormData) {
   const currentUser = await requirePermission("PROJECTS", "CREATE");
@@ -47,25 +70,36 @@ async function createProjectInternal(formData: FormData) {
 
   if (!parsed.success) throw parsed.error;
 
-  const count = await prisma.project.count();
-  const code = `ELT-${new Date().getFullYear()}-${String(count + 1).padStart(3, "0")}`;
-
-  const created = await prisma.project.create({
-    data: {
-      code,
-      title: parsed.data.title,
-      siteAddress: parsed.data.siteAddress,
-      clientId: parsed.data.clientId,
-      type: parsed.data.type,
-      status: parsed.data.status,
-      managerId: currentUser.id,
-      contractValue: parsed.data.contractValue,
-      estimatedBudget: parsed.data.estimatedBudget,
-      startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : null,
-      endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
-      description: "Proiect creat din modulul Proiecte",
-    },
-  });
+  let created: Awaited<ReturnType<typeof prisma.project.create>> | null = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const code = await getNextProjectCode();
+    try {
+      created = await prisma.project.create({
+        data: {
+          code,
+          title: parsed.data.title,
+          siteAddress: parsed.data.siteAddress,
+          clientId: parsed.data.clientId,
+          type: parsed.data.type,
+          status: parsed.data.status,
+          managerId: currentUser.id,
+          contractValue: parsed.data.contractValue,
+          estimatedBudget: parsed.data.estimatedBudget,
+          startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : null,
+          endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
+          description: "Proiect creat din modulul Proiecte",
+        },
+      });
+      break;
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+        throw error;
+      }
+    }
+  }
+  if (!created) {
+    throw new Error("Nu am putut genera un cod unic de proiect. Incearca din nou.");
+  }
 
   await logActivity({
     userId: currentUser.id,
@@ -107,9 +141,12 @@ export async function createProjectAction(
 
 export async function updateProjectStatus(formData: FormData) {
   const currentUser = await requirePermission("PROJECTS", "UPDATE");
-
-  const id = String(formData.get("id"));
-  const status = formData.get("status") as ProjectStatus;
+  const parsed = updateProjectStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) throw new Error("Date invalide pentru actualizarea statusului.");
+  const { id, status } = parsed.data;
   await assertProjectAccess(currentUser, id);
 
   const before = await prisma.project.findUnique({

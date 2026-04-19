@@ -13,7 +13,7 @@ import { prisma } from "@/src/lib/prisma";
 const reportSchema = z.object({
   projectId: z.string().cuid(),
   workOrderId: z.string().cuid().optional(),
-  reportDate: z.string().min(1),
+  reportDate: z.coerce.date(),
   weather: z.string().optional(),
   workersCount: z.coerce.number().int().min(0).max(200),
   subcontractorsPresent: z.string().optional(),
@@ -48,14 +48,14 @@ async function createDailyReportInternal(formData: FormData) {
   if (!parsed.success) throw parsed.error;
   await assertProjectAccess(currentUser, parsed.data.projectId);
   if (parsed.data.workOrderId) {
-    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId);
+    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
   }
 
   const created = await prisma.dailySiteReport.create({
     data: {
       projectId: parsed.data.projectId,
       workOrderId: parsed.data.workOrderId,
-      reportDate: new Date(parsed.data.reportDate),
+      reportDate: parsed.data.reportDate,
       weather: parsed.data.weather,
       workersCount: parsed.data.workersCount,
       subcontractorsPresent: parsed.data.subcontractorsPresent,

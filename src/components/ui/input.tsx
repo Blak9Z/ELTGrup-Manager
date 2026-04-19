@@ -8,7 +8,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       <HeroInput
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-xl border border-[#354b63] bg-[#122133] px-3.5 text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--muted)] transition-colors outline-none focus:border-[#4d6e90] focus:ring-2 focus:ring-[rgba(77,110,144,0.24)] disabled:opacity-60",
+          "h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] transition-colors outline-none focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)] disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
         {...props}

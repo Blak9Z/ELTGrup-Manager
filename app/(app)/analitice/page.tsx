@@ -138,39 +138,39 @@ export default async function AnaliticePage() {
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <Card>
-            <p className="text-xs uppercase tracking-wide text-[#9fb1c5]">Lucrari intarziate</p>
+            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Lucrari intarziate</p>
             <p className="mt-2 text-2xl font-black">{delayedWorkOrders.length}</p>
           </Card>
           <Card>
-            <p className="text-xs uppercase tracking-wide text-[#9fb1c5]">Ore peste estimat</p>
+            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Ore peste estimat</p>
             <p className="mt-2 text-2xl font-black">{hoursVsEstimate.filter((item) => item.variance > 0).length}</p>
           </Card>
           <Card>
-            <p className="text-xs uppercase tracking-wide text-[#9fb1c5]">Materiale peste plan</p>
+            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Materiale peste plan</p>
             <p className="mt-2 text-2xl font-black">{materialsVsPlan.filter((item) => item.actual > item.planned).length}</p>
           </Card>
           <Card>
-            <p className="text-xs uppercase tracking-wide text-[#9fb1c5]">Cost peste buget</p>
+            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Cost peste buget</p>
             <p className="mt-2 text-2xl font-black">{costVsBudget.filter((item) => item.actual > item.planned).length}</p>
           </Card>
           <Card>
-            <p className="text-xs uppercase tracking-wide text-[#9fb1c5]">Facturi restante</p>
+            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Facturi restante</p>
             <p className="mt-2 text-2xl font-black">{overdueInvoiceCount}</p>
           </Card>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Lucrari intarziate (actiune imediata)</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Lucrari intarziate (actiune imediata)</h2>
             <div className="mt-3 space-y-2">
-              {delayedWorkOrders.length === 0 ? <p className="text-sm text-[#9fb1c5]">Nicio lucrare intarziata in aria ta.</p> : null}
+              {delayedWorkOrders.length === 0 ? <p className="text-sm text-[var(--muted)]">Nicio lucrare intarziata in aria ta.</p> : null}
               {delayedWorkOrders.map((workOrder) => (
                 <div key={workOrder.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold text-[#f2f9ff]">{workOrder.title}</p>
+                    <p className="font-semibold text-[var(--foreground)]">{workOrder.title}</p>
                     <Badge tone="danger">{workOrder.status}</Badge>
                   </div>
-                  <p className="mt-1 text-xs text-[#9fb1c5]">
+                  <p className="mt-1 text-xs text-[var(--muted)]">
                     {workOrder.project.title} • termen {workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}
                   </p>
                   <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/lucrari/${workOrder.id}`}>
@@ -182,12 +182,12 @@ export default async function AnaliticePage() {
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Ore pontate vs ore estimate</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Ore pontate vs ore estimate</h2>
             <div className="mt-3 space-y-2">
               {hoursVsEstimate.map((item) => (
                 <div key={item.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
-                  <p className="font-semibold text-[#f2f9ff]">{item.title}</p>
-                  <p className="text-xs text-[#9fb1c5]">
+                  <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
+                  <p className="text-xs text-[var(--muted)]">
                     {item.project.title} • estimate {item.plannedHours}h • pontate {item.actualHours}h
                   </p>
                   <p className={`mt-1 text-xs font-semibold ${item.variance > 0 ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
@@ -201,12 +201,12 @@ export default async function AnaliticePage() {
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Materiale consumate vs aprobate</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Materiale consumate vs aprobate</h2>
             <div className="mt-3 space-y-2">
               {materialsVsPlan.map((item) => (
                 <div key={item.projectId} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
-                  <p className="font-semibold text-[#f2f9ff]">{item.title}</p>
-                  <p className="text-xs text-[#9fb1c5]">Aprobate {item.planned.toFixed(2)} • Consumate {item.actual.toFixed(2)}</p>
+                  <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
+                  <p className="text-xs text-[var(--muted)]">Aprobate {item.planned.toFixed(2)} • Consumate {item.actual.toFixed(2)}</p>
                   <p className={`mt-1 text-xs font-semibold ${item.actual > item.planned ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
                     Diferenta: {(item.actual - item.planned).toFixed(2)}
                   </p>
@@ -216,12 +216,12 @@ export default async function AnaliticePage() {
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[#f2f9ff]">Cost real vs buget estimat</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Cost real vs buget estimat</h2>
             <div className="mt-3 space-y-2">
               {costVsBudget.map((item) => (
                 <div key={item.projectId} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
-                  <p className="font-semibold text-[#f2f9ff]">{item.title}</p>
-                  <p className="text-xs text-[#9fb1c5]">Buget {formatCurrency(item.planned)} • Cost {formatCurrency(item.actual)}</p>
+                  <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
+                  <p className="text-xs text-[var(--muted)]">Buget {formatCurrency(item.planned)} • Cost {formatCurrency(item.actual)}</p>
                   <p className={`mt-1 text-xs font-semibold ${item.actual > item.planned ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
                     Variatie: {formatCurrency(item.actual - item.planned)}
                   </p>
@@ -232,19 +232,19 @@ export default async function AnaliticePage() {
         </section>
 
         <Card>
-          <h2 className="text-lg font-semibold text-[#f2f9ff]">Facturi si plati</h2>
+          <h2 className="text-lg font-semibold text-[var(--foreground)]">Facturi si plati</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-3 text-sm">
             <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
-              <p className="text-xs text-[#9fb1c5]">Total facturat</p>
-              <p className="mt-1 font-semibold text-[#f2f9ff]">{formatCurrency(totalInvoiced)}</p>
+              <p className="text-xs text-[var(--muted)]">Total facturat</p>
+              <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
             </div>
             <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
-              <p className="text-xs text-[#9fb1c5]">Total incasat</p>
-              <p className="mt-1 font-semibold text-[#f2f9ff]">{formatCurrency(totalPaid)}</p>
+              <p className="text-xs text-[var(--muted)]">Total incasat</p>
+              <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(totalPaid)}</p>
             </div>
             <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
-              <p className="text-xs text-[#9fb1c5]">Creanta + rata incasare</p>
-              <p className="mt-1 font-semibold text-[#f2f9ff]">{formatCurrency(receivable)} • {collectionRate}%</p>
+              <p className="text-xs text-[var(--muted)]">Creanta + rata incasare</p>
+              <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(receivable)} • {collectionRate}%</p>
             </div>
           </div>
         </Card>

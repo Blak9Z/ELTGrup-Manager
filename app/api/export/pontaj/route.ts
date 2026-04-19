@@ -16,6 +16,13 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const month = Number(url.searchParams.get("month") || new Date().getMonth() + 1);
   const year = Number(url.searchParams.get("year") || new Date().getFullYear());
+  const currentYear = new Date().getFullYear();
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    return NextResponse.json({ error: "Parametrul month trebuie sa fie intre 1 si 12." }, { status: 400 });
+  }
+  if (!Number.isInteger(year) || year < 2000 || year > currentYear + 1) {
+    return NextResponse.json({ error: "Parametrul year este invalid." }, { status: 400 });
+  }
 
   const from = new Date(year, month - 1, 1);
   const to = new Date(year, month, 0, 23, 59, 59);
