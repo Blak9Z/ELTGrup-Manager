@@ -228,6 +228,11 @@ export default async function DashboardPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Recent Activity</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele miscari in sistem</h2>
             <div className="mt-3 space-y-2">
+              {latestActivities.length === 0 ? (
+                <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista activitate recenta in aria ta de acces.
+                </p>
+              ) : null}
               {latestActivities.map((log) => (
                 <div key={log.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3">
                   <p className="text-sm font-semibold text-[var(--foreground)]">{log.action}</p>

@@ -122,7 +122,13 @@ export default async function CalendarPage({
           {canCreate ? (
             <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 md:grid-cols-4">
               <Input name="title" placeholder="Adauga lucrare rapida in calendar" required />
-              <select name="projectId" required defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
+              <select
+                name="projectId"
+                required
+                defaultValue=""
+                disabled={projects.length === 0}
+                className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+              >
                 <option value="" disabled>
                   Selecteaza proiect
                 </option>
@@ -140,7 +146,7 @@ export default async function CalendarPage({
                   </option>
                 ))}
               </select>
-              <div className="flex gap-2">
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <select name="dayLabel" defaultValue="Luni" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
                   {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
                     <option key={day} value={day}>
@@ -148,13 +154,18 @@ export default async function CalendarPage({
                     </option>
                   ))}
                 </select>
-                <Button type="submit" className="h-10">
+                <Button type="submit" className="h-10 w-full sm:w-auto" disabled={projects.length === 0}>
                   Adauga
                 </Button>
               </div>
             </form>
           ) : null}
 
+          {tasks.length === 0 ? (
+            <p className="rounded-xl border border-[var(--border)] bg-[rgba(10,18,33,0.7)] p-3 text-sm text-[var(--muted)]">
+              Nu exista lucrari in calendar pentru filtrele curente.
+            </p>
+          ) : null}
           <PlanningBoard initialTasks={tasks} />
         </Card>
       </div>

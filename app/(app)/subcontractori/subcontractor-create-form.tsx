@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { createSubcontractorAction } from "./actions";
+import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
 import { initialActionState } from "@/src/lib/action-state";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -28,7 +29,13 @@ export function SubcontractorCreateForm() {
         {state.errors?.email ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.email[0]}</p> : null}
       </div>
       <Input name="phone" placeholder="Telefon" />
-      <Input name="approvalStatus" defaultValue="IN_VERIFICARE" placeholder="Status aprobare" />
+      <select name="approvalStatus" defaultValue="IN_VERIFICARE" className="h-10 rounded-lg border border-[var(--border)] px-3 text-sm">
+        {SUBCONTRACTOR_APPROVAL_STATUSES.map((status) => (
+          <option key={status} value={status}>
+            {status}
+          </option>
+        ))}
+      </select>
       <div className="md:col-span-2 xl:col-span-4 flex justify-end">
         <Button type="submit" disabled={pending}>{pending ? "Se salveaza..." : "Creeaza"}</Button>
       </div>

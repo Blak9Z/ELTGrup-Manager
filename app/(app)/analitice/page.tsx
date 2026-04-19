@@ -184,6 +184,11 @@ export default async function AnaliticePage() {
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Ore pontate vs ore estimate</h2>
             <div className="mt-3 space-y-2">
+              {hoursVsEstimate.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
+                  Nu exista suficiente date de pontaj/estimare pentru comparatie.
+                </p>
+              ) : null}
               {hoursVsEstimate.map((item) => (
                 <div key={item.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
@@ -203,6 +208,11 @@ export default async function AnaliticePage() {
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Materiale consumate vs aprobate</h2>
             <div className="mt-3 space-y-2">
+              {materialsVsPlan.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
+                  Nu exista date de consum/aprobare materiale pentru proiectele vizibile.
+                </p>
+              ) : null}
               {materialsVsPlan.map((item) => (
                 <div key={item.projectId} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
@@ -218,6 +228,11 @@ export default async function AnaliticePage() {
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Cost real vs buget estimat</h2>
             <div className="mt-3 space-y-2">
+              {costVsBudget.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
+                  Nu exista proiecte cu date suficiente pentru analiza cost vs buget.
+                </p>
+              ) : null}
               {costVsBudget.map((item) => (
                 <div key={item.projectId} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{item.title}</p>

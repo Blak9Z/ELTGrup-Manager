@@ -96,6 +96,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card className="xl:col-span-2">
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Lucrari active</h2>
             <div className="mt-3 space-y-2">
+              {project.workOrders.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista lucrari active pe acest proiect.
+                </p>
+              ) : null}
               {project.workOrders.map((task) => (
                 <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
@@ -110,6 +115,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Faze proiect</h2>
             <div className="mt-3 space-y-2">
+              {project.phases.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista faze definite pentru acest proiect.
+                </p>
+              ) : null}
               {project.phases.map((phase) => (
                 <div key={phase.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">
@@ -126,6 +136,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Consum materiale</h2>
             <div className="mt-3 space-y-2 text-sm">
+              {project.materialUsage.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista consum de materiale inregistrat.
+                </p>
+              ) : null}
               {project.materialUsage.map((item) => (
                 <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="font-semibold text-[var(--foreground)]">{item.material.name}</p>
@@ -139,6 +154,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Facturi</h2>
             <div className="mt-3 space-y-2 text-sm">
+              {project.invoices.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista facturi asociate acestui proiect.
+                </p>
+              ) : null}
               {project.invoices.map((invoice) => (
                 <div key={invoice.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="font-semibold text-[var(--foreground)]">{invoice.invoiceNumber}</p>
@@ -155,6 +175,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Documente proiect</h2>
             <div className="mt-3 space-y-2 text-sm">
+              {project.documents.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista documente incarcate pentru proiect.
+                </p>
+              ) : null}
               {project.documents.map((doc) => (
                 <div key={doc.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="font-semibold text-[var(--foreground)]">{doc.title}</p>
@@ -168,6 +193,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Rapoarte zilnice</h2>
             <div className="mt-3 space-y-2 text-sm">
+              {project.dailyReports.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista rapoarte zilnice in acest moment.
+                </p>
+              ) : null}
               {project.dailyReports.map((report) => (
                 <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="font-semibold text-[var(--foreground)]">{formatDate(report.reportDate)}</p>
@@ -181,6 +211,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <Card>
           <h2 className="text-lg font-semibold text-[var(--foreground)]">Subcontractori</h2>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {project.subcontractors.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)] md:col-span-2">
+                Nu exista subcontractori alocati pe acest proiect.
+              </p>
+            ) : null}
             {project.subcontractors.map((assignment) => (
               <div key={assignment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
                 <p className="font-semibold text-[var(--foreground)]">{assignment.subcontractor.name}</p>

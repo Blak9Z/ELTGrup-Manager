@@ -134,7 +134,7 @@ export default async function DocumentePage({
           </form>
           {canUpdate || canDelete ? (
             <form action={bulkDocumentsAction} className="mb-3 space-y-3">
-              <div className="bulk-controls grid gap-2 md:grid-cols-3">
+              <div className="bulk-controls grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                 <select
                   name="operation"
                   defaultValue={canUpdate ? "MAKE_PRIVATE" : "DELETE"}
@@ -144,8 +144,9 @@ export default async function DocumentePage({
                   {canUpdate ? <option value="MAKE_PUBLIC">Marcheaza public</option> : null}
                   {canDelete ? <option value="DELETE">Sterge definitiv</option> : null}
                 </select>
-                <div />
-                <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pe documentele selectate?" />
+                <div className="flex md:justify-end">
+                  <ConfirmSubmitButton text="Executa bulk" confirmMessage="Confirmi actiunea bulk pe documentele selectate?" />
+                </div>
               </div>
               <div className="grid gap-1 md:grid-cols-2 rounded-lg border border-[var(--border)] p-2">
                 {docs.map((doc) => (
@@ -185,7 +186,7 @@ export default async function DocumentePage({
               ))}
             </div>
           )}
-          <div className="mt-4 flex items-center justify-between text-sm text-[var(--muted)]">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--muted)]">
             <span>Pagina {page} din {totalPages}</span>
             <div className="flex gap-2">
               {page > 1 ? (

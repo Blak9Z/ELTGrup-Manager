@@ -100,6 +100,12 @@ export default async function FinanciarPage({
           </div>
         ) : null}
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {costs.length === 0 ? (
+            <Card className="md:col-span-2 xl:col-span-4">
+              <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Costuri</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">Nu exista costuri inregistrate in aria ta pentru filtrul curent.</p>
+            </Card>
+          ) : null}
           {costs.map((cost) => (
             <Card key={cost.type}>
               <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Cost {cost.type}</p>
@@ -147,21 +153,21 @@ export default async function FinanciarPage({
                     <Badge tone={invoice.status === "OVERDUE" ? "danger" : invoice.status === "PAID" ? "success" : "warning"}>{invoice.status}</Badge>
                   </div>
                   {canUpdateInvoice ? (
-                    <form action={updateInvoiceStatus} className="mt-2 flex items-center gap-2">
+                    <form action={updateInvoiceStatus} className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,220px)_auto] sm:items-center">
                       <input type="hidden" name="id" value={invoice.id} />
-                      <select name="status" defaultValue={invoice.status} className="h-9 w-auto min-w-[180px] rounded-md px-2 text-xs">
+                      <select name="status" defaultValue={invoice.status} className="h-9 w-full rounded-md px-2 text-xs">
                         {Object.values(InvoiceStatus).map((status) => (
                           <option key={status} value={status}>{status}</option>
                         ))}
                       </select>
-                      <Button type="submit" size="sm" variant="secondary">Actualizeaza status</Button>
+                      <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">Actualizeaza status</Button>
                     </form>
                   ) : null}
                 </div>
               ))}
             </div>
           )}
-          <div className="mt-3 flex items-center justify-between text-sm text-[var(--muted)]">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--muted)]">
             <span>Pagina {page} din {totalPages}</span>
             <div className="flex gap-2">
               {page > 1 ? <Link href={`/financiar?page=${page - 1}&status=${statusFilter || ""}&projectId=${params.projectId || ""}`} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Anterior</Link> : null}
@@ -174,6 +180,11 @@ export default async function FinanciarPage({
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Margins</p>
           <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Cashflow si marja estimata pe proiect</h2>
           <div className="mt-3 space-y-2">
+            {projects.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                Nu exista proiecte in aria ta pentru calculul de marja.
+              </p>
+            ) : null}
             {projects.map((project) => {
               const costTotal = costByProject.get(project.id) || 0;
               const invoiced = invoicedByProject.get(project.id) || 0;

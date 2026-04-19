@@ -182,9 +182,9 @@ export default async function TerenPage() {
                 {activeEntry ? `${activeEntry.project.title} • start ${formatDateTime(activeEntry.startAt)}` : "Porneste pontajul din Task Pulse"}
               </p>
               {activeEntry ? (
-                <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <Badge tone={runningLive ? "success" : "warning"}>{activeEntry.liveState}</Badge>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 sm:justify-end">
                     {runningLive ? (
                       <form action={pauseLivePontaj}>
                         <input type="hidden" name="id" value={activeEntry.id} />
@@ -209,6 +209,11 @@ export default async function TerenPage() {
           <Card>
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Field Update Composer</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Raport operational rapid</h2>
+            {projects.length === 0 ? (
+              <p className="mt-3 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                Nu exista proiecte disponibile in aria ta. Raportarea teren devine disponibila dupa alocare.
+              </p>
+            ) : null}
             <form action={createFieldUpdate} className="mt-3 space-y-3">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
@@ -253,7 +258,9 @@ export default async function TerenPage() {
                 <Textarea name="note" rows={2} placeholder="Informatii utile pentru PM / birou" />
               </div>
               <div className="flex justify-end">
-                <Button type="submit">Trimite update teren</Button>
+                <Button type="submit" disabled={projects.length === 0}>
+                  {projects.length === 0 ? "Fara proiecte disponibile" : "Trimite update teren"}
+                </Button>
               </div>
             </form>
           </Card>
@@ -294,6 +301,11 @@ export default async function TerenPage() {
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Field Evidence</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Foto progres pe lucrari</h2>
             <div className="mt-3 space-y-3">
+              {tasks.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista lucrari active pentru incarcare foto.
+                </p>
+              ) : null}
               {tasks.map((task) => (
                 <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
@@ -315,6 +327,11 @@ export default async function TerenPage() {
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Update Feed</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele rapoarte teren</h2>
             <div className="mt-3 space-y-2">
+              {reports.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista rapoarte teren in istoricul curent.
+                </p>
+              ) : null}
               {reports.map((report) => (
                 <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="text-sm font-semibold text-[var(--foreground)]">{report.project.title}</p>

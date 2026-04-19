@@ -9,6 +9,7 @@ import { resolveAccessScope, subcontractorScopeWhere } from "@/src/lib/access-sc
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 import { updateSubcontractorAction, updateSubcontractorStatus } from "./actions";
+import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
 import { SubcontractorCreateForm } from "./subcontractor-create-form";
 
 export default async function SubcontractoriPage() {
@@ -68,6 +69,13 @@ export default async function SubcontractoriPage() {
           </Card>
         ) : null}
 
+        {subcontractors.length === 0 ? (
+          <Card>
+            <p className="text-sm font-semibold text-[var(--foreground)]">Nu exista subcontractori vizibili in aria ta.</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Adauga un subcontractor nou sau extinde aria de acces pentru a vedea alocarile existente.</p>
+          </Card>
+        ) : null}
+
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {subcontractors.map((company) => (
             <Card key={company.id} className="space-y-3">
@@ -94,19 +102,14 @@ export default async function SubcontractoriPage() {
                     <Button type="submit" size="sm">Salveaza detalii</Button>
                   </form>
 
-                  <form action={updateSubcontractorStatus} className="mt-3 flex items-center gap-2">
+                  <form action={updateSubcontractorStatus} className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                     <input type="hidden" name="id" value={company.id} />
-                    <select name="approvalStatus" defaultValue={company.approvalStatus} className="h-9 rounded-md border border-[var(--border)] px-2 text-xs">
-                      {[
-                        "IN_VERIFICARE",
-                        "APROBAT",
-                        "RESPINS",
-                        "SUSPENDAT",
-                      ].map((status) => (
+                    <select name="approvalStatus" defaultValue={company.approvalStatus} className="h-9 w-full rounded-md border border-[var(--border)] px-2 text-xs">
+                      {SUBCONTRACTOR_APPROVAL_STATUSES.map((status) => (
                         <option key={status} value={status}>{status}</option>
                       ))}
                     </select>
-                    <Button type="submit" size="sm" variant="secondary">Actualizeaza</Button>
+                    <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">Actualizeaza</Button>
                   </form>
                 </>
               ) : (

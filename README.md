@@ -90,6 +90,11 @@ Minim necesar:
 - `NEXTAUTH_SECRET` - secret semnare sesiuni
 - `NEXTAUTH_URL` - URL-ul public al aplicatiei
 
+Nota importanta pentru Supabase + Prisma:
+
+- Evita `connection_limit=1` in `DATABASE_URL` pentru runtime.
+- Pentru modulele acestui proiect (care ruleaza query-uri paralele) foloseste minim `connection_limit=5` (recomandat `10+` pentru trafic real).
+
 Optional pentru upload S3 compatibil:
 
 - `STORAGE_ENDPOINT`

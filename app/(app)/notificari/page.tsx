@@ -70,7 +70,9 @@ export default async function NotificariPage() {
                   {!notification.isRead ? (
                     <form action={markNotificationRead}>
                       <input type="hidden" name="id" value={notification.id} />
-                      <button className="text-xs font-semibold text-[var(--muted-strong)] hover:underline" type="submit">Marcheaza citit</button>
+                      <Button size="sm" variant="ghost" type="submit" className="h-8 px-2 text-xs">
+                        Marcheaza citit
+                      </Button>
                     </form>
                   ) : null}
                 </div>

@@ -31,7 +31,7 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
       <Button
         isIconOnly
         variant="secondary"
-        className="h-10 w-10 rounded-lg border-[var(--border)] bg-[var(--surface-card)] lg:hidden"
+        className="h-11 w-11 rounded-lg border-[var(--border)] bg-[var(--surface-card)] lg:hidden"
         onPress={() => setOpenPath(pathname)}
         aria-label="Deschide meniul"
       >
@@ -47,7 +47,7 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
             </div>
             <button
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] text-[var(--muted-strong)]"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] text-[var(--muted-strong)]"
               onClick={() => setOpenPath(null)}
               aria-label="Inchide meniul"
             >
@@ -74,7 +74,7 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
                           href={item.href}
                           onClick={() => setOpenPath(null)}
                           className={cn(
-                            "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition",
+                            "flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition",
                             active
                               ? "border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--foreground)]"
                               : "border-transparent text-[var(--muted-strong)] hover:border-[var(--border)] hover:bg-[var(--surface-card)]",

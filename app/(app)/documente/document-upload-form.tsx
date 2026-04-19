@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { DocumentCategory } from "@prisma/client";
 import { createDocumentAction } from "./actions";
 import { initialActionState } from "@/src/lib/action-state";
+import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 
 type Option = { id: string; label: string };
@@ -62,14 +63,10 @@ export function DocumentUploadForm({
         ))}
       </select>
       <Input name="tags" placeholder="Tag-uri separate prin virgula" className="md:col-span-2 xl:col-span-2" />
-      <div className="md:col-span-2 xl:col-span-4 flex justify-end">
-        <button
-          type="submit"
-          disabled={pending}
-          className="h-10 rounded-lg bg-[#3b6fe9] px-4 text-sm font-semibold text-white disabled:opacity-70"
-        >
+      <div className="flex md:col-span-2 md:justify-end xl:col-span-4">
+        <Button type="submit" disabled={pending} className="h-10 w-full sm:w-auto">
           {pending ? "Se incarca..." : "Salveaza document"}
-        </button>
+        </Button>
       </div>
     </form>
   );

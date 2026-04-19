@@ -18,6 +18,14 @@ type Item = {
 export function DashboardScheduleTable({ items }: { items: Item[] }) {
   const [active, setActive] = useState<Item | null>(null);
 
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-4 text-sm text-[var(--muted)]">
+        Nu exista lucrari programate pentru intervalul curent.
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="space-y-2 md:hidden">
@@ -81,15 +89,24 @@ export function DashboardScheduleTable({ items }: { items: Item[] }) {
           role="presentation"
         >
           <div
-            className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-panel)]"
+            className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-panel)] max-h-[90vh] overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-label="Detalii lucrare programata"
           >
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">Detalii lucrare programata</p>
-              <h3 className="text-lg font-semibold text-[var(--foreground)]">{active.title}</h3>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">Detalii lucrare programata</p>
+                <h3 className="text-lg font-semibold text-[var(--foreground)]">{active.title}</h3>
+              </div>
+              <button
+                type="button"
+                className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
+                onClick={() => setActive(null)}
+              >
+                Inchide
+              </button>
             </div>
             <div className="mt-3 grid gap-3 text-sm text-[var(--muted-strong)] md:grid-cols-2">
               <div>

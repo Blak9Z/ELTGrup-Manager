@@ -7,8 +7,9 @@ import { ActionState, fromZodError } from "@/src/lib/action-state";
 import { assertSubcontractorAccess } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
+import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
 
-const subcontractorStatusSchema = z.enum(["IN_VERIFICARE", "APROBAT", "RESPINS", "SUSPENDAT"]);
+const subcontractorStatusSchema = z.enum(SUBCONTRACTOR_APPROVAL_STATUSES);
 
 const subcontractorSchema = z.object({
   name: z.string().min(2),

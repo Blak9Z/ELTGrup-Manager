@@ -114,6 +114,11 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Comentarii / update-uri</h2>
             <div className="mt-3 space-y-2">
+              {workOrder.comments.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista comentarii pe aceasta lucrare.
+                </p>
+              ) : null}
               {workOrder.comments.map((comment) => (
                 <div key={comment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
                   <p className="text-[var(--muted-strong)]">{comment.content}</p>
@@ -126,6 +131,11 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Documente / foto</h2>
             <div className="mt-3 space-y-2">
+              {workOrder.documents.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista documente sau fotografii incarcate.
+                </p>
+              ) : null}
               {workOrder.documents.map((doc) => (
                 <a key={doc.id} href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="block rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm hover:border-[var(--border-strong)]">
                   <p className="font-semibold text-[var(--foreground)]">{doc.title}</p>
@@ -138,6 +148,11 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
           <Card>
             <h2 className="text-lg font-semibold text-[var(--foreground)]">Aprobari si ore</h2>
             <div className="mt-3 space-y-2">
+              {workOrder.timeEntries.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista inregistrari de pontaj pe aceasta lucrare.
+                </p>
+              ) : null}
               {workOrder.timeEntries.map((entry) => (
                 <div key={entry.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{entry.user.firstName} {entry.user.lastName}</p>

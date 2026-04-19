@@ -110,6 +110,11 @@ export function UserAdminPanel({
         <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Access Matrix</p>
         <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Utilizatori si permisiuni</h2>
         <div className="mt-3 space-y-3">
+          {users.length === 0 ? (
+            <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+              Nu exista utilizatori disponibili in acest mediu.
+            </p>
+          ) : null}
           {users.map((user) => (
             <div key={user.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">

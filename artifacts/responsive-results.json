@@ -1,0 +1,2120 @@
+[
+  {
+    "route": "/panou",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/panou",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 3,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/panou",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/panou",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 2,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/panou",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/panou",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 1,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/panou",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/panou",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 15,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/panou",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/panou",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 15,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/panou",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/panou",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 15,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/proiecte",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/proiecte",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 36,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/proiecte",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/proiecte",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 35,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/proiecte",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/proiecte",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 968.6,
+        "left": 42,
+        "width": 926.6
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 968.6,
+        "left": 42,
+        "width": 926.6
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 968.6,
+        "left": 42,
+        "width": 926.6
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 769.7,
+        "left": 647.5,
+        "width": 122.2
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 968.6,
+        "left": 769.7,
+        "width": 198.9
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 968.6,
+        "left": 42,
+        "width": 926.6
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 968.6,
+        "left": 42,
+        "width": 926.6
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 769.7,
+        "left": 647.5,
+        "width": 122.2
+      }
+    ],
+    "smallTouchTargets": 34,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/proiecte",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/proiecte",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 1253.6,
+        "left": 327,
+        "width": 926.6
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 1253.6,
+        "left": 327,
+        "width": 926.6
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1253.6,
+        "left": 327,
+        "width": 926.6
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1054.7,
+        "left": 932.5,
+        "width": 122.2
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1253.6,
+        "left": 1054.7,
+        "width": 198.9
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 1253.6,
+        "left": 327,
+        "width": 926.6
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1253.6,
+        "left": 327,
+        "width": 926.6
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 1054.7,
+        "left": 932.5,
+        "width": 122.2
+      }
+    ],
+    "smallTouchTargets": 48,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/proiecte",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/proiecte",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 48,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/proiecte",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/proiecte",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 50,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/lucrari",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/lucrari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 42,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/lucrari",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/lucrari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 42,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/lucrari",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/lucrari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 1074.2,
+        "left": 42,
+        "width": 1032.2
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 1074.2,
+        "left": 42,
+        "width": 1032.2
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1074.2,
+        "left": 42,
+        "width": 1032.2
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 875.3,
+        "left": 741.7,
+        "width": 133.5
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1074.2,
+        "left": 875.3,
+        "width": 198.9
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 1074.2,
+        "left": 42,
+        "width": 1032.2
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1074.2,
+        "left": 42,
+        "width": 1032.2
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 875.3,
+        "left": 741.7,
+        "width": 133.5
+      }
+    ],
+    "smallTouchTargets": 43,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/lucrari",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/lucrari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1026.7,
+        "left": 918.4,
+        "width": 108.3
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1160.3,
+        "left": 1026.7,
+        "width": 133.5
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1359.2,
+        "left": 1160.3,
+        "width": 198.9
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      }
+    ],
+    "smallTouchTargets": 57,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/lucrari",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/lucrari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1359.2,
+        "left": 1160.3,
+        "width": 198.9
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1359.2,
+        "left": 327,
+        "width": 1032.2
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 1359.2,
+        "left": 1160.3,
+        "width": 198.9
+      },
+      {
+        "tag": "div",
+        "className": "flex gap-2",
+        "right": 1343.2,
+        "left": 1176.3,
+        "width": 166.9
+      }
+    ],
+    "smallTouchTargets": 57,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/lucrari",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/lucrari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 57,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/calendar",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/calendar",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 53,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/calendar",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/calendar",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 52,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/calendar",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/calendar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 51,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/calendar",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/calendar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 65,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/calendar",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/calendar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 65,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/calendar",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/calendar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 65,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/pontaj",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/pontaj",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 24,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/pontaj",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/pontaj",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 23,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/pontaj",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/pontaj",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 857.9,
+        "left": 42,
+        "width": 815.9
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 857.9,
+        "left": 42,
+        "width": 815.9
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 857.9,
+        "left": 42,
+        "width": 815.9
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 857.9,
+        "left": 753.5,
+        "width": 104.4
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 857.9,
+        "left": 42,
+        "width": 815.9
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 857.9,
+        "left": 42,
+        "width": 815.9
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 857.9,
+        "left": 753.5,
+        "width": 104.4
+      },
+      {
+        "tag": "form",
+        "className": "",
+        "right": 841.9,
+        "left": 769.5,
+        "width": 72.4
+      }
+    ],
+    "smallTouchTargets": 22,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/pontaj",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/pontaj",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 1142.9,
+        "left": 327,
+        "width": 815.9
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 1142.9,
+        "left": 327,
+        "width": 815.9
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1142.9,
+        "left": 327,
+        "width": 815.9
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1038.5,
+        "left": 918.5,
+        "width": 120
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1142.9,
+        "left": 1038.5,
+        "width": 104.4
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 1142.9,
+        "left": 327,
+        "width": 815.9
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1142.9,
+        "left": 327,
+        "width": 815.9
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 1038.5,
+        "left": 918.5,
+        "width": 120
+      }
+    ],
+    "smallTouchTargets": 36,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/pontaj",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/pontaj",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 36,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/pontaj",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/pontaj",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 36,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/teren",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/teren",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 63,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/teren",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/teren",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 62,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/teren",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/teren",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 61,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/teren",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/teren",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 75,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/teren",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/teren",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 75,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/teren",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/teren",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 75,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/materiale",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/materiale",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 37,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/materiale",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/materiale",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 36,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/materiale",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/materiale",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 802,
+        "left": 42,
+        "width": 760
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 802,
+        "left": 42,
+        "width": 760
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 802,
+        "left": 42,
+        "width": 760
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 802,
+        "left": 656.7,
+        "width": 145.3
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 802,
+        "left": 42,
+        "width": 760
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 802,
+        "left": 42,
+        "width": 760
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 802,
+        "left": 656.7,
+        "width": 145.3
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 802,
+        "left": 42,
+        "width": 760
+      }
+    ],
+    "smallTouchTargets": 35,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/materiale",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/materiale",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "table",
+        "className": "w-full min-w-[760px] border-collapse text-sm",
+        "right": 1087,
+        "left": 327,
+        "width": 760
+      },
+      {
+        "tag": "thead",
+        "className": "",
+        "right": 1087,
+        "left": 327,
+        "width": 760
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1087,
+        "left": 327,
+        "width": 760
+      },
+      {
+        "tag": "th",
+        "className": "sticky top-0 z-[1] border-b border-[var(--border)] bg-[var(--surface-card)] px-4 py-2.5 text-left text-[10px] font-semib",
+        "right": 1087,
+        "left": 941.7,
+        "width": 145.3
+      },
+      {
+        "tag": "tbody",
+        "className": "",
+        "right": 1087,
+        "left": 327,
+        "width": 760
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1087,
+        "left": 327,
+        "width": 760
+      },
+      {
+        "tag": "td",
+        "className": "border-b border-[var(--border)] px-4 py-3 align-top text-[var(--muted-strong)]",
+        "right": 1087,
+        "left": 941.7,
+        "width": 145.3
+      },
+      {
+        "tag": "tr",
+        "className": "",
+        "right": 1087,
+        "left": 327,
+        "width": 760
+      }
+    ],
+    "smallTouchTargets": 49,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/materiale",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/materiale",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 49,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/materiale",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/materiale",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 49,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/documente",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/documente",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 55,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/documente",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/documente",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 54,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/documente",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/documente",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 53,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/documente",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/documente",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 67,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/documente",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/documente",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 67,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/documente",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/documente",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 67,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/clienti",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/clienti",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 16,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/clienti",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/clienti",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 15,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/clienti",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/clienti",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 14,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/clienti",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/clienti",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 28,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/clienti",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/clienti",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 28,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/clienti",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/clienti",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 28,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/rapoarte-zilnice",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/rapoarte-zilnice",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 48,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/rapoarte-zilnice",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/rapoarte-zilnice",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 47,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/rapoarte-zilnice",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/rapoarte-zilnice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 46,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/rapoarte-zilnice",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/rapoarte-zilnice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 60,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/rapoarte-zilnice",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/rapoarte-zilnice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 60,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/rapoarte-zilnice",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/rapoarte-zilnice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 60,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/subcontractori",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/subcontractori",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 10,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/subcontractori",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/subcontractori",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 9,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/subcontractori",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/subcontractori",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 8,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/subcontractori",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/subcontractori",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 22,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/subcontractori",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/subcontractori",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 22,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/subcontractori",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/subcontractori",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 22,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/financiar",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/financiar",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 22,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/financiar",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/financiar",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 21,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/financiar",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/financiar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 20,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/financiar",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/financiar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 34,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/financiar",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/financiar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 34,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/financiar",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/financiar",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 34,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/analitice",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/analitice",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 15,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/analitice",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/analitice",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 14,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/analitice",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/analitice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 13,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/analitice",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/analitice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 27,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/analitice",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/analitice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 27,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/analitice",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/analitice",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 27,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/notificari",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/notificari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 12,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/notificari",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/notificari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 11,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/notificari",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/notificari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 10,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/notificari",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/notificari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 24,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/notificari",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/notificari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 24,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/notificari",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/notificari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 24,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/setari",
+    "width": 320,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/setari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 348,
+        "left": 270,
+        "width": 78
+      },
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 26,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/setari",
+    "width": 375,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/setari",
+    "overflowPx": 0,
+    "overflowingElements": [
+      {
+        "tag": "a",
+        "className": "inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-car",
+        "right": 434,
+        "left": 356,
+        "width": 78
+      }
+    ],
+    "smallTouchTargets": 25,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/setari",
+    "width": 768,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/setari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 24,
+    "drawerVisible": true,
+    "sidebarVisible": false,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/setari",
+    "width": 1024,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/setari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 38,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/setari",
+    "width": 1280,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/setari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 38,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  },
+  {
+    "route": "/setari",
+    "width": 1440,
+    "status": "ok",
+    "errorMessage": null,
+    "url": "http://127.0.0.1:3000/setari",
+    "overflowPx": 0,
+    "overflowingElements": [],
+    "smallTouchTargets": 38,
+    "drawerVisible": false,
+    "sidebarVisible": true,
+    "title": "ELTGRUP Manager",
+    "screenshotPath": null
+  }
+]

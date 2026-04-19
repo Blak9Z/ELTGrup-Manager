@@ -61,7 +61,7 @@ export async function Topbar({
           {visibleSet.has("notifications") ? (
             <Link
               href="/notificari"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] text-[var(--muted-strong)] transition hover:border-[var(--border-strong)]"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] text-[var(--muted-strong)] transition hover:border-[var(--border-strong)]"
               aria-label="Notificari"
             >
               <Bell className="h-4 w-4" />
@@ -94,7 +94,7 @@ export async function Topbar({
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-strong)]"
+            className="inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-xs font-semibold text-[var(--muted-strong)]"
           >
             {item.label}
           </Link>

@@ -9,7 +9,7 @@ export function SignOutButton() {
     <Button
       onClick={() => signOut({ callbackUrl: "/autentificare" })}
       variant="secondary"
-      className="h-10 gap-2 px-3"
+      className="h-11 gap-2 px-3"
     >
       <LogOut className="h-4 w-4" />
       <span className="hidden sm:inline">Iesire</span>

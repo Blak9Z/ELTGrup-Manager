@@ -54,6 +54,13 @@ export default async function ClientiPage() {
           </Card>
         ) : null}
 
+        {clients.length === 0 ? (
+          <Card>
+            <p className="text-sm font-semibold text-[var(--foreground)]">Nu exista clienti in aria ta de acces.</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Creeaza primul client pentru a porni fluxul CRM si asocierea cu proiecte.</p>
+          </Card>
+        ) : null}
+
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {clients.map((client) => (
             <Card key={client.id} className="space-y-3">
