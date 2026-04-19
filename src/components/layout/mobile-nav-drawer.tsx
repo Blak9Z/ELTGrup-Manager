@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader } from "@heroui/react";
@@ -11,9 +11,20 @@ import { navItems, navSections } from "@/src/components/layout/navigation-config
 import { cn } from "@/src/lib/utils";
 
 export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[] }) {
-  const [open, setOpen] = useState(false);
+  const [openPath, setOpenPath] = useState<string | null>(null);
   const pathname = usePathname();
   const visibleSet = useMemo(() => new Set(visibleModules), [visibleModules]);
+  const open = openPath === pathname;
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setOpenPath(null);
+    };
+
+    media.addEventListener("change", closeOnDesktop);
+    return () => media.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   return (
     <>
@@ -21,13 +32,13 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
         isIconOnly
         variant="secondary"
         className="h-10 w-10 rounded-lg border-[var(--border)] bg-[var(--surface-card)] lg:hidden"
-        onPress={() => setOpen(true)}
+        onPress={() => setOpenPath(pathname)}
         aria-label="Deschide meniul"
       >
         <Menu className="h-5 w-5" />
       </Button>
 
-      <Drawer isOpen={open} onOpenChange={setOpen}>
+      <Drawer isOpen={open} onOpenChange={(next) => setOpenPath(next ? pathname : null)}>
         <DrawerContent className="max-w-[320px] border-r border-[var(--border)] bg-[var(--shell)] text-[var(--foreground)]">
           <DrawerHeader className="flex items-center justify-between border-b border-[var(--border)] py-4">
             <div>
@@ -37,7 +48,7 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
             <button
               type="button"
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] text-[var(--muted-strong)]"
-              onClick={() => setOpen(false)}
+              onClick={() => setOpenPath(null)}
               aria-label="Inchide meniul"
             >
               <X className="h-4 w-4" />
@@ -61,7 +72,7 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
                         <Link
                           key={item.href}
                           href={item.href}
-                          onClick={() => setOpen(false)}
+                          onClick={() => setOpenPath(null)}
                           className={cn(
                             "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition",
                             active

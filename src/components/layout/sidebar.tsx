@@ -12,7 +12,7 @@ export function Sidebar({ visibleModules }: { visibleModules: AppModule[] }) {
   const visibleSet = new Set(visibleModules);
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 overflow-hidden border-r border-[var(--border)] bg-[var(--shell)] md:flex md:flex-col">
+    <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 overflow-hidden border-r border-[var(--border)] bg-[var(--shell)] lg:flex lg:flex-col">
       <div className="border-b border-[var(--border)] px-4 pb-4 pt-5">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
