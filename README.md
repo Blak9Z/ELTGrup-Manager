@@ -99,11 +99,6 @@ Optional pentru upload S3 compatibil:
 
 Daca variabilele de storage lipsesc, upload-ul merge pe fallback local in `public/uploads`.
 
-## Cont seed (demo)
-
-- Email: `eduard@eltgrup.com`
-- Parola: `eltgrup`
-
 ## Scripturi utile
 
 ```bash
