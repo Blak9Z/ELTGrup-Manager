@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, RoleKey, PermissionAction, PermissionResource, ProjectStatus, ProjectType, TaskPriority, WorkOrderStatus, TimeEntryStatus, StockMovementType, InvoiceStatus, CostType, DocumentCategory, NotificationType, EquipmentStatus, MaterialRequestStatus } from "@prisma/client";
+import { PrismaClient, Prisma, RoleKey, PermissionAction, PermissionResource, ProjectStatus, ProjectType, TaskPriority, WorkOrderStatus, TimeEntryStatus, StockMovementType, InvoiceStatus, CostType, DocumentCategory, NotificationType, EquipmentStatus, MaterialRequestStatus, ClientType, SubcontractorApprovalStatus, AssignmentStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { addDays, subDays } from "date-fns";
 
@@ -39,6 +39,14 @@ function rand(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+async function createSequential<T, R>(items: T[], create: (item: T, index: number) => Promise<R>) {
+  const results: R[] = [];
+  for (let index = 0; index < items.length; index++) {
+    results.push(await create(items[index], index));
+  }
+  return results;
+}
+
 async function main() {
   await prisma.rolePermission.deleteMany();
   await prisma.userRole.deleteMany();
@@ -75,30 +83,27 @@ async function main() {
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
 
-  const roles = await Promise.all(
-    Object.values(RoleKey).map((key) =>
-      prisma.role.create({
-        data: {
-          key,
-          label: roleLabels[key],
-          description: `Rol operational ${roleLabels[key]}`,
-        },
-      }),
-    ),
+  const roles = await createSequential(Object.values(RoleKey), (key) =>
+    prisma.role.create({
+      data: {
+        key,
+        label: roleLabels[key],
+        description: `Rol operational ${roleLabels[key]}`,
+      },
+    }),
   );
 
-  const permissions = await Promise.all(
-    Object.values(PermissionResource).flatMap((resource) =>
-      Object.values(PermissionAction).map((action) =>
-        prisma.permission.create({
-          data: {
-            resource,
-            action,
-            label: `${resource}_${action}`,
-          },
-        }),
-      ),
-    ),
+  const permissionTuples = Object.values(PermissionResource).flatMap((resource) =>
+    Object.values(PermissionAction).map((action) => ({ resource, action })),
+  );
+  const permissions = await createSequential(permissionTuples, (item) =>
+    prisma.permission.create({
+      data: {
+        resource: item.resource,
+        action: item.action,
+        label: `${item.resource}_${item.action}`,
+      },
+    }),
   );
 
   for (const role of roles) {
@@ -208,8 +213,9 @@ async function main() {
     users.push({ id: user.id, role: roleKey, name: `${firstName} ${lastName}` });
   }
 
-  const teams = await Promise.all(
-    ["Echipa Instalatii Electrice", "Echipa Reabilitari", "Echipa Service Mentenanta", "Echipa Infrastructura"].map((name, index) =>
+  const teams = await createSequential(
+    ["Echipa Instalatii Electrice", "Echipa Reabilitari", "Echipa Service Mentenanta", "Echipa Infrastructura"],
+    (name, index) =>
       prisma.team.create({
         data: {
           code: `ECH-${index + 1}`,
@@ -218,7 +224,6 @@ async function main() {
           leadUserId: users[index + 2]?.id,
         },
       }),
-    ),
   );
 
   const workerUsers = users.filter((u) => u.role === RoleKey.WORKER || u.role === RoleKey.SITE_MANAGER);
@@ -235,7 +240,7 @@ async function main() {
     });
   }
 
-  const clients = await Promise.all(
+  const clients = await createSequential(
     [
       "Construct Invest SRL",
       "Nord Industrial Park SA",
@@ -243,10 +248,11 @@ async function main() {
       "Retail Hub Romania",
       "Logistic Future SRL",
       "Energo Center SA",
-    ].map((name, index) =>
+    ],
+    (name, index) =>
       prisma.client.create({
         data: {
-          type: "COMPANY",
+          type: ClientType.COMPANY,
           name,
           cui: `RO${40000000 + index * 712}`,
           registrationNumber: `J40/${1000 + index}/2018`,
@@ -265,7 +271,6 @@ async function main() {
           },
         },
       }),
-    ),
   );
 
   const manager = users.find((u) => u.role === RoleKey.PROJECT_MANAGER)!;
@@ -353,7 +358,7 @@ async function main() {
     workOrders.push({ id: wo.id, projectId: project.id });
   }
 
-  const materials = await Promise.all(
+  const materials = await createSequential(
     [
       ["MAT-001", "Cablu FY 3x2.5", "m"],
       ["MAT-002", "Doza aparat 68", "buc"],
@@ -361,7 +366,8 @@ async function main() {
       ["MAT-004", "Tablou electric 24M", "buc"],
       ["MAT-005", "Intrerupator diferential", "buc"],
       ["MAT-006", "Corp iluminat LED", "buc"],
-    ].map(([code, name, uom], i) =>
+    ] as const,
+    ([code, name, uom], i) =>
       prisma.material.create({
         data: {
           code,
@@ -374,11 +380,11 @@ async function main() {
           minStockLevel: decimal(50),
         },
       }),
-    ),
   );
 
-  const warehouses = await Promise.all(
-    ["Depozit Bucuresti", "Depozit Cluj", "Depozit Iasi"].map((name, i) =>
+  const warehouses = await createSequential(
+    ["Depozit Bucuresti", "Depozit Cluj", "Depozit Iasi"],
+    (name, i) =>
       prisma.warehouse.create({
         data: {
           code: `DEP-${i + 1}`,
@@ -387,7 +393,6 @@ async function main() {
           managerName: `Gestionar ${i + 1}`,
         },
       }),
-    ),
   );
 
   for (let i = 0; i < 100; i++) {
@@ -498,8 +503,9 @@ async function main() {
     });
   }
 
-  const subcontractors = await Promise.all(
-    ["MetalStruct Team", "Rapid Instal Systems", "BuildSub Vest"].map((name, i) =>
+  const subcontractors = await createSequential(
+    ["MetalStruct Team", "Rapid Instal Systems", "BuildSub Vest"],
+    (name, i) =>
       prisma.subcontractor.create({
         data: {
           name,
@@ -507,10 +513,9 @@ async function main() {
           contactName: `Coordonator ${i + 1}`,
           phone: `0733 000 0${i + 1}`,
           email: `contact${i + 1}@subcontractor.ro`,
-          approvalStatus: i === 0 ? "APROBAT" : "IN_VERIFICARE",
+          approvalStatus: i === 0 ? SubcontractorApprovalStatus.APROBAT : SubcontractorApprovalStatus.IN_VERIFICARE,
         },
       }),
-    ),
   );
 
   for (let i = 0; i < 10; i++) {
@@ -521,7 +526,7 @@ async function main() {
         contractRef: `SUB-${i + 100}`,
         startDate: subDays(new Date(), rand(10, 60)),
         endDate: addDays(new Date(), rand(10, 60)),
-        status: i % 2 === 0 ? "ACTIV" : "PLANIFICAT",
+        status: i % 2 === 0 ? AssignmentStatus.ACTIV : AssignmentStatus.PLANIFICAT,
       },
     });
   }

@@ -1,6 +1,6 @@
 "use server";
 
-import { DocumentCategory } from "@prisma/client";
+import { DocumentCategory, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assertClientAccess, assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
@@ -18,6 +18,7 @@ const createDocumentSchema = z.object({
   workOrderId: z.string().cuid().optional(),
   tags: z.string().optional(),
   expiresAt: z.string().optional(),
+  isPrivate: z.coerce.boolean().optional(),
 });
 
 export async function createDocumentAction(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -32,6 +33,7 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
       workOrderId: formData.get("workOrderId") || undefined,
       tags: formData.get("tags") || undefined,
       expiresAt: formData.get("expiresAt") || undefined,
+      isPrivate: formData.get("isPrivate") || undefined,
     });
 
     if (!parsed.success) {
@@ -63,6 +65,16 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
       effectiveProjectId = workOrder.projectId;
     }
 
+    if (effectiveProjectId) {
+      const project = await prisma.project.findUnique({
+        where: { id: effectiveProjectId },
+        select: { deletedAt: true },
+      });
+      if (!project || project.deletedAt) {
+        return { ok: false, message: "Nu poti incarca documente pe un proiect arhivat sau inexistent." };
+      }
+    }
+
     const file = formData.get("file");
     if (!(file instanceof File)) {
       return { ok: false, message: "Fisierul este obligatoriu", errors: { file: ["Fisier lipsa"] } };
@@ -83,6 +95,7 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
         uploadedById: currentUser.id,
         tags: parsed.data.tags ? parsed.data.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
         expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
+        isPrivate: parsed.data.isPrivate ?? true,
       },
     });
 
@@ -130,12 +143,21 @@ export async function bulkDocumentsAction(formData: FormData) {
       ? await requirePermission("DOCUMENTS", "DELETE")
       : await requirePermission("DOCUMENTS", "UPDATE");
   const scope = await resolveAccessScope(actor);
+  const hasExternalRole = actor.roleKeys.some(
+    (role) => role === RoleKey.CLIENT_VIEWER || role === RoleKey.SUBCONTRACTOR,
+  );
+  const scopedProjectIds = scope.projectIds && scope.projectIds.length > 0 ? scope.projectIds : ["__none__"];
   let scopedIds = parsed.data.ids;
   if (scope.projectIds !== null) {
     const allowed = await prisma.document.findMany({
       where: {
         id: { in: parsed.data.ids },
-        OR: [{ projectId: { in: scope.projectIds } }, { projectId: null, uploadedById: actor.id }],
+        OR: [
+          { projectId: { in: scopedProjectIds } },
+          { workOrder: { projectId: { in: scopedProjectIds } } },
+          { projectId: null, uploadedById: actor.id },
+        ],
+        ...(hasExternalRole ? { isPrivate: false } : {}),
       },
       select: { id: true },
     });

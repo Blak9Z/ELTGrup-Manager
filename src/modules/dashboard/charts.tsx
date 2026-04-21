@@ -1,8 +1,18 @@
 "use client";
 
+import { memo } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-export function ProductivityChart({ data }: { data: { name: string; ore: number }[] }) {
+const tooltipContentStyle = {
+  background: "#151f2a",
+  border: "1px solid #33465a",
+  color: "#ecf2fb",
+  borderRadius: "10px",
+};
+
+const tooltipLabelStyle = { color: "#ecf2fb", fontWeight: 600 };
+
+export const ProductivityChart = memo(function ProductivityChart({ data }: { data: { name: string; ore: number }[] }) {
   return (
     <div className="w-full min-w-0">
       <ResponsiveContainer width="100%" height={280} minWidth={0}>
@@ -14,20 +24,12 @@ export function ProductivityChart({ data }: { data: { name: string; ore: number 
             </linearGradient>
           </defs>
           <CartesianGrid stroke="#2f4154" strokeDasharray="4 4" />
-          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#9baec4" }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#9baec4" }} axisLine={false} tickLine={false} minTickGap={16} />
           <YAxis tick={{ fontSize: 12, fill: "#9baec4" }} axisLine={false} tickLine={false} />
-          <Tooltip
-            contentStyle={{
-              background: "#151f2a",
-              border: "1px solid #33465a",
-              color: "#ecf2fb",
-              borderRadius: "10px",
-            }}
-            labelStyle={{ color: "#ecf2fb", fontWeight: 600 }}
-          />
-          <Area type="monotone" dataKey="ore" stroke="#6a93c6" fill="url(#oreGradient)" strokeWidth={2} />
+          <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
+          <Area type="monotone" dataKey="ore" stroke="#6a93c6" fill="url(#oreGradient)" strokeWidth={2} isAnimationActive={false} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
   );
-}
+});

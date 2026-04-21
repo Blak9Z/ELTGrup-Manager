@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Bell, CalendarClock, Search } from "lucide-react";
+import { Bell, CalendarClock } from "lucide-react";
 import type { AppModule } from "@/src/lib/access-control";
 import { getUnreadNotificationCount } from "@/src/lib/notifications";
 import { SignOutButton } from "@/src/components/auth/sign-out-button";
-import { Input } from "@/src/components/ui/input";
 import { MobileNavDrawer } from "@/src/components/layout/mobile-nav-drawer";
+import { TopbarGlobalSearch } from "@/src/components/ui/topbar-global-search";
 
 const mobileQuickLinks = [
   { module: "dashboard" as AppModule, href: "/panou", label: "Panou" },
@@ -44,13 +44,7 @@ export async function Topbar({
           <p className="truncate text-sm font-semibold text-[var(--foreground)]">ELTGRUP Manager</p>
         </div>
 
-        <div className="relative hidden max-w-[520px] flex-1 xl:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7f93ab]" />
-          <Input
-            placeholder="Cauta proiect, lucrare, client, document..."
-            className="h-10 rounded-lg border-[var(--border)] bg-[var(--surface-card)] pl-9"
-          />
-        </div>
+        <TopbarGlobalSearch visibleModules={visibleModules} className="hidden max-w-[560px] flex-1 xl:block" />
 
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-2.5 py-1.5 text-xs text-[var(--muted-strong)] lg:flex">
@@ -83,10 +77,7 @@ export async function Topbar({
       </div>
 
       <div className="mt-3 xl:hidden">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7f93ab]" />
-          <Input placeholder="Cauta rapid..." className="h-10 rounded-lg border-[var(--border)] bg-[var(--surface-card)] pl-9" />
-        </div>
+        <TopbarGlobalSearch visibleModules={visibleModules} placeholder="Cauta rapid in modulele active..." />
       </div>
 
       <nav className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 lg:hidden">

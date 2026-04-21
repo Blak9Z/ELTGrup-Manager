@@ -9,6 +9,20 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 
 type Option = { id: string; label: string };
+const costTypeLabels: Record<CostType, string> = {
+  LABOR: "Manopera",
+  MATERIAL: "Materiale",
+  SUBCONTRACTOR: "Subcontractor",
+  EQUIPMENT: "Echipamente",
+  OTHER: "Altele",
+};
+
+function formatDateForInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export function CostEntryForm({ projects }: { projects: Option[] }) {
   const [state, formAction, pending] = useActionState(createCostEntryAction, initialActionState);
@@ -21,10 +35,11 @@ export function CostEntryForm({ projects }: { projects: Option[] }) {
   return (
     <form action={formAction} className="mt-3 space-y-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Cost Registration</p>
+      <p className="text-xs text-[var(--muted)]">Inregistreaza costuri validate in santier sau birou pentru actualizarea marjei in timp real.</p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="space-y-1">
           <label>Proiect</label>
-          <select name="projectId" required>
+          <select name="projectId" required disabled={projects.length === 0}>
             <option value="">Proiect</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>{project.label}</option>
@@ -35,7 +50,7 @@ export function CostEntryForm({ projects }: { projects: Option[] }) {
           <label>Tip cost</label>
           <select name="type" defaultValue={CostType.OTHER}>
             {Object.values(CostType).map((type) => (
-              <option key={type} value={type}>{type}</option>
+              <option key={type} value={type}>{costTypeLabels[type]}</option>
             ))}
           </select>
         </div>
@@ -49,12 +64,12 @@ export function CostEntryForm({ projects }: { projects: Option[] }) {
         </div>
         <div className="space-y-1">
           <label>Data</label>
-          <Input name="occurredAt" type="date" required />
+          <Input name="occurredAt" type="date" defaultValue={formatDateForInput(new Date())} required />
         </div>
       </div>
       <div className="flex justify-end md:col-span-2 xl:col-span-5">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Se salveaza..." : "Salveaza cost"}
+        <Button type="submit" disabled={pending || projects.length === 0}>
+          {pending ? "Se salveaza..." : projects.length === 0 ? "Nu exista proiecte active" : "Salveaza cost"}
         </Button>
       </div>
       {state.errors?.amount ? <p className="md:col-span-2 xl:col-span-5 text-xs text-[#ffb4bd]">{state.errors.amount[0]}</p> : null}

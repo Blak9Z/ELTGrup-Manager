@@ -23,8 +23,9 @@ export default async function AnaliticePage() {
   const scope = session?.user ? await resolveAccessScope(userContext) : { projectIds: null, teamId: null };
   const scopedProjectFilter = scope.projectIds === null ? undefined : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
   const scopedWorkOrderWhere = { ...workOrderScopeWhere(userContext, scope), deletedAt: null };
+  const scopedProjectWhere = scope.projectIds === null ? undefined : { projectId: scopedProjectFilter };
 
-  const [projects, delayedWorkOrders, workOrdersWithEstimates, timeByWorkOrder, approvedMaterialByProject, usedMaterialByProject, costByProject, invoiceTotals, overdueInvoiceCount] =
+  const [projects, delayedWorkOrders, workOrdersWithEstimates, approvedMaterialByProject, usedMaterialByProject, costByProject, invoiceTotals, overdueInvoiceCount] =
     await Promise.all([
       prisma.project.findMany({
         where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter }) },
@@ -36,7 +37,13 @@ export default async function AnaliticePage() {
           dueDate: { lt: new Date() },
           status: { notIn: ["DONE", "CANCELED"] },
         },
-        include: { project: { select: { title: true } } },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          dueDate: true,
+          project: { select: { title: true } },
+        },
         orderBy: { dueDate: "asc" },
         take: 12,
       }),
@@ -49,43 +56,47 @@ export default async function AnaliticePage() {
         select: { id: true, title: true, estimatedHours: true, project: { select: { title: true } } },
         take: 200,
       }),
-      prisma.timeEntry.groupBy({
-        by: ["workOrderId"],
-        where: {
-          ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter }),
-          workOrderId: { not: null },
-        },
-        _sum: { durationMinutes: true },
-      }),
       prisma.materialRequest.groupBy({
         by: ["projectId"],
         where: {
-          ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter }),
+          ...(scopedProjectWhere || {}),
           status: "APPROVED",
         },
         _sum: { quantity: true },
       }),
       prisma.projectMaterialUsage.groupBy({
         by: ["projectId"],
-        where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter },
+        where: scopedProjectWhere,
         _sum: { quantityUsed: true },
       }),
       prisma.costEntry.groupBy({
         by: ["projectId"],
-        where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter },
+        where: scopedProjectWhere,
         _sum: { amount: true },
       }),
       prisma.invoice.aggregate({
-        where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter },
+        where: scopedProjectWhere,
         _sum: { totalAmount: true, paidAmount: true },
       }),
       prisma.invoice.count({
         where: {
-          ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter }),
+          ...(scopedProjectWhere || {}),
           status: "OVERDUE",
         },
       }),
     ]);
+  const workOrderIdsForTime = workOrdersWithEstimates.map((item) => item.id);
+  const timeByWorkOrder =
+    workOrderIdsForTime.length === 0
+      ? []
+      : await prisma.timeEntry.groupBy({
+          by: ["workOrderId"],
+          where: {
+            ...(scopedProjectWhere || {}),
+            workOrderId: { in: workOrderIdsForTime },
+          },
+          _sum: { durationMinutes: true },
+        });
 
   const timeByWorkOrderMap = new Map(timeByWorkOrder.map((row) => [row.workOrderId, row._sum.durationMinutes || 0]));
   const approvedMaterialMap = new Map(approvedMaterialByProject.map((row) => [row.projectId, Number(row._sum.quantity || 0)]));
@@ -127,6 +138,9 @@ export default async function AnaliticePage() {
   const totalPaid = Number(invoiceTotals._sum.paidAmount || 0);
   const receivable = totalInvoiced - totalPaid;
   const collectionRate = totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0;
+  const overEstimateCount = hoursVsEstimate.filter((item) => item.variance > 0).length;
+  const materialsOverPlanCount = materialsVsPlan.filter((item) => item.actual > item.planned).length;
+  const costOverBudgetCount = costVsBudget.filter((item) => item.actual > item.planned).length;
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
@@ -136,22 +150,22 @@ export default async function AnaliticePage() {
           subtitle="Semnale reale pentru decizie: intarzieri, ore vs estimat, materiale vs plan, cost vs buget, facturi/plati"
         />
 
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Lucrari intarziate</p>
             <p className="mt-2 text-2xl font-black">{delayedWorkOrders.length}</p>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Ore peste estimat</p>
-            <p className="mt-2 text-2xl font-black">{hoursVsEstimate.filter((item) => item.variance > 0).length}</p>
+            <p className="mt-2 text-2xl font-black">{overEstimateCount}</p>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Materiale peste plan</p>
-            <p className="mt-2 text-2xl font-black">{materialsVsPlan.filter((item) => item.actual > item.planned).length}</p>
+            <p className="mt-2 text-2xl font-black">{materialsOverPlanCount}</p>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Cost peste buget</p>
-            <p className="mt-2 text-2xl font-black">{costVsBudget.filter((item) => item.actual > item.planned).length}</p>
+            <p className="mt-2 text-2xl font-black">{costOverBudgetCount}</p>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Facturi restante</p>

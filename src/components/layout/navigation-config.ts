@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { AppModule } from '@/src/lib/access-control';
 import {
+  Bell,
   BriefcaseBusiness,
   CalendarDays,
   ChartColumn,
@@ -39,6 +40,7 @@ export const navItems: NavItem[] = [
   { module: 'subcontractors', href: '/subcontractori', label: 'Subcontractori', icon: Truck, section: 'Business' },
   { module: 'financial', href: '/financiar', label: 'Financiar', icon: Receipt, section: 'Business' },
   { module: 'analytics', href: '/analitice', label: 'Analitice', icon: ChartColumn, section: 'System' },
+  { module: 'notifications', href: '/notificari', label: 'Notificari', icon: Bell, section: 'System' },
   { module: 'settings', href: '/setari', label: 'Setari', icon: Settings, section: 'System' },
 ];
 

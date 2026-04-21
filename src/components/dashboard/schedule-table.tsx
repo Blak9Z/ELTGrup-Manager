@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { WorkOrderStatus } from "@prisma/client";
 import { Badge } from "@/src/components/ui/badge";
 import { TD, TH, Table } from "@/src/components/ui/table";
@@ -15,8 +15,23 @@ type Item = {
   description: string;
 };
 
-export function DashboardScheduleTable({ items }: { items: Item[] }) {
+function getStatusTone(status: WorkOrderStatus): "neutral" | "info" | "danger" | "success" {
+  if (status === "IN_PROGRESS") {
+    return "info";
+  }
+  if (status === "BLOCKED") {
+    return "danger";
+  }
+  if (status === "DONE") {
+    return "success";
+  }
+  return "neutral";
+}
+
+export const DashboardScheduleTable = memo(function DashboardScheduleTable({ items }: { items: Item[] }) {
   const [active, setActive] = useState<Item | null>(null);
+  const handleClose = useCallback(() => setActive(null), []);
+  const handleOpen = useCallback((item: Item) => setActive(item), []);
 
   if (items.length === 0) {
     return (
@@ -34,14 +49,14 @@ export function DashboardScheduleTable({ items }: { items: Item[] }) {
             key={item.id}
             type="button"
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-left shadow-[var(--shadow-float)] transition hover:border-[var(--border-strong)]"
-            onClick={() => setActive(item)}
+            onClick={() => handleOpen(item)}
           >
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">{item.startLabel}</p>
             <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{item.title}</p>
             <p className="mt-1 text-xs text-[var(--muted)]">{item.projectTitle}</p>
             <div className="mt-2 flex items-center justify-between gap-2">
               <p className="text-xs text-[var(--muted)]">{item.teamName}</p>
-              <Badge tone={item.status === "IN_PROGRESS" ? "info" : item.status === "BLOCKED" ? "danger" : item.status === "DONE" ? "success" : "neutral"}>
+              <Badge tone={getStatusTone(item.status)}>
                 {item.status}
               </Badge>
             </div>
@@ -65,14 +80,14 @@ export function DashboardScheduleTable({ items }: { items: Item[] }) {
               <tr
                 key={item.id}
                 className="cursor-pointer hover:bg-[var(--surface-2)]"
-                onClick={() => setActive(item)}
+                onClick={() => handleOpen(item)}
               >
                 <TD>{item.startLabel}</TD>
                 <TD className="font-semibold text-[#ecf6ff]">{item.title}</TD>
                 <TD>{item.projectTitle}</TD>
                 <TD>{item.teamName}</TD>
                 <TD>
-                  <Badge tone={item.status === "IN_PROGRESS" ? "info" : item.status === "BLOCKED" ? "danger" : item.status === "DONE" ? "success" : "neutral"}>
+                  <Badge tone={getStatusTone(item.status)}>
                     {item.status}
                   </Badge>
                 </TD>
@@ -85,7 +100,7 @@ export function DashboardScheduleTable({ items }: { items: Item[] }) {
       {active ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(2,9,18,0.72)] p-4"
-          onClick={() => setActive(null)}
+          onClick={handleClose}
           role="presentation"
         >
           <div
@@ -103,7 +118,7 @@ export function DashboardScheduleTable({ items }: { items: Item[] }) {
               <button
                 type="button"
                 className="rounded-md border border-[var(--border)] px-2 py-1 text-xs font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
-                onClick={() => setActive(null)}
+                onClick={handleClose}
               >
                 Inchide
               </button>
@@ -123,7 +138,7 @@ export function DashboardScheduleTable({ items }: { items: Item[] }) {
               </div>
               <div>
                 <p className="text-xs text-[var(--muted)]">Status</p>
-                <Badge tone={active.status === "IN_PROGRESS" ? "info" : active.status === "BLOCKED" ? "danger" : active.status === "DONE" ? "success" : "neutral"}>
+                <Badge tone={getStatusTone(active.status)}>
                   {active.status}
                 </Badge>
               </div>
@@ -137,4 +152,4 @@ export function DashboardScheduleTable({ items }: { items: Item[] }) {
       ) : null}
     </>
   );
-}
+});

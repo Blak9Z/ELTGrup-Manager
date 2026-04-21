@@ -32,6 +32,10 @@ const approveAndIssueSchema = z.object({
   id: z.string().cuid(),
   warehouseId: z.string().cuid(),
 });
+const updateMaterialRequestStatusSchema = z.object({
+  id: z.string().cuid(),
+  status: z.nativeEnum(MaterialRequestStatus),
+});
 
 const createMaterialSchema = z.object({
   code: z.string().trim().min(2),
@@ -148,21 +152,32 @@ export async function createMaterialRequestAction(
 export async function approveMaterialRequest(formData: FormData) {
   const currentUser = await requirePermission("MATERIALS", "APPROVE");
 
-  const id = String(formData.get("id"));
-  const status = String(formData.get("status"));
+  const parsed = updateMaterialRequestStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) {
+    throw new Error("Status invalid");
+  }
   const allowedStatuses: MaterialRequestStatus[] = [MaterialRequestStatus.APPROVED, MaterialRequestStatus.REJECTED];
-  if (!allowedStatuses.includes(status as MaterialRequestStatus)) {
+  if (!allowedStatuses.includes(parsed.data.status)) {
     throw new Error("Status invalid");
   }
 
-  const current = await prisma.materialRequest.findUnique({ where: { id }, select: { projectId: true } });
+  const current = await prisma.materialRequest.findUnique({
+    where: { id: parsed.data.id },
+    select: { projectId: true, status: true },
+  });
   if (!current) throw new Error("Cerere inexistenta.");
   await assertProjectAccess(currentUser, current.projectId);
+  if (current.status !== MaterialRequestStatus.PENDING) {
+    throw new Error("Doar cererile PENDING pot fi aprobate sau respinse.");
+  }
 
   const request = await prisma.materialRequest.update({
-    where: { id },
+    where: { id: parsed.data.id },
     data: {
-      status: status as MaterialRequestStatus,
+      status: parsed.data.status,
       approvedAt: new Date(),
       approvedById: currentUser.id,
     },
@@ -172,16 +187,16 @@ export async function approveMaterialRequest(formData: FormData) {
   await logActivity({
     userId: currentUser.id,
     entityType: "MATERIAL_REQUEST",
-    entityId: id,
+    entityId: parsed.data.id,
     action: "MATERIAL_REQUEST_STATUS_UPDATED",
-    diff: { status },
+    diff: { status: parsed.data.status },
   });
 
   await notifyUser({
     userId: request.requestedById,
     type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
     title: "Cerere materiale actualizata",
-    message: `Status nou: ${status}`,
+    message: `Status nou: ${parsed.data.status}`,
     actionUrl: "/materiale",
   });
 

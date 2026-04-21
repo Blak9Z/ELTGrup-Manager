@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { hasPermission, normalizeRoleKeys } from "./rbac";
+import { hasPermission, isRoleKey, normalizeRoleKeys } from "./rbac";
 
 describe("normalizeRoleKeys", () => {
   it("keeps valid role keys and strips invalid ones", () => {
     const result = normalizeRoleKeys([" SUPER_ADMIN ", "INVALID_ROLE", "WORKER"]);
     expect(result).toEqual(["SUPER_ADMIN", "WORKER"]);
+  });
+
+  it("deduplicates repeated role keys", () => {
+    const result = normalizeRoleKeys(["WORKER", "WORKER", " WORKER "]);
+    expect(result).toEqual(["WORKER"]);
+  });
+});
+
+describe("isRoleKey", () => {
+  it("detects valid and invalid role key values", () => {
+    expect(isRoleKey("WORKER")).toBe(true);
+    expect(isRoleKey("worker")).toBe(false);
   });
 });
 

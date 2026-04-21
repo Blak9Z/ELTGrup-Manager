@@ -85,12 +85,19 @@ export async function updateInvoiceStatus(formData: FormData) {
   if (!current) throw new Error("Factura inexistenta.");
   await assertProjectAccess(currentUser, current.projectId);
 
+  const paidAmountForStatus =
+    status === InvoiceStatus.PAID
+      ? current.totalAmount
+      : status === InvoiceStatus.PARTIAL_PAID
+        ? current.paidAmount
+        : 0;
+
   const updated = await prisma.invoice.update({
     where: { id },
     data: {
       status,
       paidAt: status === InvoiceStatus.PAID ? new Date() : null,
-      paidAmount: status === InvoiceStatus.PAID ? current.totalAmount : current.paidAmount,
+      paidAmount: paidAmountForStatus,
     },
   });
 

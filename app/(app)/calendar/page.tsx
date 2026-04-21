@@ -26,6 +26,7 @@ export default async function CalendarPage({
   searchParams: Promise<{ projectId?: string; teamId?: string; q?: string }>;
 }) {
   const params = await searchParams;
+  const trimmedQuery = params.q?.trim() || "";
   const session = await auth();
   const scope = session?.user
     ? await resolveAccessScope({
@@ -38,6 +39,9 @@ export default async function CalendarPage({
     ? { id: session.user.id, email: session.user.email, roleKeys: session.user.roleKeys || [] }
     : { id: "", email: null, roleKeys: [] };
   const canCreate = hasPermission(userContext.roleKeys || [], "TASKS", "CREATE", userContext.email);
+  const allowedProjectId =
+    params.projectId && (scope.projectIds === null || scope.projectIds.includes(params.projectId)) ? params.projectId : undefined;
+  const allowedTeamId = params.teamId && (!scope.teamId || scope.teamId === params.teamId) ? params.teamId : undefined;
 
   const [projects, teams, workOrders] = await Promise.all([
     prisma.project.findMany({
@@ -58,12 +62,9 @@ export default async function CalendarPage({
         deletedAt: null,
         ...workOrderScopeWhere(userContext, scope),
         status: { not: "CANCELED" },
-        projectId:
-          params.projectId && (scope.projectIds === null || scope.projectIds.includes(params.projectId))
-            ? params.projectId
-            : undefined,
-        teamId: params.teamId && (!scope.teamId || scope.teamId === params.teamId) ? params.teamId : undefined,
-        title: params.q ? { contains: params.q, mode: "insensitive" } : undefined,
+        projectId: allowedProjectId,
+        teamId: allowedTeamId,
+        title: trimmedQuery ? { contains: trimmedQuery, mode: "insensitive" } : undefined,
       },
       select: {
         id: true,
@@ -96,8 +97,8 @@ export default async function CalendarPage({
       <div className="space-y-6">
         <PageHeader title="Calendar operational" subtitle="Planificare saptamanala cu detectie conflicte si reprogramare directa" />
         <Card className="space-y-4">
-          <form className="grid gap-3 md:grid-cols-4">
-            <Input name="q" placeholder="Cauta lucrare" defaultValue={params.q || ""} />
+          <form className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Input name="q" placeholder="Cauta lucrare" defaultValue={trimmedQuery} />
             <select name="projectId" defaultValue={params.projectId || ""} className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
               <option value="">Toate proiectele</option>
               {projects.map((project) => (
@@ -120,7 +121,7 @@ export default async function CalendarPage({
           </form>
 
           {canCreate ? (
-            <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 md:grid-cols-4">
+            <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 sm:grid-cols-2 xl:grid-cols-4">
               <Input name="title" placeholder="Adauga lucrare rapida in calendar" required />
               <select
                 name="projectId"

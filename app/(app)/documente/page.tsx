@@ -1,4 +1,4 @@
-import { DocumentCategory } from "@prisma/client";
+import { DocumentCategory, RoleKey } from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
@@ -40,14 +40,23 @@ export default async function DocumentePage({
   const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
   const roleKeys = session?.user?.roleKeys || [];
   const userEmail = session?.user?.email || null;
-  const isClientViewer = roleKeys.includes("CLIENT_VIEWER");
+  const isExternalViewer = roleKeys.includes(RoleKey.CLIENT_VIEWER) || roleKeys.includes(RoleKey.SUBCONTRACTOR);
   const canCreate = hasPermission(roleKeys, "DOCUMENTS", "CREATE", userEmail);
   const canUpdate = hasPermission(roleKeys, "DOCUMENTS", "UPDATE", userEmail);
   const canDelete = hasPermission(roleKeys, "DOCUMENTS", "DELETE", userEmail);
+  const scopedProjectIds = scope.projectIds && scope.projectIds.length > 0 ? scope.projectIds : ["__none__"];
 
   const where = {
-    ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter }),
-    ...(isClientViewer ? { isPrivate: false } : {}),
+    ...(scope.projectIds === null
+      ? {}
+      : {
+          OR: [
+            { projectId: { in: scopedProjectIds } },
+            { workOrder: { projectId: { in: scopedProjectIds } } },
+            ...(session?.user?.id ? [{ projectId: null, uploadedById: session.user.id }] : []),
+          ],
+        }),
+    ...(isExternalViewer ? { isPrivate: false } : {}),
     title: query ? { contains: query, mode: "insensitive" as const } : undefined,
     category: categoryFilter,
   };
@@ -83,7 +92,7 @@ export default async function DocumentePage({
         category: true,
         fileName: true,
         version: true,
-        storagePath: true,
+        isPrivate: true,
         createdAt: true,
         tags: true,
         expiresAt: true,
@@ -176,10 +185,10 @@ export default async function DocumentePage({
                     <Badge tone={doc.expiresAt && doc.expiresAt < reminderThreshold ? "warning" : "neutral"}>{doc.category}</Badge>
                   </div>
                   <p className="mt-2 text-xs text-[var(--muted)]">Fisier: {doc.fileName} • Versiune {doc.version}</p>
-                  <p className="mt-1 text-xs text-[var(--muted)] break-all">Path: {doc.storagePath}</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">{doc.isPrivate ? "Acces: Privat" : "Acces: Public"}</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Creat la: {formatDate(doc.createdAt)}</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Tag-uri: {doc.tags.join(", ") || "-"}</p>
-                  <a href={doc.storagePath} target="_blank" rel="noreferrer noopener" className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline">
+                  <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noreferrer noopener" className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline">
                     Deschide document
                   </a>
                 </Card>

@@ -62,6 +62,7 @@ export default async function WorkOrdersPage({
 
   const where = {
     deletedAt: null,
+    project: { deletedAt: null },
     ...workOrderScopeWhere(userContext, scope),
     title: q ? { contains: q, mode: "insensitive" as const } : undefined,
     status: statusFilter,

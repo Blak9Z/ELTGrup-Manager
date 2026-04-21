@@ -1,6 +1,6 @@
 "use server";
 
-import { NotificationType, Prisma, ProjectStatus, ProjectType, RoleKey } from "@prisma/client";
+import { NotificationType, Prisma, ProjectStatus, ProjectType, RoleKey, WorkOrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
@@ -51,6 +51,23 @@ async function getNextProjectCode() {
   }
 
   return `${prefix}${String(maxSequence + 1).padStart(3, "0")}`;
+}
+
+async function archiveProjectsWithWorkOrders(projectIds: string[]) {
+  if (projectIds.length === 0) return { archivedProjects: 0, archivedWorkOrders: 0 };
+  const now = new Date();
+  const [projectsResult, workOrdersResult] = await prisma.$transaction([
+    prisma.project.updateMany({
+      where: { id: { in: projectIds }, deletedAt: null },
+      data: { deletedAt: now, status: ProjectStatus.CANCELED },
+    }),
+    prisma.workOrder.updateMany({
+      where: { projectId: { in: projectIds }, deletedAt: null },
+      data: { deletedAt: now, status: WorkOrderStatus.CANCELED },
+    }),
+  ]);
+
+  return { archivedProjects: projectsResult.count, archivedWorkOrders: workOrdersResult.count };
 }
 
 async function createProjectInternal(formData: FormData) {
@@ -198,17 +215,23 @@ export async function deleteProject(formData: FormData) {
   const id = String(formData.get("id"));
   await assertProjectAccess(currentUser, id);
 
-  const project = await prisma.project.update({
+  const project = await prisma.project.findUnique({
     where: { id },
-    data: { deletedAt: new Date(), status: "CANCELED" },
+    select: { id: true, title: true, deletedAt: true },
   });
+  if (!project || project.deletedAt) throw new Error("Proiect inexistent sau deja arhivat.");
+
+  const archiveResult = await archiveProjectsWithWorkOrders([id]);
 
   await logActivity({
     userId: currentUser.id,
     entityType: "PROJECT",
     entityId: id,
     action: "PROJECT_SOFT_DELETED",
-    diff: { title: project.title },
+    diff: {
+      title: project.title,
+      archivedWorkOrders: archiveResult.archivedWorkOrders,
+    },
   });
 
   revalidateProjectRelatedPaths(id);
@@ -240,16 +263,17 @@ export async function bulkProjectsAction(formData: FormData) {
   if (scopedIds.length === 0) throw new Error("Nu ai acces la proiectele selectate.");
 
   if (parsed.data.operation === "ARCHIVE") {
-    const result = await prisma.project.updateMany({
-      where: { id: { in: scopedIds }, deletedAt: null },
-      data: { deletedAt: new Date(), status: ProjectStatus.CANCELED },
-    });
+    const result = await archiveProjectsWithWorkOrders(scopedIds);
     await logActivity({
       userId: actor.id,
       entityType: "PROJECT_BULK",
       entityId: "MULTI",
       action: "PROJECTS_ARCHIVED_BULK",
-      diff: { ids: scopedIds, affectedRows: result.count },
+      diff: {
+        ids: scopedIds,
+        affectedRows: result.archivedProjects,
+        archivedWorkOrders: result.archivedWorkOrders,
+      },
     });
   } else {
     if (!parsed.data.status) throw new Error("Statusul este obligatoriu.");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { ClientType } from "@prisma/client";
 import { toast } from "sonner";
 import { createClientAction } from "./actions";
 import { initialActionState } from "@/src/lib/action-state";
@@ -21,7 +22,18 @@ export function ClientCreateForm() {
         <Input name="name" placeholder="Denumire client" required />
         {state.errors?.name ? <p className="mt-1 text-xs text-[#ffb4bd]">{state.errors.name[0]}</p> : null}
       </div>
-      <Input name="type" placeholder="Tip (COMPANY/PERSON)" defaultValue="COMPANY" required />
+      <select
+        name="type"
+        defaultValue={ClientType.COMPANY}
+        className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+        required
+      >
+        <option value={ClientType.COMPANY}>Companie</option>
+        <option value={ClientType.INDIVIDUAL}>Persoana fizica</option>
+        <option value={ClientType.PUBLIC_INSTITUTION}>Institutie publica</option>
+        <option value={ClientType.NGO}>ONG</option>
+        <option value={ClientType.OTHER}>Alt tip</option>
+      </select>
       <Input name="cui" placeholder="CUI" />
       <div>
         <Input name="email" type="email" placeholder="Email" />

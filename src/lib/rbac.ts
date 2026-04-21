@@ -11,7 +11,7 @@ type PermissionMap = Record<
   Partial<Record<PermissionResource, PermissionAction[]>>
 >;
 
-const matrix: PermissionMap = {
+export const rolePermissionMatrix: PermissionMap = {
   SUPER_ADMIN: {
     PROJECTS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
     TASKS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
@@ -95,11 +95,15 @@ export function hasSuperAdminRole(roleKeys: Array<RoleKey | string>) {
   return normalizeRoleKeys(roleKeys).includes(RoleKey.SUPER_ADMIN);
 }
 
+export function isRoleKey(role: string): role is RoleKey {
+  return (Object.values(RoleKey) as string[]).includes(role);
+}
+
 export function normalizeRoleKeys(roleKeys: Array<RoleKey | string>) {
-  const validRoleSet = new Set(Object.values(RoleKey));
-  return roleKeys
+  const validRoleSet = new Set(Object.values(RoleKey) as string[]);
+  return [...new Set(roleKeys
     .map((role) => `${role}`.trim())
-    .filter((role): role is RoleKey => validRoleSet.has(role as RoleKey));
+    .filter((role): role is RoleKey => validRoleSet.has(role)))];
 }
 
 export function hasPermission(
@@ -111,5 +115,5 @@ export function hasPermission(
   void userEmail;
   const normalizedRoles = normalizeRoleKeys(roles);
   if (hasSuperAdminRole(normalizedRoles)) return true;
-  return normalizedRoles.some((role) => matrix[role]?.[resource]?.includes(action));
+  return normalizedRoles.some((role) => rolePermissionMatrix[role]?.[resource]?.includes(action));
 }

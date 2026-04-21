@@ -19,6 +19,7 @@ import {
   startLivePontaj,
   stopLivePontaj,
   uploadTaskPhoto,
+  uploadTaskSignature,
 } from "./actions";
 
 function todayDateAtMidnight() {
@@ -299,7 +300,7 @@ export default async function TerenPage() {
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Field Evidence</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Foto progres pe lucrari</h2>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Foto progres si semnatura predare</h2>
             <div className="mt-3 space-y-3">
               {tasks.length === 0 ? (
                 <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
@@ -311,13 +312,23 @@ export default async function TerenPage() {
                   <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
                   <p className="text-xs text-[var(--muted)]">{task.project.title} • {task.status} • {task.priority}</p>
 
-                  <form action={uploadTaskPhoto} className="mt-2 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-                    <input type="hidden" name="workOrderId" value={task.id} />
-                    <input type="hidden" name="projectId" value={task.projectId} />
-                    <input name="file" type="file" accept="image/*" className="h-10 w-full text-xs" required />
-                    <Input name="note" placeholder="Descriere foto" className="h-10" />
-                    <Button size="sm" variant="secondary" className="h-10">Incarca foto</Button>
-                  </form>
+                  <div className="mt-2 grid gap-2">
+                    <form action={uploadTaskPhoto} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                      <input type="hidden" name="workOrderId" value={task.id} />
+                      <input type="hidden" name="projectId" value={task.projectId} />
+                      <input name="file" type="file" accept="image/*" className="h-10 w-full text-xs" required />
+                      <Input name="note" placeholder="Descriere foto progres" className="h-10" />
+                      <Button size="sm" variant="secondary" className="h-10">Incarca foto</Button>
+                    </form>
+
+                    <form action={uploadTaskSignature} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                      <input type="hidden" name="workOrderId" value={task.id} />
+                      <input type="hidden" name="projectId" value={task.projectId} />
+                      <input name="file" type="file" accept="image/*,application/pdf" className="h-10 w-full text-xs" required />
+                      <Input name="note" placeholder="Semnatura client / PV predare" className="h-10" />
+                      <Button size="sm" className="h-10">Incarca semnatura</Button>
+                    </form>
+                  </div>
                 </div>
               ))}
             </div>

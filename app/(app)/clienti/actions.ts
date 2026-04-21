@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { ClientType } from "@prisma/client";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
@@ -10,7 +11,7 @@ import { prisma } from "@/src/lib/prisma";
 
 const clientSchema = z.object({
   name: z.string().trim().min(2),
-  type: z.string().trim().min(2),
+  type: z.nativeEnum(ClientType),
   cui: z.string().trim().optional(),
   email: z.email().optional().or(z.literal("")),
   phone: z.string().trim().optional(),
@@ -30,7 +31,7 @@ async function createClientInternal(formData: FormData) {
 
   const parsed = clientSchema.safeParse({
     name: formData.get("name"),
-    type: formData.get("type") || "COMPANY",
+    type: formData.get("type") || ClientType.COMPANY,
     cui: formData.get("cui") || undefined,
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,

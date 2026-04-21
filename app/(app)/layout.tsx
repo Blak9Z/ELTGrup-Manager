@@ -14,6 +14,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     email: session.user.email,
     roleKeys: session.user.roleKeys || [],
   });
+  if (!visibleModules.length) {
+    redirect("/autentificare");
+  }
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[var(--background)] text-[color:var(--foreground)]">

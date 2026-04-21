@@ -28,6 +28,9 @@ const bulkTimeEntrySchema = z.object({
   operation: z.enum(["APPROVE", "REJECT"]),
   ids: z.array(z.string().cuid()).min(1),
 });
+const approveTimeEntrySchema = z.object({
+  id: z.string().cuid(),
+});
 
 function combineDateTime(date?: string, time?: string) {
   if (!date) return null;
@@ -165,11 +168,20 @@ export async function createTimeEntryAction(
 
 export async function approveTimeEntry(formData: FormData) {
   const currentUser = await requirePermission("TIME_TRACKING", "APPROVE");
-
-  const id = String(formData.get("id"));
-  const current = await prisma.timeEntry.findUnique({ where: { id }, select: { projectId: true } });
+  const parsed = approveTimeEntrySchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) throw new Error("ID pontaj invalid.");
+  const id = parsed.data.id;
+  const current = await prisma.timeEntry.findUnique({
+    where: { id },
+    select: { projectId: true, status: true },
+  });
   if (!current) throw new Error("Pontaj inexistent.");
   await assertProjectAccess(currentUser, current.projectId);
+  if (current.status !== TimeEntryStatus.SUBMITTED) {
+    throw new Error("Doar inregistrarile SUBMITTED pot fi aprobate.");
+  }
 
   const entry = await prisma.timeEntry.update({
     where: { id },
