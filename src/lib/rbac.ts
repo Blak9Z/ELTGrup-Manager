@@ -11,6 +11,41 @@ type PermissionMap = Record<
   Partial<Record<PermissionResource, PermissionAction[]>>
 >;
 
+export const permissionResourceLabels = {
+  PROJECTS: "Proiecte",
+  TASKS: "Lucrari",
+  TEAMS: "Echipe",
+  TIME_TRACKING: "Pontaj",
+  MATERIALS: "Materiale",
+  DOCUMENTS: "Documente",
+  INVOICES: "Facturi",
+  REPORTS: "Rapoarte",
+  SETTINGS: "Setari",
+  USERS: "Utilizatori",
+} satisfies Record<PermissionResource, string>;
+
+export const permissionActionLabels = {
+  VIEW: "Vizualizare",
+  CREATE: "Creare",
+  UPDATE: "Actualizare",
+  DELETE: "Stergere",
+  APPROVE: "Aprobare",
+  EXPORT: "Export",
+  MANAGE: "Administrare",
+} satisfies Record<PermissionAction, string>;
+
+type RolePermissionOverview = {
+  summary: string;
+  restrictions: string;
+  isFullAccess: boolean;
+  resourceSummaries: Array<{
+    resource: PermissionResource;
+    label: string;
+    actions: PermissionAction[];
+    actionLabels: string[];
+  }>;
+};
+
 export const rolePermissionMatrix: PermissionMap = {
   SUPER_ADMIN: {
     PROJECTS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
@@ -91,6 +126,45 @@ export const rolePermissionMatrix: PermissionMap = {
   },
 };
 
+const rolePermissionOverviews: Record<RoleKey, Pick<RolePermissionOverview, "summary" | "restrictions">> = {
+  SUPER_ADMIN: {
+    summary: "Acces complet la toate modulele si actiunile.",
+    restrictions: "Poate administra utilizatori, setari si intregul flux operational.",
+  },
+  ADMINISTRATOR: {
+    summary: "Acces complet la toate modulele si actiunile.",
+    restrictions: "Poate gestiona platforma fara limitari operationale.",
+  },
+  PROJECT_MANAGER: {
+    summary: "Coordoneaza proiecte, lucrari, echipe, pontaj, materiale, documente, facturi si rapoarte.",
+    restrictions: "Nu are acces la setari sau administrarea conturilor.",
+  },
+  SITE_MANAGER: {
+    summary: "Coordoneaza santierul: proiecte, lucrari, echipe, pontaj, materiale, documente si rapoarte.",
+    restrictions: "Nu are acces la setari, utilizatori sau facturi.",
+  },
+  BACKOFFICE: {
+    summary: "Sprijina operatiunile interne: proiecte, lucrari, echipe, pontaj, materiale, documente si rapoarte.",
+    restrictions: "Nu are acces la setari, utilizatori sau facturi.",
+  },
+  WORKER: {
+    summary: "Lucreaza pe teren: taskuri, pontaj, materiale, documente si rapoarte limitate.",
+    restrictions: "Nu poate administra proiecte, utilizatori sau setari.",
+  },
+  ACCOUNTANT: {
+    summary: "Acopera zona financiara: proiecte, facturi, pontaj si rapoarte.",
+    restrictions: "Nu are acces la setari sau utilizatori.",
+  },
+  CLIENT_VIEWER: {
+    summary: "Are vizibilitate doar pe proiecte, documente, facturi si rapoarte.",
+    restrictions: "Permisiunile sunt doar de tip vizualizare.",
+  },
+  SUBCONTRACTOR: {
+    summary: "Colaboreaza pe taskuri, documente si rapoarte.",
+    restrictions: "Permisiunile sunt limitate la contextul de executie.",
+  },
+};
+
 export function hasSuperAdminRole(roleKeys: Array<RoleKey | string>) {
   return normalizeRoleKeys(roleKeys).includes(RoleKey.SUPER_ADMIN);
 }
@@ -104,6 +178,32 @@ export function normalizeRoleKeys(roleKeys: Array<RoleKey | string>) {
   return [...new Set(roleKeys
     .map((role) => `${role}`.trim())
     .filter((role): role is RoleKey => validRoleSet.has(role)))];
+}
+
+export function getPermissionLabel(resource: PermissionResource, action: PermissionAction) {
+  return `${permissionResourceLabels[resource]} / ${permissionActionLabels[action]}`;
+}
+
+export function getRolePermissionOverview(roleKey: RoleKey): RolePermissionOverview {
+  const matrix = rolePermissionMatrix[roleKey] || {};
+  const resourceSummaries = Object.entries(matrix)
+    .map(([resource, actions]) => {
+      const typedResource = resource as PermissionResource;
+      const typedActions = actions || [];
+      return {
+        resource: typedResource,
+        label: permissionResourceLabels[typedResource],
+        actions: typedActions,
+        actionLabels: typedActions.map((action) => permissionActionLabels[action]),
+      };
+    })
+    .sort((left, right) => left.label.localeCompare(right.label, "ro"));
+
+  return {
+    ...rolePermissionOverviews[roleKey],
+    isFullAccess: roleKey === RoleKey.SUPER_ADMIN || roleKey === RoleKey.ADMINISTRATOR,
+    resourceSummaries,
+  };
 }
 
 export function hasPermission(

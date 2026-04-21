@@ -45,6 +45,7 @@ export function UserAdminPanel({
   const [state, formAction, pending] = useActionState(createUserAction, initialActionState);
   const [newUserRole, setNewUserRole] = useState<RoleKey>(RoleKey.WORKER);
   const [confirmNewSuperAdmin, setConfirmNewSuperAdmin] = useState(false);
+  const roleLabelByKey = useMemo(() => new Map(roles.map((role) => [role.key, role.label])), [roles]);
 
   useEffect(() => {
     if (state.ok && state.message) toast.success(state.message);
@@ -60,8 +61,11 @@ export function UserAdminPanel({
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Create Account</p>
-        <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Cont nou</h2>
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Cont nou</p>
+        <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Alege rolul activ</h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Fiecare cont are un singur rol activ. Rolul selectat aici decide ce module poate vedea si ce actiuni poate face utilizatorul.
+        </p>
         {canCreateUsers ? (
           <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <Input name="firstName" placeholder="Prenume" required />
@@ -76,6 +80,7 @@ export function UserAdminPanel({
                 setNewUserRole(nextRole);
                 if (nextRole !== RoleKey.SUPER_ADMIN) setConfirmNewSuperAdmin(false);
               }}
+              className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)]"
             >
               {creatableRoles.map((role) => (
                 <option key={role.id} value={role.key}>
@@ -84,6 +89,9 @@ export function UserAdminPanel({
               ))}
             </select>
             <Input name="positionTitle" placeholder="Functie (optional)" />
+            <p className="md:col-span-2 xl:col-span-3 text-xs text-[var(--muted)]">
+              Selectia de rol inlocuieste accesul curent; este recomandat sa existe un singur rol activ per cont.
+            </p>
             {newUserRole === RoleKey.SUPER_ADMIN ? (
               <label className="md:col-span-2 xl:col-span-3 flex items-center gap-2 rounded-lg border border-[#f4b87a] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[#ffd8ad]">
                 <input
@@ -107,8 +115,8 @@ export function UserAdminPanel({
       </section>
 
       <section className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
-        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Access Matrix</p>
-        <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Utilizatori si permisiuni</h2>
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Utilizatori si permisiuni</p>
+        <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Rolul activ al fiecarui cont</h2>
         <div className="mt-3 space-y-3">
           {users.length === 0 ? (
             <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
@@ -121,6 +129,13 @@ export function UserAdminPanel({
                 <div>
                   <p className="font-semibold text-[var(--foreground)]">{user.firstName} {user.lastName}</p>
                   <p className="text-xs text-[var(--muted)]">{user.email}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {user.roleKeys.map((roleKey) => (
+                      <Badge key={roleKey} tone="neutral">
+                        {roleLabelByKey.get(roleKey) || roleKey}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
                 <Badge tone={user.isActive ? "success" : "danger"}>{user.isActive ? "Activ" : "Inactiv"}</Badge>
               </div>

@@ -5,24 +5,73 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
-import { ActionState } from "@/src/lib/action-state";
+import { ActionState, fromZodError } from "@/src/lib/action-state";
 import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
-const timeEntrySchema = z.object({
-  projectId: z.string().min(1),
-  userId: z.string().optional(),
-  workOrderId: z.string().optional(),
-  startAt: z.string().optional(),
-  startDate: z.string().optional(),
-  startTime: z.string().optional(),
-  endAt: z.string().optional(),
-  endDate: z.string().optional(),
-  endTime: z.string().optional(),
-  breakMinutes: z.coerce.number().min(0).max(600).default(0),
-  note: z.string().optional(),
-});
+const STANDARD_SHIFT_END_HOUR = 17;
+
+function buildPontajUrl(params: Record<string, string | undefined>) {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) searchParams.set(key, value);
+  }
+  const query = searchParams.toString();
+  return query ? `/pontaj?${query}` : "/pontaj";
+}
+
+const timeEntrySchema = z
+  .object({
+    projectId: z.string().cuid("Selecteaza un proiect valid."),
+    userId: z.string().cuid("Selecteaza un angajat valid.").optional(),
+    workOrderId: z.string().cuid("Selecteaza o lucrare valida.").optional(),
+    shiftMode: z.enum(["STANDARD", "CUSTOM"]),
+    startDate: z.string().min(1, "Selecteaza data de start."),
+    startTime: z.string().min(1, "Selecteaza ora de start."),
+    endDate: z.string().optional(),
+    endTime: z.string().optional(),
+    breakMinutes: z.coerce.number().min(0).max(600).default(0),
+    note: z.string().max(1000, "Nota este prea lunga.").optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasEndDate = Boolean(data.endDate?.trim());
+    const hasEndTime = Boolean(data.endTime?.trim());
+
+    if (data.shiftMode === "CUSTOM" && (!hasEndDate || !hasEndTime)) {
+      if (!hasEndDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["endDate"],
+          message: "Pentru tura custom completeaza data de final.",
+        });
+      }
+      if (!hasEndTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["endTime"],
+          message: "Pentru tura custom completeaza ora de final.",
+        });
+      }
+    }
+
+    if ((hasEndDate || hasEndTime) && (!hasEndDate || !hasEndTime)) {
+      if (!hasEndDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["endDate"],
+          message: "Completeaza atat data, cat si ora de final.",
+        });
+      }
+      if (!hasEndTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["endTime"],
+          message: "Completeaza atat data, cat si ora de final.",
+        });
+      }
+    }
+  });
 
 const bulkTimeEntrySchema = z.object({
   operation: z.enum(["APPROVE", "REJECT"]),
@@ -38,6 +87,12 @@ function combineDateTime(date?: string, time?: string) {
   return new Date(`${date}T${normalizedTime}`);
 }
 
+function getStandardShiftEndAt(startAt: Date) {
+  const fallback = new Date(startAt);
+  fallback.setHours(STANDARD_SHIFT_END_HOUR, 0, 0, 0);
+  return fallback;
+}
+
 async function createTimeEntryInternal(formData: FormData) {
   const currentUser = await requirePermission("TIME_TRACKING", "CREATE");
 
@@ -45,10 +100,9 @@ async function createTimeEntryInternal(formData: FormData) {
     projectId: formData.get("projectId"),
     userId: formData.get("userId") || undefined,
     workOrderId: formData.get("workOrderId") || undefined,
-    startAt: formData.get("startAt") || undefined,
+    shiftMode: formData.get("shiftMode") || "STANDARD",
     startDate: formData.get("startDate") || undefined,
     startTime: formData.get("startTime") || undefined,
-    endAt: formData.get("endAt") || undefined,
     endDate: formData.get("endDate") || undefined,
     endTime: formData.get("endTime") || undefined,
     breakMinutes: formData.get("breakMinutes") || 0,
@@ -61,12 +115,8 @@ async function createTimeEntryInternal(formData: FormData) {
     await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
   }
 
-  const startAt =
-    (parsed.data.startAt ? new Date(parsed.data.startAt) : null) ||
-    combineDateTime(parsed.data.startDate, parsed.data.startTime);
-  const endAt =
-    (parsed.data.endAt ? new Date(parsed.data.endAt) : null) ||
-    combineDateTime(parsed.data.endDate, parsed.data.endTime);
+  const startAt = combineDateTime(parsed.data.startDate, parsed.data.startTime);
+  const endAt = parsed.data.endDate && parsed.data.endTime ? combineDateTime(parsed.data.endDate, parsed.data.endTime) : null;
 
   if (!startAt || Number.isNaN(startAt.getTime())) {
     throw new Error("Selecteaza data si ora de inceput.");
@@ -76,24 +126,22 @@ async function createTimeEntryInternal(formData: FormData) {
     throw new Error("Data/ora de final este invalida.");
   }
 
-  const canManageTeamPontaj =
-    currentUser.roleKeys.some((role) =>
-      ["SUPER_ADMIN", "ADMINISTRATOR", "PROJECT_MANAGER", "SITE_MANAGER", "BACKOFFICE"].includes(role),
-    );
+  const canManageTeamPontaj = currentUser.roleKeys.some((role) =>
+    ["SUPER_ADMIN", "ADMINISTRATOR", "PROJECT_MANAGER", "SITE_MANAGER", "BACKOFFICE"].includes(role),
+  );
   const targetUserId = parsed.data.userId || currentUser.id;
   if (!canManageTeamPontaj && targetUserId !== currentUser.id) {
     throw new Error("Poti adauga pontaj doar pentru contul tau.");
   }
 
-  const computedEndAt = endAt || (() => {
-    const fallback = new Date(startAt);
-    fallback.setHours(17, 0, 0, 0);
-    if (fallback < startAt) {
-      fallback.setHours(startAt.getHours(), startAt.getMinutes(), 0, 0);
-    }
-    return fallback;
-  })();
+  const computedEndAt = endAt || (parsed.data.shiftMode === "STANDARD" ? getStandardShiftEndAt(startAt) : null);
+  if (!computedEndAt) {
+    throw new Error("Pentru tura custom completeaza data si ora de final.");
+  }
   if (computedEndAt < startAt) {
+    if (parsed.data.shiftMode === "STANDARD") {
+      throw new Error(`Tura standard se inchide la ${STANDARD_SHIFT_END_HOUR}:00. Completeaza finalul pentru un program mai lung.`);
+    }
     throw new Error("Ora de final trebuie sa fie dupa ora de start.");
   }
 
@@ -147,21 +195,19 @@ async function createTimeEntryInternal(formData: FormData) {
     type: NotificationType.TIMESHEET_APPROVAL_REQUIRED,
     title: "Pontaj nou pentru aprobare",
     message: `${created.project.title}: ${created.durationMinutes} minute raportate.`,
-    actionUrl: "/pontaj",
+    actionUrl: buildPontajUrl({ status: TimeEntryStatus.SUBMITTED, projectId: created.projectId }),
   });
 
   revalidatePath("/pontaj");
   revalidatePath("/panou");
 }
 
-export async function createTimeEntryAction(
-  _: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function createTimeEntryAction(_: ActionState, formData: FormData): Promise<ActionState> {
   try {
     await createTimeEntryInternal(formData);
     return { ok: true, message: "Pontaj inregistrat cu succes." };
   } catch (error) {
+    if (error instanceof z.ZodError) return fromZodError(error);
     return { ok: false, message: error instanceof Error ? error.message : "Eroare pontaj" };
   }
 }
@@ -235,7 +281,7 @@ export async function approveTimeEntry(formData: FormData) {
       type: NotificationType.TIMESHEET_APPROVAL_REQUIRED,
       title: "Pontaj aprobat",
       message: "Inregistrarea ta de pontaj a fost aprobata.",
-      actionUrl: "/pontaj",
+      actionUrl: buildPontajUrl({ status: TimeEntryStatus.APPROVED, projectId: entry.projectId }),
     });
   }
 
@@ -300,7 +346,7 @@ export async function bulkTimeEntriesAction(formData: FormData) {
           status === TimeEntryStatus.APPROVED
             ? `${count} ${count === 1 ? "inregistrare" : "inregistrari"} de pontaj au fost aprobate.`
             : `${count} ${count === 1 ? "inregistrare" : "inregistrari"} de pontaj au fost respinse.`,
-        actionUrl: "/pontaj",
+        actionUrl: buildPontajUrl({ status }),
       }),
     ),
   );

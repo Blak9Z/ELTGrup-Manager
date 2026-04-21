@@ -30,6 +30,32 @@ const createWorkOrderSchema = z.object({
   priority: z.nativeEnum(TaskPriority),
   status: z.nativeEnum(WorkOrderStatus),
   description: z.string().optional(),
+}).superRefine((data, ctx) => {
+  const isValidDate = (value?: string) => !value || !Number.isNaN(new Date(value).getTime());
+
+  if (data.startDate && !isValidDate(data.startDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startDate"],
+      message: "Data de inceput trebuie sa fie valida.",
+    });
+  }
+
+  if (data.dueDate && !isValidDate(data.dueDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["dueDate"],
+      message: "Termenul trebuie sa fie valid.",
+    });
+  }
+
+  if (data.startDate && data.dueDate && data.startDate > data.dueDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["dueDate"],
+      message: "Termenul nu poate fi inainte de data de inceput.",
+    });
+  }
 });
 
 const rescheduleSchema = z.object({
@@ -111,7 +137,7 @@ export async function createWorkOrderAction(
     return { ok: true, message: "Lucrare creata cu succes." };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { ok: false, errors: error.flatten().fieldErrors, message: "Date lucrare invalide." };
+      return { ok: false, errors: error.flatten().fieldErrors, message: "Verifica datele lucrarii." };
     }
     return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare lucrare" };
   }

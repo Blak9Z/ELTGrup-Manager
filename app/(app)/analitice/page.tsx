@@ -141,142 +141,233 @@ export default async function AnaliticePage() {
   const overEstimateCount = hoursVsEstimate.filter((item) => item.variance > 0).length;
   const materialsOverPlanCount = materialsVsPlan.filter((item) => item.actual > item.planned).length;
   const costOverBudgetCount = costVsBudget.filter((item) => item.actual > item.planned).length;
+  const topDelayedWorkOrders = delayedWorkOrders.slice(0, 3);
+  const topOverBudgetProjects = costVsBudget.filter((item) => item.actual > item.planned).slice(0, 3);
+  const topHoursOverruns = hoursVsEstimate.filter((item) => item.variance > 0).slice(0, 3);
+  const topMaterialOverruns = materialsVsPlan
+    .map((item) => ({ ...item, variance: item.actual - item.planned }))
+    .filter((item) => item.variance > 0)
+    .sort((a, b) => b.variance - a.variance)
+    .slice(0, 3);
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
       <div className="space-y-6">
         <PageHeader
           title="Analitice operationale"
-          subtitle="Semnale reale pentru decizie: intarzieri, ore vs estimat, materiale vs plan, cost vs buget, facturi/plati"
+          subtitle="Am redus zgomotul la semnale care pot schimba azi planul: ce e intarziat, ce depaseste bugetul si ce bani trebuie recuperati."
         />
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Lucrari intarziate</p>
             <p className="mt-2 text-2xl font-black">{delayedWorkOrders.length}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Reprioritizeaza si verifica termenele blocate.</p>
+            <Link href="/lucrari" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Vezi lucrarile
+            </Link>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Ore peste estimat</p>
             <p className="mt-2 text-2xl font-black">{overEstimateCount}</p>
-          </Card>
-          <Card>
-            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Materiale peste plan</p>
-            <p className="mt-2 text-2xl font-black">{materialsOverPlanCount}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Confirma pontajele si ajusteaza estimarile.</p>
+            <Link href="/pontaj" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Vezi pontajele
+            </Link>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Cost peste buget</p>
             <p className="mt-2 text-2xl font-black">{costOverBudgetCount}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Taie costurile care trag proiectele in sus.</p>
+            <Link href="/proiecte" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Vezi proiectele
+            </Link>
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Facturi restante</p>
             <p className="mt-2 text-2xl font-black">{overdueInvoiceCount}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Creanta {formatCurrency(receivable)} - incasare {collectionRate}%
+            </p>
+            <Link href="/financiar" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Vezi financiar
+            </Link>
           </Card>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-2">
+        <section className="grid gap-4 xl:grid-cols-3">
           <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Lucrari intarziate (actiune imediata)</h2>
-            <div className="mt-3 space-y-2">
-              {delayedWorkOrders.length === 0 ? <p className="text-sm text-[var(--muted)]">Nicio lucrare intarziata in aria ta.</p> : null}
-              {delayedWorkOrders.map((workOrder) => (
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">1. Lucrari intarziate</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Recomandare: muta aceste lucrari in fata si actualizeaza termenele inainte sa consume alte resurse.
+                </p>
+              </div>
+              <Badge tone="danger">{delayedWorkOrders.length}</Badge>
+            </div>
+            <div className="mt-4 space-y-2">
+              {topDelayedWorkOrders.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
+                  Nicio lucrare intarziata in aria ta.
+                </p>
+              ) : null}
+              {topDelayedWorkOrders.map((workOrder) => (
                 <div key={workOrder.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold text-[var(--foreground)]">{workOrder.title}</p>
-                    <Badge tone="danger">{workOrder.status}</Badge>
+                    <Badge tone="warning">{workOrder.status}</Badge>
                   </div>
                   <p className="mt-1 text-xs text-[var(--muted)]">
-                    {workOrder.project.title} • termen {workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}
+                    {workOrder.project.title} - termen {workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}
                   </p>
                   <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/lucrari/${workOrder.id}`}>
-                    Deschide lucrare
+                    Deschide lucrarea
                   </Link>
                 </div>
               ))}
             </div>
+            <Link href="/lucrari" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Deschide toate lucrarile
+            </Link>
           </Card>
 
           <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Ore pontate vs ore estimate</h2>
-            <div className="mt-3 space-y-2">
-              {hoursVsEstimate.length === 0 ? (
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">2. Costuri peste buget</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Recomandare: opreste achizitiile neesentiale si verifica devizele proiectelor care au depasit pragul.
+                </p>
+              </div>
+              <Badge tone="warning">{costOverBudgetCount}</Badge>
+            </div>
+            <div className="mt-4 space-y-2">
+              {topOverBudgetProjects.length === 0 ? (
                 <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
-                  Nu exista suficiente date de pontaj/estimare pentru comparatie.
+                  Nu exista proiecte cu depasiri de cost in datele vizibile.
                 </p>
               ) : null}
-              {hoursVsEstimate.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
+              {topOverBudgetProjects.map((item) => (
+                <div key={item.projectId} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {item.project.title} • estimate {item.plannedHours}h • pontate {item.actualHours}h
+                  <p className="text-xs text-[var(--muted)]">Buget {formatCurrency(item.planned)} - Cost {formatCurrency(item.actual)}</p>
+                  <p className={`mt-1 text-xs font-semibold ${item.actual > item.planned ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
+                    Variatie: {formatCurrency(item.actual - item.planned)}
                   </p>
-                  <p className={`mt-1 text-xs font-semibold ${item.variance > 0 ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
-                    Variatie: {item.variance > 0 ? "+" : ""}{item.variance}h
-                  </p>
+                  <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/proiecte/${item.projectId}`}>
+                    Deschide proiectul
+                  </Link>
                 </div>
               ))}
             </div>
+            <Link href="/proiecte" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Deschide toate proiectele
+            </Link>
+          </Card>
+
+          <Card>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">3. Incasari si restante</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Recomandare: trimite remindere si urmareste facturile restante pana cand devin pierdere de timp.
+                </p>
+              </div>
+              <Badge tone={overdueInvoiceCount > 0 ? "danger" : "success"}>{overdueInvoiceCount}</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 text-sm">
+              <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
+                <p className="text-xs text-[var(--muted)]">Total facturat</p>
+                <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
+                <p className="text-xs text-[var(--muted)]">Total incasat</p>
+                <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(totalPaid)}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
+                <p className="text-xs text-[var(--muted)]">Creanta si rata incasare</p>
+                <p className="mt-1 font-semibold text-[var(--foreground)]">
+                  {formatCurrency(receivable)} - {collectionRate}%
+                </p>
+              </div>
+            </div>
+            <Link href="/financiar" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Deschide financiar
+            </Link>
           </Card>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Materiale consumate vs aprobate</h2>
-            <div className="mt-3 space-y-2">
-              {materialsVsPlan.length === 0 ? (
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">Ore pontate vs ore estimate</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Recomandare: valideaza pontajele care sar peste estimare si ajusteaza planul inainte de urmatoarea saptamana.
+                </p>
+              </div>
+              <Badge tone={overEstimateCount > 0 ? "warning" : "success"}>{overEstimateCount}</Badge>
+            </div>
+            <div className="mt-4 space-y-2">
+              {topHoursOverruns.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
+                  Nu exista suficiente date de pontaj/estimare pentru comparatie.
+                </p>
+              ) : null}
+              {topHoursOverruns.map((item) => (
+                <div key={item.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
+                  <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
+                  <p className="text-xs text-[var(--muted)]">
+                    {item.project.title} - estimate {item.plannedHours}h - pontate {item.actualHours}h
+                  </p>
+                  <p className={`mt-1 text-xs font-semibold ${item.variance > 0 ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
+                    Variatie: {item.variance > 0 ? "+" : ""}
+                    {item.variance}h
+                  </p>
+                  <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/lucrari/${item.id}`}>
+                    Deschide lucrarea
+                  </Link>
+                </div>
+              ))}
+            </div>
+            <Link href="/pontaj" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Deschide pontajele
+            </Link>
+          </Card>
+
+          <Card>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">Materiale consumate vs aprobate</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Recomandare: verifica proiectele unde consumul a depasit aprobarea si opreste alocarile suplimentare.
+                </p>
+              </div>
+              <Badge tone={materialsOverPlanCount > 0 ? "warning" : "success"}>{materialsOverPlanCount}</Badge>
+            </div>
+            <div className="mt-4 space-y-2">
+              {topMaterialOverruns.length === 0 ? (
                 <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
                   Nu exista date de consum/aprobare materiale pentru proiectele vizibile.
                 </p>
               ) : null}
-              {materialsVsPlan.map((item) => (
+              {topMaterialOverruns.map((item) => (
                 <div key={item.projectId} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
                   <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
-                  <p className="text-xs text-[var(--muted)]">Aprobate {item.planned.toFixed(2)} • Consumate {item.actual.toFixed(2)}</p>
-                  <p className={`mt-1 text-xs font-semibold ${item.actual > item.planned ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
-                    Diferenta: {(item.actual - item.planned).toFixed(2)}
-                  </p>
+                  <p className="text-xs text-[var(--muted)]">Aprobate {item.planned.toFixed(2)} - Consumate {item.actual.toFixed(2)}</p>
+                  <p className="mt-1 text-xs font-semibold text-[#ffb9c1]">Diferenta: {(item.actual - item.planned).toFixed(2)}</p>
+                  <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/proiecte/${item.projectId}`}>
+                    Deschide proiectul
+                  </Link>
                 </div>
               ))}
             </div>
-          </Card>
-
-          <Card>
-            <h2 className="text-lg font-semibold text-[var(--foreground)]">Cost real vs buget estimat</h2>
-            <div className="mt-3 space-y-2">
-              {costVsBudget.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm text-[var(--muted)]">
-                  Nu exista proiecte cu date suficiente pentru analiza cost vs buget.
-                </p>
-              ) : null}
-              {costVsBudget.map((item) => (
-                <div key={item.projectId} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3 text-sm">
-                  <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
-                  <p className="text-xs text-[var(--muted)]">Buget {formatCurrency(item.planned)} • Cost {formatCurrency(item.actual)}</p>
-                  <p className={`mt-1 text-xs font-semibold ${item.actual > item.planned ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
-                    Variatie: {formatCurrency(item.actual - item.planned)}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <Link href="/materiale" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+              Deschide materialele
+            </Link>
           </Card>
         </section>
-
-        <Card>
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">Facturi si plati</h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-3 text-sm">
-            <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
-              <p className="text-xs text-[var(--muted)]">Total facturat</p>
-              <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
-            </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
-              <p className="text-xs text-[var(--muted)]">Total incasat</p>
-              <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(totalPaid)}</p>
-            </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))] p-3">
-              <p className="text-xs text-[var(--muted)]">Creanta + rata incasare</p>
-              <p className="mt-1 font-semibold text-[var(--foreground)]">{formatCurrency(receivable)} • {collectionRate}%</p>
-            </div>
-          </div>
-        </Card>
       </div>
     </PermissionGuard>
   );

@@ -18,21 +18,31 @@ import { prisma } from "@/src/lib/prisma";
 import { bulkProjectsAction, deleteProject, updateProjectStatus } from "./actions";
 import { ProjectCreateForm } from "./project-create-form";
 
+const projectStatusMeta: Record<ProjectStatus, { label: string; tone: "neutral" | "info" | "danger" | "success" | "warning" }> = {
+  DRAFT: { label: "Schita", tone: "neutral" },
+  PLANNED: { label: "Planificat", tone: "info" },
+  ACTIVE: { label: "In lucru", tone: "success" },
+  BLOCKED: { label: "Blocat", tone: "danger" },
+  COMPLETED: { label: "Finalizat", tone: "neutral" },
+  CANCELED: { label: "Anulat", tone: "warning" },
+};
+
 function mapStatus(status: ProjectStatus) {
-  switch (status) {
-    case "ACTIVE":
-      return { label: "Activ", tone: "success" as const };
-    case "PLANNED":
-      return { label: "Planificat", tone: "info" as const };
-    case "BLOCKED":
-      return { label: "Blocat", tone: "danger" as const };
-    case "COMPLETED":
-      return { label: "Finalizat", tone: "neutral" as const };
-    case "CANCELED":
-      return { label: "Anulat", tone: "warning" as const };
-    default:
-      return { label: "Draft", tone: "neutral" as const };
+  return projectStatusMeta[status];
+}
+
+const projectStatusOptions = Object.values(ProjectStatus).map((status) => ({
+  value: status,
+  label: projectStatusMeta[status].label,
+}));
+
+function formatProjectDates(startDate: Date | null, endDate: Date | null) {
+  if (!startDate && !endDate) return "Fara interval definit";
+  if (startDate && endDate) {
+    return `Start: ${formatDate(startDate)} / Termen: ${formatDate(endDate)}`;
   }
+  if (startDate) return `Start: ${formatDate(startDate)}`;
+  return `Termen: ${formatDate(endDate as Date)}`;
 }
 
 export default async function ProjectsPage({
@@ -125,9 +135,9 @@ export default async function ProjectsPage({
                   {canDelete ? <option value="ARCHIVE">Arhiveaza (soft delete)</option> : null}
                 </select>
                 <select name="status" defaultValue={ProjectStatus.ACTIVE} disabled={!canUpdate}>
-                  {Object.values(ProjectStatus).map((status) => (
-                    <option key={status} value={status}>
-                      {status}
+                  {projectStatusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
                     </option>
                   ))}
                 </select>
@@ -157,9 +167,9 @@ export default async function ProjectsPage({
             <input type="hidden" name="page" value="1" />
             <select name="status" defaultValue={statusFilter || ""}>
               <option value="">Toate statusurile</option>
-              {Object.values(ProjectStatus).map((status) => (
-                <option key={status} value={status}>
-                  {status}
+              {projectStatusOptions.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
                 </option>
               ))}
             </select>
@@ -183,11 +193,14 @@ export default async function ProjectsPage({
                           {project.title}
                         </Link>
                         <p className="text-xs text-[#9fb9d7]">{project.code}</p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">{formatProjectDates(project.startDate, project.endDate)}</p>
                       </div>
                       <Badge tone={status.tone}>{status.label}</Badge>
                     </div>
                     <p className="mt-2 text-xs text-[var(--muted)]">{project.client.name}</p>
-                    <p className="text-xs text-[var(--muted)]">{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Manager nealocat"}</p>
+                    <p className="text-xs text-[var(--muted)]">
+                      Coordonator: {project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "nealocat"}
+                    </p>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#cfe0f6]">
                       <p>Buget: {formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
                       <p>Progres: {project.progressPercent}%</p>
@@ -198,9 +211,9 @@ export default async function ProjectsPage({
                           <form action={updateProjectStatus} className="grid grid-cols-[1fr_auto] gap-2">
                             <input type="hidden" name="id" value={project.id} />
                             <select name="status" defaultValue={project.status} className="h-10 rounded-md px-2 text-sm">
-                              {Object.values(ProjectStatus).map((st) => (
-                                <option key={st} value={st}>
-                                  {st}
+                              {projectStatusOptions.map((st) => (
+                                <option key={st.value} value={st.value}>
+                                  {st.label}
                                 </option>
                               ))}
                             </select>
@@ -244,16 +257,17 @@ export default async function ProjectsPage({
                       <tr key={project.id}>
                         <TD>{project.code}</TD>
                         <TD>
-                          <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#d4e8ff] hover:text-[#f0f8ff] hover:underline">
+                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[#d4e8ff] hover:text-[#f0f8ff] hover:underline">
                             {project.title}
                           </Link>
                           <p className="text-xs text-[var(--muted)]">{project.siteAddress}</p>
-                          <p className="text-xs text-[var(--muted)]">
-                            {project.startDate ? formatDate(project.startDate) : "-"} - {project.endDate ? formatDate(project.endDate) : "-"}
-                          </p>
+                          <p className="text-xs text-[var(--muted)]">{formatProjectDates(project.startDate, project.endDate)}</p>
                         </TD>
                         <TD>{project.client.name}</TD>
-                        <TD>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</TD>
+                        <TD>
+                          <p>{project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "Nealocat"}</p>
+                          <p className="text-xs text-[var(--muted)]">Manager responsabil de proiect</p>
+                        </TD>
                         <TD>
                           <p>{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
                           <p className="text-xs text-[var(--muted)]">Contract: {formatCurrency(project.contractValue?.toString() || 0)}</p>
@@ -269,9 +283,9 @@ export default async function ProjectsPage({
                                 <form action={updateProjectStatus}>
                                   <input type="hidden" name="id" value={project.id} />
                                   <select name="status" defaultValue={project.status} className="h-9 rounded-md px-2 text-xs">
-                                    {Object.values(ProjectStatus).map((st) => (
-                                      <option key={st} value={st}>
-                                        {st}
+                                    {projectStatusOptions.map((st) => (
+                                      <option key={st.value} value={st.value}>
+                                        {st.label}
                                       </option>
                                     ))}
                                   </select>

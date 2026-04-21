@@ -72,6 +72,10 @@ export default async function CalendarPage({
         status: true,
         priority: true,
         startDate: true,
+        dueDate: true,
+        responsibleId: true,
+        responsible: { select: { firstName: true, lastName: true } },
+        teamId: true,
         project: { select: { title: true } },
         team: { select: { name: true } },
       },
@@ -86,10 +90,14 @@ export default async function CalendarPage({
     title: workOrder.title,
     project: workOrder.project.title,
     team: workOrder.team?.name || "Nealocata",
+    teamId: workOrder.teamId,
+    responsibleId: workOrder.responsibleId,
+    responsible: workOrder.responsible ? `${workOrder.responsible.firstName} ${workOrder.responsible.lastName}` : null,
     status: workOrder.status,
     priority: workOrder.priority,
     day: workOrder.startDate ? weekday[workOrder.startDate.getDay()] : "Luni",
     startDateIso: workOrder.startDate?.toISOString() ?? null,
+    dueDateIso: workOrder.dueDate?.toISOString() ?? null,
   }));
 
   return (
@@ -122,43 +130,63 @@ export default async function CalendarPage({
 
           {canCreate ? (
             <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Input name="title" placeholder="Adauga lucrare rapida in calendar" required />
-              <select
-                name="projectId"
-                required
-                defaultValue=""
-                disabled={projects.length === 0}
-                className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
-              >
-                <option value="" disabled>
-                  Selecteaza proiect
-                </option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.title}
+              <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                <span>Titlu lucrare</span>
+                <Input name="title" placeholder="Ex: Montaj tablou electric" required />
+              </label>
+              <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                <span>Proiect</span>
+                <select
+                  name="projectId"
+                  required
+                  defaultValue=""
+                  disabled={projects.length === 0}
+                  className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                >
+                  <option value="" disabled>
+                    Selecteaza proiectul
                   </option>
-                ))}
-              </select>
-              <select name="teamId" defaultValue="" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
-                <option value="">Fara echipa</option>
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <select name="dayLabel" defaultValue="Luni" className="h-10 rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
-                  {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
-                    <option key={day} value={day}>
-                      {day}
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.title}
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                <span>Echipa</span>
+                <select name="teamId" defaultValue="" className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
+                  <option value="">Fara echipa / de completat ulterior</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                  <span>Zi de inceput</span>
+                  <select
+                    name="dayLabel"
+                    defaultValue="Luni"
+                    className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                  >
+                    {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
+                      <option key={day} value={day}>
+                        {day}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <Button type="submit" className="h-10 w-full sm:w-auto" disabled={projects.length === 0}>
-                  Adauga
+                  Creeaza si plaseaza
                 </Button>
               </div>
+              <p className="sm:col-span-2 xl:col-span-4 text-[11px] leading-5 text-[var(--muted)]">
+                Lucrarea va porni automat la 08:00 si va primi termen la 17:00 in ziua selectata. Daca ramane fara responsabil sau
+                depaseste termenul, cardul va afisa avertismente explicite.
+              </p>
             </form>
           ) : null}
 

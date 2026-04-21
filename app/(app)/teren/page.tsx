@@ -113,7 +113,7 @@ export default async function TerenPage() {
       <div className="space-y-6">
         <PageHeader
           title="Field Operations"
-          subtitle="Coordonare santier in timp real: prezenta, pontaj live, raportare progres, evidenta blocaje si dovada foto."
+          subtitle="Prezenta, pontaj live, raportare zilnica, fotografii si semnaturi - tot ce trebuie pentru o zi clara pe santier."
           actions={
             <div className="flex flex-wrap gap-2">
               <Link href="/pontaj" className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]">
@@ -154,52 +154,54 @@ export default async function TerenPage() {
 
         <section className="grid gap-4 xl:grid-cols-[1fr_1.2fr_1fr]">
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Shift Command</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Prezenta si pontaj live</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Prezenta si tura</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Check-in, check-out si pontaj live</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Check-in/check-out marcheaza prezenta la santier. Pontajul live se gestioneaza separat, din acelasi panou.</p>
+
             <div className="mt-3 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-xs text-[var(--muted)]">
               <p>Check-in: {attendance?.checkInAt ? formatDateTime(attendance.checkInAt) : "-"}</p>
               <p>Check-out: {attendance?.checkOutAt ? formatDateTime(attendance.checkOutAt) : "-"}</p>
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-3">
               <form action={checkInOnSite} className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-                <Input name="latitude" placeholder="Latitudine" className="h-11" />
-                <Input name="longitude" placeholder="Longitudine" className="h-11" />
-                <Button type="submit" className="h-11">Check-in</Button>
+                <Input name="latitude" placeholder="Latitudine GPS (optional)" className="h-11" />
+                <Input name="longitude" placeholder="Longitudine GPS (optional)" className="h-11" />
+                <Button type="submit" className="h-11">Check-in santier</Button>
               </form>
               <form action={checkOutOnSite} className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-                <Input name="latitude" placeholder="Latitudine" className="h-11" />
-                <Input name="longitude" placeholder="Longitudine" className="h-11" />
-                <Button type="submit" variant="secondary" className="h-11">Check-out</Button>
+                <Input name="latitude" placeholder="Latitudine GPS (optional)" className="h-11" />
+                <Input name="longitude" placeholder="Longitudine GPS (optional)" className="h-11" />
+                <Button type="submit" variant="secondary" className="h-11">Check-out santier</Button>
               </form>
             </div>
 
             <div className="mt-4 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Pontaj activ</p>
               <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-                {activeEntry ? `${activeEntry.workOrder?.title || "General"}` : "Fara pontaj activ"}
+                {activeEntry ? activeEntry.workOrder?.title || "General" : "Fara pontaj activ"}
               </p>
               <p className="text-xs text-[var(--muted)]">
-                {activeEntry ? `${activeEntry.project.title} • start ${formatDateTime(activeEntry.startAt)}` : "Porneste pontajul din Task Pulse"}
+                {activeEntry ? `${activeEntry.project.title} • start ${formatDateTime(activeEntry.startAt)}` : "Porneste tura din lista de lucrari active."}
               </p>
               {activeEntry ? (
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <Badge tone={runningLive ? "success" : "warning"}>{activeEntry.liveState}</Badge>
+                  <Badge tone={runningLive ? "success" : "warning"}>{runningLive ? "RUNNING" : "PAUSED"}</Badge>
                   <div className="flex flex-wrap gap-2 sm:justify-end">
                     {runningLive ? (
                       <form action={pauseLivePontaj}>
                         <input type="hidden" name="id" value={activeEntry.id} />
-                        <Button size="sm" variant="secondary">Pauza</Button>
+                        <Button size="sm" variant="secondary">Pauza tura</Button>
                       </form>
                     ) : (
                       <form action={resumeLivePontaj}>
                         <input type="hidden" name="id" value={activeEntry.id} />
-                        <Button size="sm">Reia</Button>
+                        <Button size="sm">Reia tura</Button>
                       </form>
                     )}
                     <form action={stopLivePontaj}>
                       <input type="hidden" name="id" value={activeEntry.id} />
-                      <Button size="sm" variant="destructive">Stop</Button>
+                      <Button size="sm" variant="destructive">Inchide tura</Button>
                     </form>
                   </div>
                 </div>
@@ -208,8 +210,11 @@ export default async function TerenPage() {
           </Card>
 
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Field Update Composer</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Raport operational rapid</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Raport zilnic</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Completeaza progresul de teren</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Prioritizeaza ce s-a facut azi, ce blocheaza echipa si ce are nevoie de follow-up. Acesta este raportul care merge mai departe la PM/birou.
+            </p>
             {projects.length === 0 ? (
               <p className="mt-3 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
                 Nu exista proiecte disponibile in aria ta. Raportarea teren devine disponibila dupa alocare.
@@ -220,26 +225,38 @@ export default async function TerenPage() {
                 <div className="space-y-1">
                   <label>Proiect</label>
                   <select name="projectId" required>
-                    <option value="">Selecteaza proiect</option>
+                    <option value="">Selecteaza proiectul</option>
                     {projects.map((project) => (
-                      <option key={project.id} value={project.id}>{project.title}</option>
+                      <option key={project.id} value={project.id}>
+                        {project.title}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label>Lucrare</label>
+                  <label>Lucrare / front de lucru</label>
                   <select name="workOrderId" defaultValue="">
                     <option value="">Fara lucrare specifica</option>
                     {tasks.map((task) => (
-                      <option key={task.id} value={task.id}>{task.title}</option>
+                      <option key={task.id} value={task.id}>
+                        {task.title}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
+              <div className="space-y-1">
+                <label>Progres realizat azi</label>
+                <Textarea name="progress" rows={3} required placeholder="Ex: montaj finalizat pe sectorul A, testare inceputa pe sectorul B" />
+              </div>
+              <div className="space-y-1">
+                <label>Blocaje / riscuri</label>
+                <Textarea name="blockers" rows={2} placeholder="Ex: lipsa material, acces limitat, vreme, asteptare aviz" />
+              </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label>Conditii meteo</label>
-                  <Input name="weather" placeholder="Ex: senin, vant puternic" />
+                  <label>Vreme</label>
+                  <Input name="weather" placeholder="Ex: senin, vant puternic, ploaie" />
                 </div>
                 <div className="space-y-1">
                   <label>Muncitori prezenti</label>
@@ -247,28 +264,20 @@ export default async function TerenPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <label>Progres realizat</label>
-                <Textarea name="progress" rows={3} required placeholder="Ce s-a realizat azi in santier" />
-              </div>
-              <div className="space-y-1">
-                <label>Blocaje</label>
-                <Textarea name="blockers" rows={2} placeholder="Probleme operationale, lipsa materiale, acces, securitate" />
-              </div>
-              <div className="space-y-1">
-                <label>Observatii</label>
-                <Textarea name="note" rows={2} placeholder="Informatii utile pentru PM / birou" />
+                <label>Observatii pentru birou</label>
+                <Textarea name="note" rows={2} placeholder="Ce trebuie urmarit maine, cine confirma, ce documente lipsesc" />
               </div>
               <div className="flex justify-end">
                 <Button type="submit" disabled={projects.length === 0}>
-                  {projects.length === 0 ? "Fara proiecte disponibile" : "Trimite update teren"}
+                  {projects.length === 0 ? "Fara proiecte disponibile" : "Trimite raport de teren"}
                 </Button>
               </div>
             </form>
           </Card>
 
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Task Pulse</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Actiuni rapide pe lucrari</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Lucrari active</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Porneste lucrul pe frontul corect</h2>
             <div className="mt-3 space-y-3">
               {tasks.length === 0 ? (
                 <p className="text-sm text-[var(--muted)]">Nu exista lucrari active pentru tine in acest moment.</p>
@@ -280,15 +289,18 @@ export default async function TerenPage() {
                         <p className="text-sm font-semibold text-[var(--foreground)]">{task.title}</p>
                         <p className="text-xs text-[var(--muted)]">{task.project.title}</p>
                       </div>
-                      <Badge tone={task.status === "BLOCKED" ? "danger" : task.priority === "CRITICAL" ? "warning" : "neutral"}>
-                        {task.priority}
-                      </Badge>
+                      <Badge tone={task.status === "BLOCKED" ? "danger" : task.priority === "CRITICAL" ? "warning" : "neutral"}>{task.priority}</Badge>
                     </div>
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      Stare: {task.status === "BLOCKED" ? "blocat" : task.status === "IN_PROGRESS" ? "in lucru" : "de pornit"}
+                    </p>
                     <form action={startLivePontaj} className="mt-2 grid gap-2">
                       <input type="hidden" name="workOrderId" value={task.id} />
                       <input type="hidden" name="projectId" value={task.projectId} />
-                      <Input name="note" placeholder="Nota start pontaj (optional)" className="h-10" />
-                      <Button size="sm" className="h-10" disabled={Boolean(activeEntry)}>Start pontaj pe task</Button>
+                      <Input name="note" placeholder="Nota de start tura (optional)" className="h-10" />
+                      <Button size="sm" className="h-10" disabled={Boolean(activeEntry)}>
+                        {activeEntry ? "Tura live deja pornita" : "Porneste tura pe lucrare"}
+                      </Button>
                     </form>
                   </div>
                 ))
@@ -299,8 +311,9 @@ export default async function TerenPage() {
 
         <section className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Field Evidence</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Foto progres si semnatura predare</h2>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Dovezi de teren</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Foto progres si semnatura de predare</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Incarca fotografia de progres si, unde e cazul, semnatura sau documentul de predare. Completeaza nota pentru contextul operatiunii.</p>
             <div className="mt-3 space-y-3">
               {tasks.length === 0 ? (
                 <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
@@ -310,10 +323,12 @@ export default async function TerenPage() {
               {tasks.map((task) => (
                 <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
-                  <p className="text-xs text-[var(--muted)]">{task.project.title} • {task.status} • {task.priority}</p>
+                  <p className="text-xs text-[var(--muted)]">
+                    {task.project.title} • {task.status} • {task.priority}
+                  </p>
 
                   <div className="mt-2 grid gap-2">
-                    <form action={uploadTaskPhoto} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                    <form action={uploadTaskPhoto} encType="multipart/form-data" className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
                       <input type="hidden" name="workOrderId" value={task.id} />
                       <input type="hidden" name="projectId" value={task.projectId} />
                       <input name="file" type="file" accept="image/*" className="h-10 w-full text-xs" required />
@@ -321,7 +336,7 @@ export default async function TerenPage() {
                       <Button size="sm" variant="secondary" className="h-10">Incarca foto</Button>
                     </form>
 
-                    <form action={uploadTaskSignature} className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                    <form action={uploadTaskSignature} encType="multipart/form-data" className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
                       <input type="hidden" name="workOrderId" value={task.id} />
                       <input type="hidden" name="projectId" value={task.projectId} />
                       <input name="file" type="file" accept="image/*,application/pdf" className="h-10 w-full text-xs" required />
@@ -335,8 +350,9 @@ export default async function TerenPage() {
           </Card>
 
           <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Update Feed</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Istoric rapoarte</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele rapoarte teren</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">Vezi rapid ce a fost raportat, unde exista blocaje si ce trebuie preluat mai departe.</p>
             <div className="mt-3 space-y-2">
               {reports.length === 0 ? (
                 <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
@@ -346,7 +362,9 @@ export default async function TerenPage() {
               {reports.map((report) => (
                 <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                   <p className="text-sm font-semibold text-[var(--foreground)]">{report.project.title}</p>
-                  <p className="text-xs text-[var(--muted)]">{formatDateTime(report.createdAt)} • {report.workOrder?.title || "General"}</p>
+                  <p className="text-xs text-[var(--muted)]">
+                    {formatDateTime(report.createdAt)} • {report.workOrder?.title || "General"}
+                  </p>
                   <p className="mt-1 text-sm text-[var(--muted-strong)]">{report.workCompleted}</p>
                   <p className="text-xs text-[var(--muted)]">Blocaje: {report.blockers || "-"}</p>
                 </div>

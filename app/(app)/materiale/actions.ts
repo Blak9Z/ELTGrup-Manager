@@ -63,7 +63,7 @@ const outgoingStockTypes: StockMovementType[] = [StockMovementType.OUT, StockMov
 
 function ensureStockAndInvoiceAccess(roleKeys: RoleKey[]) {
   if (roleKeys.some((role) => stockAndInvoiceAllowedRoles.has(role))) return;
-  throw new Error("Doar Admin, Sef Santier sau Financiar pot opera miscari de stoc si facturi materiale.");
+  throw new Error("Doar Admin, Sef Santier sau Financiar pot gestiona stocurile si facturile materialelor.");
 }
 
 async function getAvailableWarehouseStock(materialId: string, warehouseId: string) {
@@ -127,7 +127,7 @@ async function createMaterialRequestInternal(formData: FormData) {
   await notifyRoles({
     roleKeys: [RoleKey.SITE_MANAGER, RoleKey.PROJECT_MANAGER, RoleKey.BACKOFFICE],
     type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
-    title: "Cerere materiale noua",
+    title: "Cerere materiale de aprobat",
     message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
     actionUrl: "/materiale",
   });
@@ -142,10 +142,10 @@ export async function createMaterialRequestAction(
 ): Promise<ActionState> {
   try {
     await createMaterialRequestInternal(formData);
-    return { ok: true, message: "Cererea de materiale a fost trimisa." };
+    return { ok: true, message: "Cererea a ajuns la aprobare." };
   } catch (error) {
     if (error instanceof z.ZodError) return fromZodError(error);
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare cerere" };
+    return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare cerere materiale" };
   }
 }
 
@@ -157,7 +157,7 @@ export async function approveMaterialRequest(formData: FormData) {
     status: formData.get("status"),
   });
   if (!parsed.success) {
-    throw new Error("Status invalid");
+    throw new Error("Starea cererii este invalida.");
   }
   const allowedStatuses: MaterialRequestStatus[] = [MaterialRequestStatus.APPROVED, MaterialRequestStatus.REJECTED];
   if (!allowedStatuses.includes(parsed.data.status)) {
@@ -171,7 +171,7 @@ export async function approveMaterialRequest(formData: FormData) {
   if (!current) throw new Error("Cerere inexistenta.");
   await assertProjectAccess(currentUser, current.projectId);
   if (current.status !== MaterialRequestStatus.PENDING) {
-    throw new Error("Doar cererile PENDING pot fi aprobate sau respinse.");
+    throw new Error("Doar cererile in asteptare pot fi aprobate sau respinse.");
   }
 
   const request = await prisma.materialRequest.update({
@@ -181,7 +181,7 @@ export async function approveMaterialRequest(formData: FormData) {
       approvedAt: new Date(),
       approvedById: currentUser.id,
     },
-    include: { requestedBy: true },
+    include: { requestedBy: true, material: { select: { name: true } }, project: { select: { title: true } } },
   });
 
   await logActivity({
@@ -195,8 +195,11 @@ export async function approveMaterialRequest(formData: FormData) {
   await notifyUser({
     userId: request.requestedById,
     type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
-    title: "Cerere materiale actualizata",
-    message: `Status nou: ${parsed.data.status}`,
+    title:
+      parsed.data.status === MaterialRequestStatus.APPROVED
+        ? "Cerere materiale aprobata"
+        : "Cerere materiale respinsa",
+    message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
     actionUrl: "/materiale",
   });
 
@@ -225,7 +228,7 @@ export async function approveAndIssueMaterialRequest(formData: FormData) {
   await assertProjectAccess(currentUser, request.projectId);
 
   if (request.status !== MaterialRequestStatus.PENDING) {
-    throw new Error("Doar cererile PENDING pot fi aprobate cu emitere stoc.");
+    throw new Error("Doar cererile in asteptare pot fi aprobate cu emitere din stoc.");
   }
 
   const existingIssuance = await prisma.stockMovement.findFirst({
@@ -306,7 +309,7 @@ export async function approveAndIssueMaterialRequest(formData: FormData) {
   await notifyUser({
     userId: request.requestedBy.id,
     type: NotificationType.MATERIAL_REQUEST_APPROVAL_REQUIRED,
-    title: "Cerere aprobata si emisa din stoc",
+    title: "Cerere aprobata si eliberata din depozit",
     message: `${request.project.title}: ${request.material.name} (${request.quantity.toString()})`,
     actionUrl: "/materiale",
   });
@@ -403,10 +406,10 @@ export async function createStockMovementAction(
 ): Promise<ActionState> {
   try {
     await createStockMovementInternal(formData);
-    return { ok: true, message: "Miscarea de stoc a fost inregistrata." };
+    return { ok: true, message: "Miscarea de stoc a fost salvata." };
   } catch (error) {
     if (error instanceof z.ZodError) return fromZodError(error);
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la inregistrarea miscarii" };
+    return { ok: false, message: error instanceof Error ? error.message : "Eroare la inregistrarea miscarii de stoc" };
   }
 }
 
@@ -481,9 +484,9 @@ export async function uploadMaterialInvoiceAction(
 
     revalidatePath("/materiale");
     revalidatePath("/documente");
-    return { ok: true, message: "Factura materiale incarcata." };
+    return { ok: true, message: "Factura de materiale a fost incarcata." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la upload factura." };
+    return { ok: false, message: error instanceof Error ? error.message : "Eroare la upload factura de materiale." };
   }
 }
 

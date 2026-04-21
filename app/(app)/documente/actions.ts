@@ -11,15 +11,26 @@ import { prisma } from "@/src/lib/prisma";
 import { uploadDocumentFile } from "@/src/lib/storage";
 
 const createDocumentSchema = z.object({
-  title: z.string().min(3, "Titlul trebuie sa aiba minim 3 caractere"),
+  title: z.string().trim().min(3, "Titlul trebuie sa aiba minim 3 caractere"),
   category: z.nativeEnum(DocumentCategory),
   projectId: z.string().cuid().optional(),
   clientId: z.string().cuid().optional(),
   workOrderId: z.string().cuid().optional(),
   tags: z.string().optional(),
   expiresAt: z.string().optional(),
-  isPrivate: z.coerce.boolean().optional(),
+  isPrivate: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
 });
+
+function normalizeTags(tags: string) {
+  return Array.from(
+    new Set(
+      tags
+        .split(",")
+        .map((tag) => tag.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+}
 
 export async function createDocumentAction(_: ActionState, formData: FormData): Promise<ActionState> {
   try {
@@ -93,7 +104,7 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
         clientId: parsed.data.clientId,
         workOrderId: parsed.data.workOrderId,
         uploadedById: currentUser.id,
-        tags: parsed.data.tags ? parsed.data.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
+        tags: parsed.data.tags ? normalizeTags(parsed.data.tags) : [],
         expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
         isPrivate: parsed.data.isPrivate ?? true,
       },
@@ -117,6 +128,9 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
     revalidatePath("/documente");
     revalidatePath("/proiecte");
     revalidatePath("/lucrari");
+    if (created.projectId) {
+      revalidatePath(`/proiecte/${created.projectId}`);
+    }
     if (created.workOrderId) {
       revalidatePath(`/lucrari/${created.workOrderId}`);
     }
@@ -166,6 +180,22 @@ export async function bulkDocumentsAction(formData: FormData) {
   }
   if (scopedIds.length === 0) throw new Error("Nu ai acces la documentele selectate.");
 
+  const affectedContexts = await prisma.document.findMany({
+    where: { id: { in: scopedIds } },
+    select: {
+      projectId: true,
+      workOrderId: true,
+      workOrder: { select: { projectId: true } },
+    },
+  });
+  const touchedProjectIds = new Set<string>();
+  const touchedWorkOrderIds = new Set<string>();
+  for (const document of affectedContexts) {
+    if (document.projectId) touchedProjectIds.add(document.projectId);
+    if (document.workOrderId) touchedWorkOrderIds.add(document.workOrderId);
+    if (document.workOrder?.projectId) touchedProjectIds.add(document.workOrder.projectId);
+  }
+
   if (parsed.data.operation === "DELETE") {
     const result = await prisma.document.deleteMany({
       where: { id: { in: scopedIds } },
@@ -193,4 +223,12 @@ export async function bulkDocumentsAction(formData: FormData) {
   }
 
   revalidatePath("/documente");
+  revalidatePath("/proiecte");
+  revalidatePath("/lucrari");
+  for (const projectId of touchedProjectIds) {
+    revalidatePath(`/proiecte/${projectId}`);
+  }
+  for (const workOrderId of touchedWorkOrderIds) {
+    revalidatePath(`/lucrari/${workOrderId}`);
+  }
 }

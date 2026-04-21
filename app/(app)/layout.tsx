@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { SignOutButton } from "@/src/components/auth/sign-out-button";
+import { EmptyState } from "@/src/components/ui/empty-state";
 import { Sidebar } from "@/src/components/layout/sidebar";
 import { Topbar } from "@/src/components/layout/topbar";
 import { auth } from "@/src/lib/auth";
@@ -15,7 +17,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     roleKeys: session.user.roleKeys || [],
   });
   if (!visibleModules.length) {
-    redirect("/autentificare");
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4 py-10 text-[color:var(--foreground)]">
+        <div className="w-full max-w-xl space-y-4">
+          <EmptyState
+            title="Cont autenticat fara module active"
+            description="Acest cont este conectat, dar nu are niciun modul disponibil. Cere unui administrator sa-i asocieze un rol sau iesi din cont si conecteaza-te cu alt utilizator."
+          />
+          <div className="flex justify-center">
+            <SignOutButton />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

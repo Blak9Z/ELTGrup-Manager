@@ -28,6 +28,32 @@ const createProjectSchema = z.object({
   endDate: z.string().optional(),
   contractValue: z.coerce.number().min(0),
   estimatedBudget: z.coerce.number().min(0),
+}).superRefine((data, ctx) => {
+  const isValidDate = (value?: string) => !value || !Number.isNaN(new Date(value).getTime());
+
+  if (data.startDate && !isValidDate(data.startDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["startDate"],
+      message: "Data de start trebuie sa fie valida.",
+    });
+  }
+
+  if (data.endDate && !isValidDate(data.endDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endDate"],
+      message: "Data de final trebuie sa fie valida.",
+    });
+  }
+
+  if (data.startDate && data.endDate && data.startDate > data.endDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["endDate"],
+      message: "Data de final trebuie sa fie dupa data de start.",
+    });
+  }
 });
 const updateProjectStatusSchema = z.object({
   id: z.string().cuid(),
@@ -150,7 +176,7 @@ export async function createProjectAction(
     return { ok: true, message: "Proiect creat cu succes." };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { ok: false, errors: error.flatten().fieldErrors, message: "Date proiect invalide." };
+      return { ok: false, errors: error.flatten().fieldErrors, message: "Verifica datele proiectului." };
     }
     return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare proiect" };
   }

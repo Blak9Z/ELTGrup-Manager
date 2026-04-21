@@ -1,4 +1,4 @@
-import { Prisma, WorkOrderStatus } from "@prisma/client";
+import { Prisma, TaskPriority, WorkOrderStatus } from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
@@ -32,6 +32,60 @@ async function withPoolFallback<T>(label: string, query: () => Promise<T>, fallb
     }
     throw error;
   }
+}
+
+const workOrderStatusMeta: Record<WorkOrderStatus, { label: string; tone: "neutral" | "info" | "danger" | "success" | "warning" }> = {
+  TODO: { label: "De facut", tone: "neutral" },
+  IN_PROGRESS: { label: "In lucru", tone: "info" },
+  BLOCKED: { label: "Blocat", tone: "danger" },
+  REVIEW: { label: "In verificare", tone: "warning" },
+  DONE: { label: "Finalizat", tone: "success" },
+  CANCELED: { label: "Anulat", tone: "neutral" },
+};
+
+const priorityMeta: Record<TaskPriority, { label: string; tone: "neutral" | "info" | "danger" | "success" | "warning" }> = {
+  LOW: { label: "Scazuta", tone: "neutral" },
+  MEDIUM: { label: "Medie", tone: "info" },
+  HIGH: { label: "Ridicata", tone: "warning" },
+  CRITICAL: { label: "Critica", tone: "danger" },
+};
+
+const workOrderStatusOptions = Object.values(WorkOrderStatus).map((status) => ({
+  value: status,
+  label: workOrderStatusMeta[status].label,
+}));
+
+function getStatusTone(status: WorkOrderStatus) {
+  return workOrderStatusMeta[status].tone;
+}
+
+function getPriorityTone(priority: TaskPriority) {
+  return priorityMeta[priority].tone;
+}
+
+function formatPriority(priority: TaskPriority) {
+  return priorityMeta[priority].label;
+}
+
+function formatWorkOrderStatus(status: WorkOrderStatus) {
+  return workOrderStatusMeta[status].label;
+}
+
+function formatDeadline(dueDate: Date | null, status: WorkOrderStatus) {
+  if (!dueDate) return { label: "Fara termen", tone: "neutral" as const };
+  if (status === WorkOrderStatus.DONE || status === WorkOrderStatus.CANCELED) {
+    return { label: `Finalizat la ${formatDate(dueDate)}`, tone: "success" as const };
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
+  const diffDays = Math.round((dueStart.getTime() - startOfToday.getTime()) / 86400000);
+
+  if (diffDays < 0) return { label: `Restant de ${Math.abs(diffDays)} zile`, tone: "danger" as const };
+  if (diffDays === 0) return { label: "Scadenta azi", tone: "warning" as const };
+  if (diffDays === 1) return { label: "Scadenta maine", tone: "warning" as const };
+  return { label: `Scadenta in ${diffDays} zile`, tone: "neutral" as const };
 }
 
 export default async function WorkOrdersPage({
@@ -71,6 +125,12 @@ export default async function WorkOrdersPage({
         ? params.projectId
         : undefined,
   };
+  const activeWorkOrderWhere = {
+    deletedAt: null,
+    project: { deletedAt: null },
+    ...workOrderScopeWhere(userContext, scope),
+    status: { notIn: [WorkOrderStatus.DONE, WorkOrderStatus.CANCELED] },
+  };
 
   const projects = await withPoolFallback(
     "project.findMany",
@@ -105,6 +165,36 @@ export default async function WorkOrdersPage({
       }),
     [],
   );
+  const responsibleLoad = await withPoolFallback(
+    "workOrder.groupBy.responsibleId",
+    () =>
+      prisma.workOrder.groupBy({
+        by: ["responsibleId"],
+        where: { ...activeWorkOrderWhere, responsibleId: { not: null } },
+        _count: { _all: true },
+      }),
+    [],
+  );
+  const teamLoad = await withPoolFallback(
+    "workOrder.groupBy.teamId",
+    () =>
+      prisma.workOrder.groupBy({
+        by: ["teamId"],
+        where: { ...activeWorkOrderWhere, teamId: { not: null } },
+        _count: { _all: true },
+      }),
+    [],
+  );
+  const responsibleWorkloadById = Object.fromEntries(
+    responsibleLoad
+      .filter((item) => item.responsibleId)
+      .map((item) => [item.responsibleId as string, item._count._all]),
+  );
+  const teamWorkloadById = Object.fromEntries(
+    teamLoad
+      .filter((item) => item.teamId)
+      .map((item) => [item.teamId as string, item._count._all]),
+  );
   const workOrders = await withPoolFallback(
     "workOrder.findMany",
     () =>
@@ -114,6 +204,7 @@ export default async function WorkOrdersPage({
           id: true,
           title: true,
           description: true,
+          startDate: true,
           dueDate: true,
           priority: true,
           status: true,
@@ -148,6 +239,8 @@ export default async function WorkOrdersPage({
               projects={projects.map((project) => ({ id: project.id, label: project.title }))}
               users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
               teams={teams.map((team) => ({ id: team.id, label: team.name }))}
+              responsibleWorkloadById={responsibleWorkloadById}
+              teamWorkloadById={teamWorkloadById}
             />
           </Card>
         ) : null}
@@ -166,9 +259,9 @@ export default async function WorkOrdersPage({
                   {canDelete ? <option value="DELETE">Sterge logic (CANCELED)</option> : null}
                 </select>
                 <select name="status" defaultValue={WorkOrderStatus.IN_PROGRESS} disabled={!canUpdate}>
-                  {Object.values(WorkOrderStatus).map((status) => (
-                    <option key={status} value={status}>
-                      {status}
+                  {workOrderStatusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
                     </option>
                   ))}
                 </select>
@@ -196,9 +289,9 @@ export default async function WorkOrdersPage({
             <Input name="q" placeholder="Cauta lucrare" defaultValue={q} />
             <select name="status" defaultValue={statusFilter || ""}>
               <option value="">Toate statusurile</option>
-              {Object.values(WorkOrderStatus).map((status) => (
-                <option key={status} value={status}>
-                  {status}
+              {workOrderStatusOptions.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
                 </option>
               ))}
             </select>
@@ -219,7 +312,7 @@ export default async function WorkOrdersPage({
             <EmptyState title="Nu exista lucrari" description="Adauga primul ordin de lucru pentru santier." />
           ) : (
             <div>
-            <div className="space-y-3 md:hidden">
+                <div className="space-y-3 md:hidden">
               {workOrders.map((item) => (
                 <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3.5">
                   <div className="flex items-start justify-between gap-3">
@@ -229,14 +322,22 @@ export default async function WorkOrdersPage({
                       </Link>
                     <p className="text-xs text-[var(--muted)]">{item.project.title}</p>
                   </div>
-                    <Badge tone={item.status === "DONE" ? "success" : item.status === "BLOCKED" ? "danger" : item.status === "IN_PROGRESS" ? "info" : "neutral"}>
-                      {item.status}
+                    <Badge tone={getStatusTone(item.status)}>
+                      {formatWorkOrderStatus(item.status)}
                     </Badge>
                   </div>
                   <p className="mt-2 text-xs text-[var(--muted)]">{item.description?.slice(0, 120) || "-"}</p>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--muted-strong)]">
-                    <p>Echipa: {item.team?.name || "-"}</p>
-                    <p>Termen: {item.dueDate ? formatDate(item.dueDate) : "-"}</p>
+                  <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-[var(--muted-strong)] sm:grid-cols-2">
+                    <p>
+                      Responsabil: {item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "nealocat"}
+                    </p>
+                    <p>Echipa: {item.team?.name || "fara echipa"}</p>
+                    <p>Start: {item.startDate ? formatDate(item.startDate) : "nedefinit"}</p>
+                    <p>Termen: {item.dueDate ? formatDate(item.dueDate) : "nedefinit"}</p>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge tone={getPriorityTone(item.priority)}>{formatPriority(item.priority)}</Badge>
+                    <Badge tone={formatDeadline(item.dueDate, item.status).tone}>{formatDeadline(item.dueDate, item.status).label}</Badge>
                   </div>
                   {canUpdate || canDelete ? (
                     <div className="mt-3 space-y-2">
@@ -244,9 +345,9 @@ export default async function WorkOrdersPage({
                         <form action={updateWorkOrderStatus} className="grid grid-cols-[1fr_auto] gap-2">
                           <input type="hidden" name="id" value={item.id} />
                           <select name="status" defaultValue={item.status} className="h-10 rounded-md px-2 text-sm">
-                            {Object.values(WorkOrderStatus).map((status) => (
-                              <option key={status} value={status}>
-                                {status}
+                            {workOrderStatusOptions.map((status) => (
+                              <option key={status.value} value={status.value}>
+                                {status.label}
                               </option>
                             ))}
                           </select>
@@ -276,7 +377,7 @@ export default async function WorkOrdersPage({
                     <TH>PROIECT</TH>
                     <TH>RESPONSABIL</TH>
                     <TH>ECHIPA</TH>
-                    <TH>TERMEN</TH>
+                    <TH>PROGRAM</TH>
                     <TH>PRIORITATE</TH>
                     <TH>STATUS</TH>
                     <TH>ACTIUNI</TH>
@@ -292,14 +393,23 @@ export default async function WorkOrdersPage({
                         <p className="text-xs text-[var(--muted)]">{item.description?.slice(0, 92) || "-"}</p>
                       </TD>
                       <TD>{item.project.title}</TD>
-                      <TD>{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "Nealocat"}</TD>
-                      <TD>{item.team?.name || "-"}</TD>
-                      <TD>{item.dueDate ? formatDate(item.dueDate) : "-"}</TD>
                       <TD>
-                        <Badge tone={item.priority === "CRITICAL" ? "danger" : item.priority === "HIGH" ? "warning" : "neutral"}>{item.priority}</Badge>
+                        <p>{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "Nealocat"}</p>
+                        <p className="text-xs text-[var(--muted)]">Persoana notificata la schimbari</p>
                       </TD>
                       <TD>
-                        <Badge tone={item.status === "DONE" ? "success" : item.status === "BLOCKED" ? "danger" : item.status === "IN_PROGRESS" ? "info" : "neutral"}>{item.status}</Badge>
+                        <p>{item.team?.name || "Fara echipa"}</p>
+                        <p className="text-xs text-[var(--muted)]">Disponibilitate calculata pe lucrari active</p>
+                      </TD>
+                      <TD>
+                        <p>{item.startDate ? formatDate(item.startDate) : "Fara start"}</p>
+                        <p className="text-xs text-[var(--muted)]">{item.dueDate ? formatDate(item.dueDate) : "Fara termen"}</p>
+                      </TD>
+                      <TD>
+                        <Badge tone={getPriorityTone(item.priority)}>{formatPriority(item.priority)}</Badge>
+                      </TD>
+                      <TD>
+                        <Badge tone={getStatusTone(item.status)}>{formatWorkOrderStatus(item.status)}</Badge>
                       </TD>
                       <TD>
                         {canUpdate || canDelete ? (
@@ -308,9 +418,9 @@ export default async function WorkOrdersPage({
                               <form action={updateWorkOrderStatus}>
                                 <input type="hidden" name="id" value={item.id} />
                                 <select name="status" defaultValue={item.status} className="h-9 rounded-md px-2 text-xs">
-                                  {Object.values(WorkOrderStatus).map((status) => (
-                                    <option key={status} value={status}>
-                                      {status}
+                                  {workOrderStatusOptions.map((status) => (
+                                    <option key={status.value} value={status.value}>
+                                      {status.label}
                                     </option>
                                   ))}
                                 </select>

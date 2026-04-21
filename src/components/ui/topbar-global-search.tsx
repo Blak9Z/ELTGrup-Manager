@@ -105,7 +105,7 @@ export function TopbarGlobalSearch({
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder={placeholder || "Cauta global: proiect, lucrare, material, document..."}
+        placeholder={placeholder || "Cauta in modulul activ sau foloseste proiect:, lucrare:, document:"}
         className={cn("h-10 rounded-lg border-[var(--border)] bg-[var(--surface-card)] pl-9 pr-20", inputClassName)}
       />
       <button

@@ -14,6 +14,8 @@ const mobileQuickLinks = [
   { module: "field" as AppModule, href: "/teren", label: "Teren" },
 ];
 
+const globalSearchPlaceholder = "Cauta in modulul activ sau foloseste proiect:, lucrare:, document:";
+
 function formatTodayLabel() {
   return new Intl.DateTimeFormat("ro-RO", {
     weekday: "short",
@@ -44,7 +46,11 @@ export async function Topbar({
           <p className="truncate text-sm font-semibold text-[var(--foreground)]">ELTGRUP Manager</p>
         </div>
 
-        <TopbarGlobalSearch visibleModules={visibleModules} className="hidden max-w-[560px] flex-1 xl:block" />
+        <TopbarGlobalSearch
+          visibleModules={visibleModules}
+          className="hidden max-w-[560px] flex-1 xl:block"
+          placeholder={globalSearchPlaceholder}
+        />
 
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-2.5 py-1.5 text-xs text-[var(--muted-strong)] lg:flex">
@@ -77,7 +83,7 @@ export async function Topbar({
       </div>
 
       <div className="mt-3 xl:hidden">
-        <TopbarGlobalSearch visibleModules={visibleModules} placeholder="Cauta rapid in modulele active..." />
+        <TopbarGlobalSearch visibleModules={visibleModules} placeholder={globalSearchPlaceholder} />
       </div>
 
       <nav className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 lg:hidden">
