@@ -164,9 +164,9 @@ export default async function ClientiPage({
           subtitle="Date companie, contacte, proiecte, note operationale si istoric"
           actions={
             canCreate ? (
-              <form method="get" action={createHref}>
-                <Button type="submit">Adauga client</Button>
-              </form>
+              <Link href={createHref}>
+                <Button>Adauga client</Button>
+              </Link>
             ) : null
           }
         />
@@ -239,11 +239,11 @@ export default async function ClientiPage({
                     Deschide formularul intr-un dialog ca sa poti ramane pe lista curenta si sa revii rapid dupa salvare.
                   </p>
                 </div>
-                <form method="get" action={closeHref}>
-                  <Button type="submit" variant="ghost" size="sm" aria-label="Inchide formularul">
+                <Link href={closeHref}>
+                  <Button variant="ghost" size="sm" aria-label="Inchide formularul">
                     Inchide
                   </Button>
-                </form>
+                </Link>
               </div>
               <div className="max-h-[80vh] overflow-y-auto px-4 py-4 sm:px-5">
                 <ClientCreateForm />
