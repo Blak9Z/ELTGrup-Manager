@@ -230,6 +230,10 @@ prisma/
   schema.prisma
   seed.ts
 proxy.ts
+docs/
+  ARCHITECTURE.md  - Detalii tehnice si fluxuri de securitate
+  DATABASE.md      - Schema bazei de date si optimizari
+  USER_GUIDE.md    - Ghid de utilizare pentru modulele principale
 ```
 
 ## Securitate si acces
