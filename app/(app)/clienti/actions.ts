@@ -5,7 +5,7 @@ import { ClientType } from "@prisma/client";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
-import { assertClientAccess } from "@/src/lib/access-scope";
+import { assertClientAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 
@@ -25,6 +25,20 @@ const addClientNoteSchema = z.object({
   id: z.string().cuid(),
   note: z.string().trim().min(1).max(2000),
 });
+
+const archiveClientSchema = z.object({
+  id: z.string().cuid(),
+});
+
+const bulkArchiveClientsSchema = z.object({
+  ids: z.array(z.string().cuid()).min(1),
+});
+
+function revalidateClientRelatedPaths(clientId?: string) {
+  revalidatePath("/clienti");
+  revalidatePath("/proiecte");
+  if (clientId) revalidatePath(`/clienti/${clientId}`);
+}
 
 async function createClientInternal(formData: FormData) {
   const currentUser = await requirePermission("PROJECTS", "CREATE");
@@ -72,7 +86,7 @@ async function createClientInternal(formData: FormData) {
     diff: { name: created.name },
   });
 
-  revalidatePath("/clienti");
+  revalidateClientRelatedPaths(created.id);
 }
 
 export async function createClientAction(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -117,6 +131,92 @@ export async function addClientNote(formData: FormData) {
     diff: { note },
   });
 
-  revalidatePath("/clienti");
-  revalidatePath(`/proiecte`);
+  revalidateClientRelatedPaths(id);
+}
+
+export async function archiveClient(formData: FormData) {
+  const currentUser = await requirePermission("PROJECTS", "DELETE");
+  const parsed = archiveClientSchema.safeParse({
+    id: formData.get("id"),
+  });
+
+  if (!parsed.success) throw new Error("Client invalid pentru arhivare.");
+  await assertClientAccess(currentUser, parsed.data.id);
+
+  const existingClient = await prisma.client.findUnique({
+    where: { id: parsed.data.id },
+    select: { id: true, name: true, deletedAt: true },
+  });
+  if (!existingClient || existingClient.deletedAt) {
+    throw new Error("Client inexistent sau deja arhivat.");
+  }
+
+  await prisma.client.update({
+    where: { id: parsed.data.id },
+    data: { deletedAt: new Date() },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "CLIENT",
+    entityId: parsed.data.id,
+    action: "CLIENT_SOFT_DELETED",
+    diff: { name: existingClient.name },
+  });
+
+  revalidateClientRelatedPaths(parsed.data.id);
+}
+
+export async function bulkArchiveClientsAction(formData: FormData) {
+  const currentUser = await requirePermission("PROJECTS", "DELETE");
+  const parsed = bulkArchiveClientsSchema.safeParse({
+    ids: formData.getAll("ids").map(String).filter(Boolean),
+  });
+  if (!parsed.success) throw new Error("Selectie invalida pentru arhivarea clientilor.");
+
+  const scope = await resolveAccessScope(currentUser);
+  let scopedIds = parsed.data.ids;
+
+  if (scope.projectIds !== null) {
+    const allowedIds = new Set(
+      (
+        await prisma.client.findMany({
+          where: {
+            id: { in: parsed.data.ids },
+            deletedAt: null,
+            projects: {
+              some: {
+                id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] },
+              },
+            },
+          },
+          select: { id: true },
+        })
+      ).map((client) => client.id),
+    );
+
+    scopedIds = parsed.data.ids.filter((id) => allowedIds.has(id));
+  }
+
+  if (scopedIds.length === 0) {
+    throw new Error("Nu ai acces la clientii selectati.");
+  }
+
+  const result = await prisma.client.updateMany({
+    where: { id: { in: scopedIds }, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "CLIENT_BULK",
+    entityId: "MULTI",
+    action: "CLIENTS_ARCHIVED_BULK",
+    diff: {
+      ids: scopedIds,
+      affectedRows: result.count,
+    },
+  });
+
+  revalidateClientRelatedPaths();
 }

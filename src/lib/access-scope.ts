@@ -1,33 +1,74 @@
 import { InventoryAssignmentStatus, RoleKey } from "@prisma/client";
 import { AuthUserLike, isCompanyWideNonAdminRole, isPrivilegedUser } from "@/src/lib/access-control";
 import { prisma } from "@/src/lib/prisma";
+import { cache } from "react";
 
 export type AccessScope = {
   projectIds: string[] | null;
   teamId: string | null;
 };
 
-export async function resolveAccessScope(user: AuthUserLike): Promise<AccessScope> {
+export const resolveAccessScope = cache(async (user: AuthUserLike): Promise<AccessScope> => {
   if (isPrivilegedUser(user) || user.roleKeys.some((role) => isCompanyWideNonAdminRole(role as RoleKey))) {
     return { projectIds: null, teamId: null };
   }
 
-  const teamProfile = await prisma.workerProfile.findUnique({
+  const teamProfilePromise = prisma.workerProfile.findUnique({
     where: { userId: user.id },
     select: { teamId: true },
   });
-  const teamId = teamProfile?.teamId ?? null;
-  const projectIds = new Set<string>();
-  const email = (user.email || "").toLowerCase();
 
+  const email = (user.email || "").toLowerCase();
+  const promises: Promise<any>[] = [teamProfilePromise];
+
+  // 1. Managed projects (PM/SM)
   if (user.roleKeys.includes(RoleKey.PROJECT_MANAGER) || user.roleKeys.includes(RoleKey.SITE_MANAGER)) {
-    const managed = await prisma.project.findMany({
-      where: { managerId: user.id, deletedAt: null },
-      select: { id: true },
-    });
-    for (const project of managed) projectIds.add(project.id);
+    promises.push(
+      prisma.project.findMany({
+        where: { managerId: user.id, deletedAt: null },
+        select: { id: true },
+      })
+    );
   }
 
+  // 2. Client projects
+  if (user.roleKeys.includes(RoleKey.CLIENT_VIEWER) && email) {
+    promises.push(
+      prisma.project.findMany({
+        where: { deletedAt: null, client: { email: { equals: email, mode: "insensitive" } } },
+        select: { id: true },
+      })
+    );
+  }
+
+  // 3. Subcontractor projects
+  if (user.roleKeys.includes(RoleKey.SUBCONTRACTOR) && email) {
+    promises.push(
+      prisma.subcontractorAssignment.findMany({
+        where: {
+          subcontractor: { email: { equals: email, mode: "insensitive" } },
+        },
+        select: { projectId: true },
+      })
+    );
+  }
+
+  const results = await Promise.all(promises);
+  const teamProfile = results[0];
+  const teamId = teamProfile?.teamId ?? null;
+
+  const projectIds = new Set<string>();
+  
+  // Add results from parallel queries
+  for (let i = 1; i < results.length; i++) {
+    const items = results[i];
+    for (const item of items) {
+      projectIds.add(item.id || item.projectId);
+    }
+  }
+
+  // 4. Assigned orders (Depends on teamId, so we do it after Promise.all or we could have included it if we fetched teamProfile first)
+  // To keep it fully parallel, we could fetch workerProfile separately, but let's optimize the remaining one
   if (user.roleKeys.includes(RoleKey.PROJECT_MANAGER) || user.roleKeys.includes(RoleKey.SITE_MANAGER) || user.roleKeys.includes(RoleKey.WORKER)) {
     const assignedOrders = await prisma.workOrder.findMany({
       where: {
@@ -39,26 +80,8 @@ export async function resolveAccessScope(user: AuthUserLike): Promise<AccessScop
     for (const order of assignedOrders) projectIds.add(order.projectId);
   }
 
-  if (user.roleKeys.includes(RoleKey.CLIENT_VIEWER) && email) {
-    const clientProjects = await prisma.project.findMany({
-      where: { deletedAt: null, client: { email: { equals: email, mode: "insensitive" } } },
-      select: { id: true },
-    });
-    for (const project of clientProjects) projectIds.add(project.id);
-  }
-
-  if (user.roleKeys.includes(RoleKey.SUBCONTRACTOR) && email) {
-    const subcontractorProjects = await prisma.subcontractorAssignment.findMany({
-      where: {
-        subcontractor: { email: { equals: email, mode: "insensitive" } },
-      },
-      select: { projectId: true },
-    });
-    for (const entry of subcontractorProjects) projectIds.add(entry.projectId);
-  }
-
   return { projectIds: [...projectIds], teamId };
-}
+});
 
 export function projectScopeWhere(projectIds: string[] | null) {
   if (projectIds === null) return {};

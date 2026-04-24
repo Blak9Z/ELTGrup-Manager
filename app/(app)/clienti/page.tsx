@@ -1,6 +1,7 @@
 import { ClientType, Prisma } from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
@@ -13,7 +14,7 @@ import { resolveAccessScope } from "@/src/lib/access-scope";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
-import { addClientNote } from "./actions";
+import { addClientNote, archiveClient, bulkArchiveClientsAction } from "./actions";
 import { ClientCreateForm } from "./client-create-form";
 
 const clientTypeLabels: Record<ClientType, string> = {
@@ -25,22 +26,32 @@ const clientTypeLabels: Record<ClientType, string> = {
 };
 
 const clientTypeOptions = Object.values(ClientType);
+const archiveVisibilityOptions = ["active", "archived", "all"] as const;
+type ArchiveVisibility = (typeof archiveVisibilityOptions)[number];
+const archiveVisibilityLabels: Record<ArchiveVisibility, string> = {
+  active: "Active",
+  archived: "Arhivate",
+  all: "Toate",
+};
 
 function buildClientiHref({
   page,
   q,
   type,
+  archived,
   dialog,
 }: {
   page?: number;
   q?: string;
   type?: ClientType | null;
+  archived?: ArchiveVisibility;
   dialog?: "create";
 }) {
   return buildListHref("/clienti", {
     page,
     q,
     type: type || undefined,
+    archived: archived === "active" ? undefined : archived,
     dialog,
   });
 }
@@ -48,11 +59,12 @@ function buildClientiHref({
 export default async function ClientiPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; type?: string; dialog?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; type?: string; dialog?: string; archived?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q?.trim() || "";
   const typeFilter = parseEnumParam(params.type, clientTypeOptions);
+  const archivedFilter = parseEnumParam(params.archived, archiveVisibilityOptions) || "active";
   const page = parsePositiveIntParam(params.page);
   const pageSize = 12;
   const createDialogOpen = params.dialog === "create";
@@ -68,9 +80,16 @@ export default async function ClientiPage({
   const userEmail = session?.user?.email || null;
   const canCreate = hasPermission(roleKeys, "PROJECTS", "CREATE", userEmail);
   const canUpdate = hasPermission(roleKeys, "PROJECTS", "UPDATE", userEmail);
+  const canDelete = hasPermission(roleKeys, "PROJECTS", "DELETE", userEmail);
   const scopedProjectIds = scope.projectIds === null ? null : scope.projectIds.length ? scope.projectIds : ["__none__"];
-  const where: Prisma.ClientWhereInput = { deletedAt: null };
+  const where: Prisma.ClientWhereInput = {};
   const andFilters: Prisma.ClientWhereInput[] = [];
+
+  if (archivedFilter === "active") {
+    where.deletedAt = null;
+  } else if (archivedFilter === "archived") {
+    where.deletedAt = { not: null };
+  }
 
   if (scopedProjectIds) {
     andFilters.push({ projects: { some: { id: { in: scopedProjectIds } } } });
@@ -123,17 +142,19 @@ export default async function ClientiPage({
       phone: true,
       billingAddress: true,
       notes: true,
+      deletedAt: true,
       _count: { select: { projects: true, contacts: true } },
     },
     orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     skip,
     take,
   });
-  const hasFilters = Boolean(query || typeFilter);
-  const createHref = buildClientiHref({ page: currentPage, q: query, type: typeFilter, dialog: "create" });
-  const closeHref = buildClientiHref({ page: currentPage, q: query, type: typeFilter });
-  const prevHref = currentPage > 1 ? buildClientiHref({ page: currentPage - 1, q: query, type: typeFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
-  const nextHref = currentPage < totalPages ? buildClientiHref({ page: currentPage + 1, q: query, type: typeFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
+  const hasFilters = Boolean(query || typeFilter || archivedFilter !== "active");
+  const activeClientsOnPage = clients.filter((client) => !client.deletedAt);
+  const createHref = buildClientiHref({ page: currentPage, q: query, type: typeFilter, archived: archivedFilter, dialog: "create" });
+  const closeHref = buildClientiHref({ page: currentPage, q: query, type: typeFilter, archived: archivedFilter });
+  const prevHref = currentPage > 1 ? buildClientiHref({ page: currentPage - 1, q: query, type: typeFilter, archived: archivedFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
+  const nextHref = currentPage < totalPages ? buildClientiHref({ page: currentPage + 1, q: query, type: typeFilter, archived: archivedFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
 
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
@@ -155,8 +176,8 @@ export default async function ClientiPage({
             <Badge tone="neutral">{totalClients} clienti gasiti</Badge>
             {hasFilters ? <Badge tone="info">Filtru activ</Badge> : <Badge tone="success">Fara filtre</Badge>}
           </div>
-          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(220px,0.85fr)_auto]">
-            <form method="get" action="/clienti" className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.85fr)_auto] lg:col-span-2">
+          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto]">
+            <form method="get" action="/clienti" className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto] lg:col-span-2">
               <input type="hidden" name="page" value="1" />
               <Input
                 name="q"
@@ -172,6 +193,17 @@ export default async function ClientiPage({
                 {clientTypeOptions.map((type) => (
                   <option key={type} value={type}>
                     {clientTypeLabels[type]}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="archived"
+                defaultValue={archivedFilter}
+                className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+              >
+                {archiveVisibilityOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {archiveVisibilityLabels[option]}
                   </option>
                 ))}
               </select>
@@ -220,6 +252,38 @@ export default async function ClientiPage({
           </div>
         ) : null}
 
+        {canDelete ? (
+          <Card className="bulk-zone">
+            <details>
+              <summary>Actiuni bulk clienti</summary>
+              <form action={bulkArchiveClientsAction} className="mt-3 space-y-3">
+                <div className="bulk-controls flex flex-wrap items-center gap-2">
+                  <Badge tone="warning">Arhivare soft delete</Badge>
+                  <ConfirmSubmitButton
+                    text="Arhiveaza selectia"
+                    confirmMessage="Confirmi arhivarea clientilor selectati?"
+                    variant="destructive"
+                  />
+                </div>
+                <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  {activeClientsOnPage.length > 0 ? (
+                    <div className="grid gap-1 md:grid-cols-2">
+                      {activeClientsOnPage.map((client) => (
+                        <label key={client.id} className="flex items-center gap-2 text-sm text-[#d9e8fb]">
+                          <input type="checkbox" name="ids" value={client.id} className="h-4 w-4" />
+                          <span>{client.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[var(--muted)]">Nu exista clienti activi pe pagina curenta pentru arhivare.</p>
+                  )}
+                </div>
+              </form>
+            </details>
+          </Card>
+        ) : null}
+
         {clients.length === 0 ? (
           <EmptyState
             title={hasFilters ? "Nu exista clienti care sa corespunda filtrelor" : "Nu exista clienti in aria ta de acces"}
@@ -234,6 +298,7 @@ export default async function ClientiPage({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {clients.map((client) => (
             <Card key={client.id} className="space-y-3">
+              {client.deletedAt ? <Badge tone="warning">Arhivat</Badge> : null}
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <Link href={`/clienti/${client.id}`} className="text-base font-bold text-[#c8dcff] hover:underline">
@@ -254,13 +319,23 @@ export default async function ClientiPage({
               </div>
               <p className="text-xs text-[var(--muted)]">Note curente: {client.notes || "-"}</p>
 
-              {canUpdate ? (
+              {canUpdate && !client.deletedAt ? (
                 <form action={addClientNote} className="mt-3 space-y-2">
                   <input type="hidden" name="id" value={client.id} />
                   <Textarea name="note" rows={2} placeholder="Adauga nota operationala" />
                   <Button type="submit" size="sm" variant="secondary">
                     Salveaza nota
                   </Button>
+                </form>
+              ) : null}
+              {canDelete && !client.deletedAt ? (
+                <form action={archiveClient} className="mt-2">
+                  <input type="hidden" name="id" value={client.id} />
+                  <ConfirmSubmitButton
+                    text="Arhiveaza client"
+                    confirmMessage={`Confirmi arhivarea clientului ${client.name}?`}
+                    variant="destructive"
+                  />
                 </form>
               ) : null}
             </Card>

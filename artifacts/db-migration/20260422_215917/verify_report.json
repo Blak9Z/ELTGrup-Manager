@@ -1,0 +1,91 @@
+{
+  "generatedAt": "2026-04-22T19:01:16.276Z",
+  "counts": {
+    "users": 15,
+    "roles": 9,
+    "userRoles": 3,
+    "accounts": 0,
+    "sessions": 0,
+    "projects": 13,
+    "workOrders": 51,
+    "materials": 6,
+    "documents": 40,
+    "reports": 20,
+    "notifications": 60,
+    "inventoryItems": 0
+  },
+  "smoke": {
+    "auth": {
+      "id": "cmo92s0dl00098pjpodrc45aa",
+      "email": "seed.superadmin@eltgrup.local",
+      "roles": [
+        {
+          "role": {
+            "key": "SUPER_ADMIN"
+          }
+        }
+      ]
+    },
+    "project": {
+      "id": "cmo90jru300388p8c1ire5mdf",
+      "code": "ELT-2026-001",
+      "title": "Modernizare instalatii electrice hala #1",
+      "client": {
+        "id": "cmo90jlky002v8p8cbhpcquhp",
+        "name": "Construct Invest SRL"
+      },
+      "workOrders": [
+        {
+          "id": "cmo90k8my004w8p8c0cxnb7r1",
+          "title": "Lucrare #1 - Montaj corpuri"
+        }
+      ],
+      "materialUsage": [],
+      "documents": [
+        {
+          "id": "cmo90r9bi01008p8cc634sfju"
+        }
+      ],
+      "dailyReports": [
+        {
+          "id": "cmo90py7s00up8p8cwb9raed9"
+        }
+      ]
+    },
+    "workOrder": {
+      "id": "cmo90k8my004w8p8c0cxnb7r1",
+      "title": "Lucrare #1 - Montaj corpuri",
+      "projectId": "cmo90jru300388p8c1ire5mdf",
+      "teamId": "cmo90jit0002i8p8cytrdeby2",
+      "responsibleId": "cmo90ja3800298p8cqphzc1hi"
+    },
+    "material": {
+      "id": "cmo90lnnh00bt8p8ce8oncgk8",
+      "name": "Cablu FY 3x2.5",
+      "stockMovements": [
+        {
+          "id": "cmo90lqxg00c38p8cj604n370",
+          "warehouseId": "cmo90lpty00bz8p8c39l0qvlz"
+        }
+      ]
+    },
+    "document": {
+      "id": "cmo90r9bi01008p8cc634sfju",
+      "fileName": "doc-1.pdf",
+      "projectId": "cmo90jru300388p8c1ire5mdf",
+      "uploadedById": "cmo90j7es00278p8c6ydj8ylc"
+    },
+    "report": {
+      "id": "cmo90py7s00up8p8cwb9raed9",
+      "projectId": "cmo90jru300388p8c1ire5mdf",
+      "workOrderId": "cmo90k8my004w8p8c0cxnb7r1",
+      "createdById": "cmo90jbmm002a8p8cukr7msxp"
+    },
+    "notification": {
+      "id": "cmo90rr4j01288p8c3h68a60c",
+      "userId": "cmo90j7es00278p8c6ydj8ylc",
+      "type": "NEW_ASSIGNMENT",
+      "isRead": true
+    }
+  }
+}

@@ -1,6 +1,6 @@
 "use server";
 
-import { CostType, InvoiceStatus, NotificationType, RoleKey } from "@prisma/client";
+import { CostType, InvoiceStatus, NotificationType, Prisma, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { assertProjectAccess } from "@/src/lib/access-scope";
@@ -22,6 +22,14 @@ const costSchema = z.object({
 const updateInvoiceStatusSchema = z.object({
   id: z.string().cuid(),
   status: z.nativeEnum(InvoiceStatus),
+});
+
+const deleteInvoiceSchema = z.object({
+  id: z.string().cuid(),
+});
+
+const deleteCostEntrySchema = z.object({
+  id: z.string().cuid(),
 });
 
 async function createCostEntryInternal(formData: FormData) {
@@ -113,6 +121,112 @@ export async function updateInvoiceStatus(formData: FormData) {
       actionUrl: "/financiar",
     });
   }
+
+  revalidatePath("/financiar");
+  revalidatePath("/proiecte");
+  revalidatePath("/panou");
+}
+
+export async function deleteInvoice(formData: FormData) {
+  const currentUser = await requirePermission("INVOICES", "DELETE");
+  const parsed = deleteInvoiceSchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) {
+    throw new Error("Factura selectata este invalida.");
+  }
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: parsed.data.id },
+    select: {
+      id: true,
+      projectId: true,
+      invoiceNumber: true,
+      status: true,
+      totalAmount: true,
+    },
+  });
+  if (!invoice) {
+    throw new Error("Factura nu exista sau a fost deja stearsa.");
+  }
+  await assertProjectAccess(currentUser, invoice.projectId);
+
+  try {
+    await prisma.invoice.delete({
+      where: { id: invoice.id },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      throw new Error("Factura nu poate fi stearsa deoarece este legata de alte inregistrari.");
+    }
+    throw error;
+  }
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "INVOICE",
+    entityId: invoice.id,
+    action: "INVOICE_DELETED",
+    diff: {
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status,
+      totalAmount: invoice.totalAmount.toString(),
+    },
+  });
+
+  revalidatePath("/financiar");
+  revalidatePath("/proiecte");
+  revalidatePath("/panou");
+}
+
+export async function deleteCostEntry(formData: FormData) {
+  const currentUser = await requirePermission("INVOICES", "DELETE");
+  const parsed = deleteCostEntrySchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) {
+    throw new Error("Costul selectat este invalid.");
+  }
+
+  const costEntry = await prisma.costEntry.findUnique({
+    where: { id: parsed.data.id },
+    select: {
+      id: true,
+      projectId: true,
+      type: true,
+      description: true,
+      amount: true,
+      occurredAt: true,
+    },
+  });
+  if (!costEntry) {
+    throw new Error("Costul nu exista sau a fost deja sters.");
+  }
+  await assertProjectAccess(currentUser, costEntry.projectId);
+
+  try {
+    await prisma.costEntry.delete({
+      where: { id: costEntry.id },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      throw new Error("Costul nu poate fi sters deoarece este legat de alte inregistrari.");
+    }
+    throw error;
+  }
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "COST_ENTRY",
+    entityId: costEntry.id,
+    action: "COST_ENTRY_DELETED",
+    diff: {
+      type: costEntry.type,
+      description: costEntry.description,
+      amount: costEntry.amount.toString(),
+      occurredAt: costEntry.occurredAt.toISOString(),
+    },
+  });
 
   revalidatePath("/financiar");
   revalidatePath("/proiecte");

@@ -4,6 +4,7 @@ import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { FormModal } from "@/src/components/forms/form-modal";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
@@ -12,7 +13,7 @@ import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination
 import { hasPermission } from "@/src/lib/rbac";
 import { formatCurrency } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
-import { updateInvoiceStatus } from "./actions";
+import { deleteCostEntry, deleteInvoice, updateInvoiceStatus } from "./actions";
 import { CostEntryForm } from "./cost-entry-form";
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
@@ -70,6 +71,7 @@ export default async function FinanciarPage({
   const userEmail = session?.user?.email || null;
   const canCreateCost = hasPermission(roleKeys, "INVOICES", "CREATE", userEmail);
   const canUpdateInvoice = hasPermission(roleKeys, "INVOICES", "UPDATE", userEmail);
+  const canDeleteFinancial = hasPermission(roleKeys, "INVOICES", "DELETE", userEmail);
   const canExportInvoices = hasPermission(roleKeys, "INVOICES", "EXPORT", userEmail);
   const scopedProjectFilter = scope.projectIds === null ? undefined : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
   const invoiceScopeWhere = {
@@ -83,7 +85,7 @@ export default async function FinanciarPage({
     status: statusFilter,
   };
 
-  const [totalInvoices, costs, projects, invoiceStatusSummary] = await Promise.all([
+  const [totalInvoices, costs, projects, invoiceStatusSummary, recentCostEntries] = await Promise.all([
     prisma.invoice.count({ where: invoiceWhere }),
     prisma.costEntry.groupBy({
       by: ["type"],
@@ -100,6 +102,19 @@ export default async function FinanciarPage({
       where: invoiceScopeWhere,
       _count: { _all: true },
       _sum: { totalAmount: true, paidAmount: true },
+    }),
+    prisma.costEntry.findMany({
+      where: scope.projectIds === null ? undefined : { projectId: scopedProjectFilter! },
+      select: {
+        id: true,
+        type: true,
+        description: true,
+        amount: true,
+        occurredAt: true,
+        project: { select: { title: true } },
+      },
+      orderBy: [{ occurredAt: "desc" }, { id: "asc" }],
+      take: 20,
     }),
   ]);
   const { totalPages, currentPage, skip, take } = resolvePagination({
@@ -271,16 +286,30 @@ export default async function FinanciarPage({
                     {invoice.sentAt ? ` • Trimisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.sentAt)}` : ""}
                     {invoice.paidAt ? ` • Incasata ${new Intl.DateTimeFormat("ro-RO").format(invoice.paidAt)}` : ""}
                   </p>
-                  {canUpdateInvoice ? (
-                    <form action={updateInvoiceStatus} className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,220px)_auto] sm:items-center">
-                      <input type="hidden" name="id" value={invoice.id} />
-                      <select name="status" defaultValue={invoice.status} className="h-9 w-full rounded-md px-2 text-xs">
-                        {Object.values(InvoiceStatus).map((status) => (
-                          <option key={status} value={status}>{invoiceStatusLabels[status]}</option>
-                        ))}
-                      </select>
-                      <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">Actualizeaza status</Button>
-                    </form>
+                  {canUpdateInvoice || canDeleteFinancial ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {canUpdateInvoice ? (
+                        <form action={updateInvoiceStatus} className="grid gap-2 sm:grid-cols-[minmax(0,220px)_auto] sm:items-center">
+                          <input type="hidden" name="id" value={invoice.id} />
+                          <select name="status" defaultValue={invoice.status} className="h-9 w-full rounded-md px-2 text-xs">
+                            {Object.values(InvoiceStatus).map((status) => (
+                              <option key={status} value={status}>{invoiceStatusLabels[status]}</option>
+                            ))}
+                          </select>
+                          <Button type="submit" size="sm" variant="secondary" className="w-full sm:w-auto">Actualizeaza status</Button>
+                        </form>
+                      ) : null}
+                      {canDeleteFinancial ? (
+                        <form action={deleteInvoice}>
+                          <input type="hidden" name="id" value={invoice.id} />
+                          <ConfirmSubmitButton
+                            text="Sterge factura"
+                            variant="destructive"
+                            confirmMessage={`Confirmi stergerea definitiva a facturii ${invoice.invoiceNumber}?`}
+                          />
+                        </form>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               ))}
@@ -292,6 +321,47 @@ export default async function FinanciarPage({
               {currentPage > 1 ? <Link href={buildFinanciarHref({ page: currentPage - 1, status: statusFilter, projectId: params.projectId })} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Anterior</Link> : null}
               {currentPage < totalPages ? <Link href={buildFinanciarHref({ page: currentPage + 1, status: statusFilter, projectId: params.projectId })} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Urmator</Link> : null}
             </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Costuri</p>
+              <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Costuri recente</h2>
+            </div>
+            <Badge tone={recentCostEntries.length > 0 ? "info" : "neutral"}>{recentCostEntries.length} inregistrari</Badge>
+          </div>
+          <div className="mt-3 space-y-2">
+            {recentCostEntries.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">Nu exista costuri recente in aria ta.</p>
+            ) : (
+              recentCostEntries.map((entry) => (
+                <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3 text-sm text-[#dde8f8]">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-[var(--foreground)]">{entry.description}</p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {entry.project.title} • {entry.type} • {new Intl.DateTimeFormat("ro-RO").format(entry.occurredAt)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-[var(--foreground)]">{formatCurrency(entry.amount.toString())}</p>
+                      {canDeleteFinancial ? (
+                        <form action={deleteCostEntry} className="mt-2">
+                          <input type="hidden" name="id" value={entry.id} />
+                          <ConfirmSubmitButton
+                            text="Sterge cost"
+                            variant="destructive"
+                            confirmMessage="Confirmi stergerea definitiva a acestui cost?"
+                          />
+                        </form>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 

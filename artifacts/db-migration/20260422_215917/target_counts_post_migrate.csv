@@ -1,0 +1,13 @@
+table_name,row_count
+User,15
+Role,9
+UserRole,3
+Account,0
+Session,0
+Project,13
+WorkOrder,51
+Material,6
+Document,40
+DailySiteReport,20
+Notification,60
+InventoryItem,0

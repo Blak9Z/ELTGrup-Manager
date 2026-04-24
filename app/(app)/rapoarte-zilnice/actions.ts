@@ -3,7 +3,7 @@
 import { NotificationType, RoleKey } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { assertProjectAccess, assertWorkOrderAccess } from "@/src/lib/access-scope";
+import { assertProjectAccess, assertWorkOrderAccess, resolveAccessScope } from "@/src/lib/access-scope";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
 import { notifyRoles } from "@/src/lib/notifications";
@@ -25,6 +25,21 @@ const reportSchema = z.object({
   signatures: z.string().optional(),
   photos: z.string().optional(),
 });
+
+const deleteDailyReportSchema = z.object({
+  id: z.string().cuid(),
+});
+
+const bulkDeleteDailyReportsSchema = z.object({
+  ids: z.array(z.string().cuid()).min(1),
+});
+
+function revalidateDailyReportsPaths(input?: { projectId?: string | null; workOrderId?: string | null }) {
+  revalidatePath("/rapoarte-zilnice");
+  revalidatePath("/panou");
+  if (input?.projectId) revalidatePath(`/proiecte/${input.projectId}`);
+  if (input?.workOrderId) revalidatePath(`/lucrari/${input.workOrderId}`);
+}
 
 async function assertActiveProjectAccess(user: Awaited<ReturnType<typeof requirePermission>>, projectId: string) {
   await assertProjectAccess(user, projectId);
@@ -134,8 +149,7 @@ async function createDailyReportInternal(formData: FormData) {
     });
   }
 
-  revalidatePath("/rapoarte-zilnice");
-  revalidatePath("/panou");
+  revalidateDailyReportsPaths({ projectId: created.projectId, workOrderId: created.workOrderId });
 }
 
 export async function createDailyReportAction(
@@ -148,5 +162,98 @@ export async function createDailyReportAction(
   } catch (error) {
     if (error instanceof z.ZodError) return fromZodError(error);
     return { ok: false, message: error instanceof Error ? error.message : "Eroare la salvare raport" };
+  }
+}
+
+export async function deleteDailyReport(formData: FormData) {
+  const currentUser = await requirePermission("REPORTS", "DELETE");
+  const parsed = deleteDailyReportSchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) throw new Error("Raport zilnic invalid pentru stergere.");
+
+  const report = await prisma.dailySiteReport.findUnique({
+    where: { id: parsed.data.id },
+    select: { id: true, projectId: true, workOrderId: true, reportDate: true, createdById: true },
+  });
+  if (!report) throw new Error("Raportul zilnic nu exista sau a fost deja sters.");
+
+  await assertProjectAccess(currentUser, report.projectId);
+
+  await prisma.dailySiteReport.delete({
+    where: { id: report.id },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "DAILY_REPORT",
+    entityId: report.id,
+    action: "DAILY_REPORT_DELETED",
+    diff: {
+      projectId: report.projectId,
+      workOrderId: report.workOrderId,
+      reportDate: report.reportDate.toISOString(),
+      createdById: report.createdById,
+    },
+  });
+
+  revalidateDailyReportsPaths({ projectId: report.projectId, workOrderId: report.workOrderId });
+}
+
+export async function bulkDeleteDailyReports(formData: FormData) {
+  const currentUser = await requirePermission("REPORTS", "DELETE");
+  const parsed = bulkDeleteDailyReportsSchema.safeParse({
+    ids: formData.getAll("ids").map(String).filter(Boolean),
+  });
+  if (!parsed.success) throw new Error("Selectie bulk invalida pentru rapoarte zilnice.");
+
+  const reports = await prisma.dailySiteReport.findMany({
+    where: { id: { in: parsed.data.ids } },
+    select: { id: true, projectId: true, workOrderId: true, reportDate: true, createdById: true },
+  });
+  if (reports.length === 0) throw new Error("Nu am gasit rapoartele selectate pentru stergere.");
+
+  const scope = await resolveAccessScope(currentUser);
+  const deletableReports =
+    scope.projectIds === null ? reports : reports.filter((report) => scope.projectIds!.includes(report.projectId));
+  if (deletableReports.length === 0) {
+    throw new Error("Nu ai acces la rapoartele selectate pentru stergere.");
+  }
+
+  const deletedIds = deletableReports.map((report) => report.id);
+  const deletionResult = await prisma.dailySiteReport.deleteMany({
+    where: { id: { in: deletedIds } },
+  });
+  if (deletionResult.count === 0) {
+    throw new Error("Rapoartele selectate nu au putut fi sterse.");
+  }
+
+  const projectIds = [...new Set(deletableReports.map((report) => report.projectId))];
+  const workOrderIds = [
+    ...new Set(deletableReports.map((report) => report.workOrderId).filter((value): value is string => Boolean(value))),
+  ];
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "DAILY_REPORT_BULK",
+    entityId: "MULTI",
+    action: "DAILY_REPORTS_DELETED_BULK",
+    diff: {
+      requestedIds: parsed.data.ids,
+      deletedIds,
+      requestedCount: parsed.data.ids.length,
+      deletedCount: deletionResult.count,
+      skippedCount: parsed.data.ids.length - deletedIds.length,
+      projectIds,
+      workOrderIds,
+    },
+  });
+
+  revalidateDailyReportsPaths();
+  for (const projectId of projectIds) {
+    revalidatePath(`/proiecte/${projectId}`);
+  }
+  for (const workOrderId of workOrderIds) {
+    revalidatePath(`/lucrari/${workOrderId}`);
   }
 }

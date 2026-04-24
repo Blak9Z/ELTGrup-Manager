@@ -5,13 +5,19 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/empty-state";
+import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { formatDateTime } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
-import { markAllNotificationsRead, markNotificationReadAndOpen } from "./actions";
+import {
+  clearReadNotifications,
+  deleteNotification,
+  markAllNotificationsRead,
+  markNotificationReadAndOpen,
+} from "./actions";
 
 const notificationTypeLabels: Partial<Record<NotificationType, string>> = {
   NEW_ASSIGNMENT: "Asignare noua",
@@ -158,15 +164,27 @@ export default async function NotificariPage({
         <PageHeader
           title="Notificari"
           subtitle="Inbox operational: aprobari, alerte, schimbari de status si urmarire executie"
-          actions={
-            globalUnreadCount > 0 ? (
-              <form action={markAllNotificationsRead}>
-                <Button type="submit" variant="secondary">
-                  Marcheaza toate ca citite ({globalUnreadCount})
-                </Button>
-              </form>
-            ) : null
-          }
+          actions={(
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {globalUnreadCount > 0 ? (
+                <form action={markAllNotificationsRead}>
+                  <Button type="submit" variant="secondary">
+                    Marcheaza toate ca citite ({globalUnreadCount})
+                  </Button>
+                </form>
+              ) : null}
+              {readCount > 0 ? (
+                <form action={clearReadNotifications}>
+                  <ConfirmSubmitButton
+                    text={`Sterge citite (${readCount})`}
+                    confirmMessage="Confirmi stergerea permanenta a notificarilor citite?"
+                    variant="destructive"
+                    size="default"
+                  />
+                </form>
+              ) : null}
+            </div>
+          )}
         />
 
         <Card>
@@ -247,12 +265,22 @@ export default async function NotificariPage({
                     </div>
                     <p className="text-xs text-[var(--muted)]">{formatDateTime(notification.createdAt)}</p>
                   </div>
-                  <form action={markNotificationReadAndOpen}>
-                    <input type="hidden" name="id" value={notification.id} />
-                    <Button size="sm" type="submit" className="shrink-0">
-                      Deschide
-                    </Button>
-                  </form>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <form action={markNotificationReadAndOpen}>
+                      <input type="hidden" name="id" value={notification.id} />
+                      <Button size="sm" type="submit">
+                        Deschide
+                      </Button>
+                    </form>
+                    <form action={deleteNotification}>
+                      <input type="hidden" name="id" value={notification.id} />
+                      <ConfirmSubmitButton
+                        text="Sterge"
+                        confirmMessage="Confirmi stergerea acestei notificari?"
+                        variant="destructive"
+                      />
+                    </form>
+                  </div>
                 </div>
               </Card>
             ))}

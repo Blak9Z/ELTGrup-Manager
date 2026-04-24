@@ -9,13 +9,14 @@ const styles: Record<string, string> = {
   info: "border border-[rgba(94,134,190,0.44)] bg-[rgba(94,134,190,0.17)] text-[#cadcf7]",
 };
 
-export function Badge({ children, tone = "neutral" }: { children: React.ReactNode; tone?: keyof typeof styles }) {
+export function Badge({ children, tone = "neutral", className }: { children: React.ReactNode; tone?: keyof typeof styles; className?: string }) {
   return (
     <Chip
       variant="soft"
       className={cn(
         "h-auto min-h-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
         styles[tone],
+        className,
       )}
     >
       {children}

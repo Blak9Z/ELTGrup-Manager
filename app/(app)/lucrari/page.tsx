@@ -346,55 +346,70 @@ export default async function WorkOrdersPage({
             <EmptyState title="Nu exista lucrari" description="Adauga primul ordin de lucru pentru santier." />
           ) : (
             <div>
-                <div className="space-y-3 lg:hidden">
+            <div className="space-y-4 lg:hidden">
               {workOrders.map((item) => (
-                <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <Link href={`/lucrari/${item.id}`} className="font-semibold text-[var(--muted-strong)] hover:underline">
+                <div key={item.id} className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.5),rgba(15,25,37,0.5))] p-5 shadow-sm">
+                  <div className="mb-4 flex items-start justify-between gap-3 border-b border-[var(--border)]/50 pb-3">
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/lucrari/${item.id}`} className="block truncate text-lg font-bold text-[var(--foreground)] hover:text-[#9bc2ea]">
                         {item.title}
                       </Link>
-                    <p className="text-xs text-[var(--muted)]">{item.project.title}</p>
+                      <p className="mt-0.5 truncate text-xs font-medium text-[#9fb9d7]">{item.project.title}</p>
+                    </div>
+                    <Badge tone={getStatusTone(item.status)} className="shrink-0">{formatWorkOrderStatus(item.status)}</Badge>
                   </div>
-                    <Badge tone={getStatusTone(item.status)}>
-                      {formatWorkOrderStatus(item.status)}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-xs text-[var(--muted)]">{item.description?.slice(0, 120) || "-"}</p>
-                  <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-[var(--muted-strong)] sm:grid-cols-2">
-                    <p>
-                      Responsabil: {item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "nealocat"}
-                    </p>
-                    <p>Echipa: {item.team?.name || "fara echipa"}</p>
-                    <p>Start: {item.startDate ? formatDate(item.startDate) : "nedefinit"}</p>
-                    <p>Termen: {item.dueDate ? formatDate(item.dueDate) : "nedefinit"}</p>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge tone={getPriorityTone(item.priority)}>{formatPriority(item.priority)}</Badge>
-                    <Badge tone={formatDeadline(item.dueDate, item.status).tone}>{formatDeadline(item.dueDate, item.status).label}</Badge>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 rounded-xl bg-[rgba(13,20,30,0.4)] p-3 text-xs">
+                      <div className="space-y-1">
+                        <p className="font-bold uppercase tracking-wider text-[var(--muted)] text-[9px]">Prioritate</p>
+                        <Badge tone={getPriorityTone(item.priority)} className="w-full justify-center">{formatPriority(item.priority)}</Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-bold uppercase tracking-wider text-[var(--muted)] text-[9px]">Termen</p>
+                        <Badge tone={formatDeadline(item.dueDate, item.status).tone} className="w-full justify-center">{formatDeadline(item.dueDate, item.status).label}</Badge>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs">
+                      <p className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-[var(--muted)]">Responsabil:</span>
+                        <span className="truncate text-[var(--foreground)]">{item.responsible ? `${item.responsible.firstName} ${item.responsible.lastName}` : "nealocat"}</span>
+                      </p>
+                      <p className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-[var(--muted)]">Echipa:</span>
+                        <span className="truncate text-[var(--foreground)]">{item.team?.name || "fara echipa"}</span>
+                      </p>
+                      <p className="flex items-center justify-between gap-2 border-t border-[var(--border)]/30 pt-1.5">
+                        <span className="font-medium text-[var(--muted)]">Start:</span>
+                        <span className="text-[var(--foreground)]">{item.startDate ? formatDate(item.startDate) : "nedefinit"}</span>
+                      </p>
+                    </div>
                   </div>
                   {canUpdate || canDelete ? (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-4 flex flex-col gap-2 border-t border-[var(--border)]/30 pt-4">
                       {canUpdate ? (
-                        <form action={updateWorkOrderStatus} className="grid grid-cols-[1fr_auto] gap-2">
+                        <form action={updateWorkOrderStatus} className="flex flex-col gap-2">
                           <input type="hidden" name="id" value={item.id} />
-                          <select name="status" defaultValue={item.status} className="h-10 rounded-md px-2 text-sm">
-                            {workOrderStatusOptions.map((status) => (
-                              <option key={status.value} value={status.value}>
-                                {status.label}
-                              </option>
-                            ))}
-                          </select>
-                          <Button variant="ghost" size="sm" type="submit">
-                            Salveaza
-                          </Button>
+                          <div className="grid grid-cols-[1fr_auto] gap-2">
+                            <select name="status" defaultValue={item.status} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:border-[var(--border-strong)] focus:outline-none">
+                              {workOrderStatusOptions.map((status) => (
+                                <option key={status.value} value={status.value}>
+                                  {status.label}
+                                </option>
+                              ))}
+                            </select>
+                            <Button variant="secondary" type="submit" className="h-11 px-4">
+                              Actualizeaza
+                            </Button>
+                          </div>
                         </form>
                       ) : null}
                       {canDelete ? (
                         <form action={deleteWorkOrder}>
                           <input type="hidden" name="id" value={item.id} />
-                          <Button variant="destructive" size="sm" type="submit" className="w-full">
-                            Sterge
+                          <Button variant="destructive" type="submit" className="h-11 w-full">
+                            Sterge Lucrare
                           </Button>
                         </form>
                       ) : null}
@@ -484,28 +499,34 @@ export default async function WorkOrdersPage({
             </div>
           )}
 
-          <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[var(--border)]/60 pt-4 text-sm text-[var(--muted)] sm:flex-row">
-            <span>
-              Pagina {currentPage} din {totalPages}
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)]/60 pt-6 text-sm text-[var(--muted)] sm:flex-row">
+            <span className="font-medium">
+              Pagina <span className="text-[var(--foreground)]">{currentPage}</span> din <span className="text-[var(--foreground)]">{totalPages}</span>
             </span>
-            <div className="flex gap-2">
+            <div className="flex w-full gap-3 sm:w-auto">
               {currentPage > 1 ? (
-                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildLucrariHref({
-                  page: currentPage - 1,
-                  q: q || undefined,
-                  status: statusFilter,
-                  projectId: params.projectId,
-                })}>
+                <Link
+                  href={buildLucrariHref({
+                    page: currentPage - 1,
+                    q: q || undefined,
+                    status: statusFilter,
+                    projectId: params.projectId,
+                  })}
+                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
+                >
                   Anterior
                 </Link>
               ) : null}
               {currentPage < totalPages ? (
-                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildLucrariHref({
-                  page: currentPage + 1,
-                  q: q || undefined,
-                  status: statusFilter,
-                  projectId: params.projectId,
-                })}>
+                <Link
+                  href={buildLucrariHref({
+                    page: currentPage + 1,
+                    q: q || undefined,
+                    status: statusFilter,
+                    projectId: params.projectId,
+                  })}
+                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
+                >
                   Urmator
                 </Link>
               ) : null}

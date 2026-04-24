@@ -11,7 +11,13 @@ export async function buildProjectTimeline(projectId: string, limit = 40): Promi
       where: {
         OR: [{ entityId: projectId }, { entityType: "PROJECT", entityId: projectId }],
       },
-      include: { user: true },
+      select: {
+        id: true,
+        action: true,
+        createdAt: true,
+        entityType: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: limit,
     }),
@@ -145,29 +151,48 @@ export async function buildWorkOrderTimeline(workOrderId: string, limit = 40): P
   const [activity, comments, documents, timeEntries, reports] = await Promise.all([
     prisma.activityLog.findMany({
       where: { entityType: "WORK_ORDER", entityId: workOrderId },
-      include: { user: true },
+      select: {
+        id: true,
+        action: true,
+        createdAt: true,
+        entityType: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: limit,
     }),
     prisma.comment.findMany({
       where: { workOrderId },
-      include: { user: true },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: 20,
     }),
     prisma.document.findMany({
       where: { workOrderId },
+      select: { id: true, title: true, category: true, fileName: true, createdAt: true },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: 20,
     }),
     prisma.timeEntry.findMany({
       where: { workOrderId },
-      include: { user: true },
+      select: {
+        id: true,
+        status: true,
+        durationMinutes: true,
+        startAt: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
       orderBy: [{ startAt: "desc" }, { id: "asc" }],
       take: 20,
     }),
     prisma.dailySiteReport.findMany({
       where: { workOrderId },
+      select: { id: true, workCompleted: true, createdAt: true },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: 12,
     }),

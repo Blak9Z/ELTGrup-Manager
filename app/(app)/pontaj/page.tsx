@@ -277,40 +277,64 @@ export default async function PontajPage({
             <EmptyState title="Nu exista pontaj" description="Adauga prima inregistrare de timp sau schimba filtrele." />
           ) : (
             <div>
-              <div className="space-y-3 lg:hidden">
-                {entries.map((entry) => {
-                  const meta = getTimeEntryStatusMeta(entry.status);
-                  return (
-                    <div key={entry.id} className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.9),rgba(8,19,32,0.9))] p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-[#e7f1ff]">
-                            {entry.user.firstName} {entry.user.lastName}
-                          </p>
-                          <p className="text-xs text-[#9fb9d7]">{entry.project.title}</p>
+            <div className="space-y-4 lg:hidden">
+              {entries.map((entry) => {
+                const meta = getTimeEntryStatusMeta(entry.status);
+                return (
+                  <div key={entry.id} className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.5),rgba(15,25,37,0.5))] p-5 shadow-sm">
+                    <div className="mb-4 flex items-start justify-between gap-3 border-b border-[var(--border)]/50 pb-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-base font-bold text-[var(--foreground)]">
+                          {entry.user.firstName} {entry.user.lastName}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs font-medium text-[#9fb9d7]">{entry.project.title}</p>
+                      </div>
+                      <Badge tone={meta.tone} className="shrink-0">{meta.label}</Badge>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 rounded-xl bg-[rgba(13,20,30,0.4)] p-3 text-xs">
+                        <div className="space-y-1">
+                          <p className="font-bold uppercase tracking-wider text-[var(--muted)] text-[9px]">Durata</p>
+                          <p className="text-sm font-bold text-[var(--foreground)]">{Math.round(entry.durationMinutes / 60)} h</p>
                         </div>
-                        <Badge tone={meta.tone}>{meta.label}</Badge>
+                        <div className="space-y-1">
+                          <p className="font-bold uppercase tracking-wider text-[var(--muted)] text-[9px]">Pauza</p>
+                          <p className="text-sm font-bold text-[var(--foreground)]">{entry.breakMinutes} min</p>
+                        </div>
                       </div>
-                      <p className="mt-2 text-xs text-[#9fb9d7]">
-                        {formatDateTime(entry.startAt)} {entry.endAt ? `- ${formatDateTime(entry.endAt)}` : "(tura inca este deschisa)"}
-                      </p>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--muted-strong)]">
-                        <p>Durata: {Math.round(entry.durationMinutes / 60)} h</p>
-                        <p>Pauza: {entry.breakMinutes} min</p>
+
+                      <div className="space-y-2 text-xs">
+                        <div className="flex flex-col gap-1 border-b border-[var(--border)]/30 pb-2">
+                          <p className="font-medium text-[var(--muted)]">Interval:</p>
+                          <p className="text-[var(--foreground)]">
+                            {formatDateTime(entry.startAt)} 
+                            <span className="mx-1 text-[var(--muted)]">→</span>
+                            {entry.endAt ? formatDateTime(entry.endAt) : <span className="text-[#8dc1f5]">In curs...</span>}
+                          </p>
+                        </div>
+                        {entry.workOrder && (
+                          <p className="flex items-center gap-1.5">
+                            <span className="font-medium text-[var(--muted)]">Lucrare:</span>
+                            <span className="truncate text-[var(--foreground)]">{entry.workOrder.title}</span>
+                          </p>
+                        )}
+                        <p className="text-[11px] italic text-[var(--muted)]">{meta.description}</p>
                       </div>
-                      <p className="mt-2 text-xs text-[var(--muted)]">{meta.description}</p>
+
                       {entry.status === TimeEntryStatus.SUBMITTED && canApprove ? (
-                        <form action={approveTimeEntry} className="mt-3">
+                        <form action={approveTimeEntry} className="mt-2 pt-2 border-t border-[var(--border)]/30">
                           <input type="hidden" name="id" value={entry.id} />
-                          <Button type="submit" size="sm" className="w-full">
-                            Aproba pontaj
+                          <Button type="submit" className="h-11 w-full font-bold shadow-lg shadow-[#426990]/20">
+                            Aproba Pontaj
                           </Button>
                         </form>
                       ) : null}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
+            </div>
               <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] lg:block">
                 <Table aria-label="Pontaj">
                   <thead>
@@ -368,18 +392,24 @@ export default async function PontajPage({
             </div>
           )}
         </Card>
-        <div className="flex items-center justify-between text-sm text-[#9cb0cb]">
-            <span>
-            Pagina {currentPage} din {totalPages}
+        <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)]/60 pt-6 text-sm text-[var(--muted)] sm:flex-row">
+          <span className="font-medium">
+            Pagina <span className="text-[var(--foreground)]">{currentPage}</span> din <span className="text-[var(--foreground)]">{totalPages}</span>
           </span>
-          <div className="flex gap-2">
+          <div className="flex w-full gap-3 sm:w-auto">
             {currentPage > 1 ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildPontajHref(currentPage - 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}>
+              <Link
+                className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
+                href={buildPontajHref(currentPage - 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}
+              >
                 Anterior
               </Link>
             ) : null}
             {currentPage < totalPages ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildPontajHref(currentPage + 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}>
+              <Link
+                className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
+                href={buildPontajHref(currentPage + 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}
+              >
                 Urmator
               </Link>
             ) : null}

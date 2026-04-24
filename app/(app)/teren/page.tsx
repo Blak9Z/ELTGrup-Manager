@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Textarea } from "@/src/components/ui/textarea";
 import { auth } from "@/src/lib/auth";
 import { projectScopeWhere, resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
-import { formatDateTime } from "@/src/lib/utils";
+import { cn, formatDateTime } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import {
   checkInOnSite,
@@ -153,155 +153,181 @@ export default async function TerenPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[1fr_1.2fr_1fr]">
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Prezenta si tura</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Check-in, check-out si pontaj live</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Check-in/check-out marcheaza prezenta la santier. Pontajul live se gestioneaza separat, din acelasi panou.</p>
-
-            <div className="mt-3 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-xs text-[var(--muted)]">
-              <p>Check-in: {attendance?.checkInAt ? formatDateTime(attendance.checkInAt) : "-"}</p>
-              <p>Check-out: {attendance?.checkOutAt ? formatDateTime(attendance.checkOutAt) : "-"}</p>
+          <Card className="flex flex-col gap-5 p-6">
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">Prezenta si tura</p>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">Pontaj Rapid</h2>
+              <p className="text-sm leading-relaxed text-[var(--muted)]">Check-in marcheaza prezenta la santier. Pontajul live se gestioneaza separat.</p>
             </div>
 
-            <div className="mt-3 space-y-3">
-              <form action={checkInOnSite} className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-                <Input name="latitude" placeholder="Latitudine GPS (optional)" className="h-11" />
-                <Input name="longitude" placeholder="Longitudine GPS (optional)" className="h-11" />
-                <Button type="submit" className="h-11">Check-in santier</Button>
+            <div className="grid grid-cols-2 gap-4 rounded-2xl bg-[rgba(13,20,30,0.5)] p-4 shadow-inner">
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Check-in</p>
+                <p className="font-mono text-xs font-semibold text-[var(--foreground)]">{attendance?.checkInAt ? formatDateTime(attendance.checkInAt) : "--:--"}</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Check-out</p>
+                <p className="font-mono text-xs font-semibold text-[var(--foreground)]">{attendance?.checkOutAt ? formatDateTime(attendance.checkOutAt) : "--:--"}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <form action={checkInOnSite} className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input name="latitude" placeholder="Latitudine GPS" className="h-12 bg-[var(--surface)] text-sm" />
+                  <Input name="longitude" placeholder="Longitudine GPS" className="h-12 bg-[var(--surface)] text-sm" />
+                </div>
+                <Button type="submit" className="h-14 w-full text-base font-bold shadow-lg shadow-[#426990]/20 active:scale-[0.98]">Check-in santier</Button>
               </form>
-              <form action={checkOutOnSite} className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-                <Input name="latitude" placeholder="Latitudine GPS (optional)" className="h-11" />
-                <Input name="longitude" placeholder="Longitudine GPS (optional)" className="h-11" />
-                <Button type="submit" variant="secondary" className="h-11">Check-out santier</Button>
+              <form action={checkOutOnSite} className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input name="latitude" placeholder="Latitudine GPS" className="h-12 bg-[var(--surface)] text-sm" />
+                  <Input name="longitude" placeholder="Longitudine GPS" className="h-12 bg-[var(--surface)] text-sm" />
+                </div>
+                <Button type="submit" variant="secondary" className="h-14 w-full text-base font-bold active:scale-[0.98]">Check-out santier</Button>
               </form>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">Pontaj activ</p>
-              <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-                {activeEntry ? activeEntry.workOrder?.title || "General" : "Fara pontaj activ"}
-              </p>
-              <p className="text-xs text-[var(--muted)]">
-                {activeEntry ? `${activeEntry.project.title} • start ${formatDateTime(activeEntry.startAt)}` : "Porneste tura din lista de lucrari active."}
-              </p>
-              {activeEntry ? (
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <Badge tone={runningLive ? "success" : "warning"}>{runningLive ? "RUNNING" : "PAUSED"}</Badge>
-                  <div className="flex flex-wrap gap-2 sm:justify-end">
+            <div className="mt-2 flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(30,44,61,0.4),rgba(20,32,46,0.4))] p-5 shadow-sm">
+              <div className="flex items-center justify-between border-b border-[var(--border)]/30 pb-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">Tura Activa</p>
+                <Badge tone={runningLive ? "success" : "warning"} className="px-3 py-1 text-[10px] font-bold">{runningLive ? "LIVE" : "PAUZĂ"}</Badge>
+              </div>
+              
+              <div className="flex flex-col gap-1">
+                <p className="text-base font-bold text-[var(--foreground)] truncate">
+                  {activeEntry ? activeEntry.workOrder?.title || "General" : "Niciun pontaj activ"}
+                </p>
+                <p className="text-xs text-[var(--muted)] truncate">
+                  {activeEntry ? `${activeEntry.project.title}` : "Porneste lucrul dintr-un task."}
+                </p>
+                {activeEntry && <p className="mt-1 font-mono text-[11px] text-[#8dc1f5]">Start: {formatDateTime(activeEntry.startAt)}</p>}
+              </div>
+
+              {activeEntry && (
+                <div className="mt-2 grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     {runningLive ? (
-                      <form action={pauseLivePontaj}>
+                      <form action={pauseLivePontaj} className="w-full">
                         <input type="hidden" name="id" value={activeEntry.id} />
-                        <Button size="sm" variant="secondary">Pauza tura</Button>
+                        <Button variant="secondary" className="h-12 w-full font-bold">Pauză</Button>
                       </form>
                     ) : (
-                      <form action={resumeLivePontaj}>
+                      <form action={resumeLivePontaj} className="w-full">
                         <input type="hidden" name="id" value={activeEntry.id} />
-                        <Button size="sm">Reia tura</Button>
+                        <Button className="h-12 w-full font-bold">Reia</Button>
                       </form>
                     )}
-                    <form action={stopLivePontaj}>
+                    <form action={stopLivePontaj} className="w-full">
                       <input type="hidden" name="id" value={activeEntry.id} />
-                      <Button size="sm" variant="destructive">Inchide tura</Button>
+                      <Button variant="destructive" className="h-12 w-full font-bold">Stop</Button>
                     </form>
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           </Card>
 
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Raport zilnic</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Completeaza progresul de teren</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Prioritizeaza ce s-a facut azi, ce blocheaza echipa si ce are nevoie de follow-up. Acesta este raportul care merge mai departe la PM/birou.
-            </p>
-            {projects.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
-                Nu exista proiecte disponibile in aria ta. Raportarea teren devine disponibila dupa alocare.
-              </p>
-            ) : null}
-            <form action={createFieldUpdate} className="mt-3 space-y-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label>Proiect</label>
-                  <select name="projectId" required>
-                    <option value="">Selecteaza proiectul</option>
+          <Card className="flex flex-col gap-5 p-6">
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">Raport zilnic</p>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">Raport Teren</h2>
+              <p className="text-sm leading-relaxed text-[var(--muted)]">Trimite progresul și blochează riscurile direct din teren.</p>
+            </div>
+
+            <form action={createFieldUpdate} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-4">
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Proiect</p>
+                  <select name="projectId" required className="h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium focus:border-[var(--border-strong)] focus:outline-none">
+                    <option value="">Alege Proiect</option>
                     {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.title}
-                      </option>
+                      <option key={project.id} value={project.id}>{project.title}</option>
                     ))}
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <label>Lucrare / front de lucru</label>
-                  <select name="workOrderId" defaultValue="">
-                    <option value="">Fara lucrare specifica</option>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Front de Lucru</p>
+                  <select name="workOrderId" defaultValue="" className="h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium focus:border-[var(--border-strong)] focus:outline-none">
+                    <option value="">General (Fără Task)</option>
                     {tasks.map((task) => (
-                      <option key={task.id} value={task.id}>
-                        {task.title}
-                      </option>
+                      <option key={task.id} value={task.id}>{task.title}</option>
                     ))}
                   </select>
                 </div>
               </div>
-              <div className="space-y-1">
-                <label>Progres realizat azi</label>
-                <Textarea name="progress" rows={3} required placeholder="Ex: montaj finalizat pe sectorul A, testare inceputa pe sectorul B" />
+
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Realizări Azi</p>
+                <Textarea name="progress" rows={3} required placeholder="Ex: Montaj finalizat sector A..." className="bg-[var(--surface)] p-4 text-sm leading-relaxed" />
               </div>
-              <div className="space-y-1">
-                <label>Blocaje / riscuri</label>
-                <Textarea name="blockers" rows={2} placeholder="Ex: lipsa material, acces limitat, vreme, asteptare aviz" />
+
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Blocaje / Nevoi</p>
+                <Textarea name="blockers" rows={2} placeholder="Ex: Lipsă material X, acces blocat..." className="bg-[var(--surface)] p-4 text-sm" />
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label>Vreme</label>
-                  <Input name="weather" placeholder="Ex: senin, vant puternic, ploaie" />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Vreme</p>
+                  <Input name="weather" placeholder="Ex: Senin" className="h-12 bg-[var(--surface)]" />
                 </div>
-                <div className="space-y-1">
-                  <label>Muncitori prezenti</label>
-                  <Input name="workersCount" type="number" min={0} placeholder="0" defaultValue={0} />
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Muncitori</p>
+                  <Input name="workersCount" type="number" min={0} defaultValue={0} className="h-12 bg-[var(--surface)]" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <label>Observatii pentru birou</label>
-                <Textarea name="note" rows={2} placeholder="Ce trebuie urmarit maine, cine confirma, ce documente lipsesc" />
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={projects.length === 0}>
-                  {projects.length === 0 ? "Fara proiecte disponibile" : "Trimite raport de teren"}
-                </Button>
-              </div>
+
+              <Button type="submit" className="h-14 w-full text-base font-bold shadow-lg shadow-[#426990]/20 active:scale-[0.98]" disabled={projects.length === 0}>
+                {projects.length === 0 ? "Fără Proiecte" : "Trimite Raport"}
+              </Button>
             </form>
           </Card>
 
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Lucrari active</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Porneste lucrul pe frontul corect</h2>
-            <div className="mt-3 space-y-3">
+          <Card className="flex flex-col gap-4 p-6">
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">Lucrari active</p>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">Task-uri Azi</h2>
+            </div>
+            
+            <div className="flex flex-col gap-4">
               {tasks.length === 0 ? (
-                <p className="text-sm text-[var(--muted)]">Nu exista lucrari active pentru tine in acest moment.</p>
+                <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--border)] py-12 text-center">
+                  <p className="text-sm font-medium text-[var(--muted)]">Nicio lucrare activă atribuită.</p>
+                </div>
               ) : (
-                tasks.slice(0, 8).map((task) => (
-                  <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">{task.title}</p>
-                        <p className="text-xs text-[var(--muted)]">{task.project.title}</p>
+                tasks.slice(0, 10).map((task) => (
+                  <div key={task.id} className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.3),rgba(15,25,37,0.3))] p-5 transition-all active:bg-[var(--surface-2)]">
+                    <div className="flex items-start justify-between gap-3 border-b border-[var(--border)]/30 pb-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-base font-bold text-[var(--foreground)]">{task.title}</p>
+                        <p className="mt-0.5 truncate text-xs font-medium text-[#9fb9d7]">{task.project.title}</p>
                       </div>
-                      <Badge tone={task.status === "BLOCKED" ? "danger" : task.priority === "CRITICAL" ? "warning" : "neutral"}>{task.priority}</Badge>
+                      <Badge tone={task.status === "BLOCKED" ? "danger" : task.priority === "CRITICAL" ? "warning" : "neutral"} className="shrink-0 font-bold uppercase text-[9px]">
+                        {task.priority}
+                      </Badge>
                     </div>
-                    <p className="mt-2 text-xs text-[var(--muted)]">
-                      Stare: {task.status === "BLOCKED" ? "blocat" : task.status === "IN_PROGRESS" ? "in lucru" : "de pornit"}
-                    </p>
-                    <form action={startLivePontaj} className="mt-2 grid gap-2">
+
+                    <form action={startLivePontaj} className="flex flex-col gap-3">
                       <input type="hidden" name="workOrderId" value={task.id} />
                       <input type="hidden" name="projectId" value={task.projectId} />
-                      <Input name="note" placeholder="Nota de start tura (optional)" className="h-10" />
-                      <Button size="sm" className="h-10" disabled={Boolean(activeEntry)}>
-                        {activeEntry ? "Tura live deja pornita" : "Porneste tura pe lucrare"}
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Notă Activitate (opțional)</p>
+                        <Input name="note" placeholder="Ce urmează să faci?" className="h-11 bg-[var(--surface)] text-sm" />
+                      </div>
+                      <Button 
+                        size="lg" 
+                        className="h-12 w-full font-bold shadow-md shadow-[#426990]/10 active:scale-[0.98]" 
+                        disabled={Boolean(activeEntry)}
+                      >
+                        {activeEntry ? "Pontaj deja activ" : "Începe Lucrul"}
                       </Button>
                     </form>
+                    
+                    <div className="flex items-center gap-2 text-[10px] font-medium text-[var(--muted)]">
+                      <div className={cn("h-1.5 w-1.5 rounded-full", task.status === "BLOCKED" ? "bg-red-400" : task.status === "IN_PROGRESS" ? "bg-blue-400" : "bg-gray-400")} />
+                      <span>Stare: {task.status === "BLOCKED" ? "Blocat" : task.status === "IN_PROGRESS" ? "In Lucru" : "Planificat"}</span>
+                    </div>
                   </div>
                 ))
               )}
@@ -310,65 +336,90 @@ export default async function TerenPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Dovezi de teren</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Foto progres si semnatura de predare</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Incarca fotografia de progres si, unde e cazul, semnatura sau documentul de predare. Completeaza nota pentru contextul operatiunii.</p>
-            <div className="mt-3 space-y-3">
+          <Card className="flex flex-col gap-5 p-6">
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">Dovezi de teren</p>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">Foto & Semnătură</h2>
+            </div>
+            
+            <div className="flex flex-col gap-6">
               {tasks.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
-                  Nu exista lucrari active pentru incarcare foto.
-                </p>
-              ) : null}
-              {tasks.map((task) => (
-                <div key={task.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  <p className="font-semibold text-[var(--foreground)]">{task.title}</p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {task.project.title} • {task.status} • {task.priority}
-                  </p>
-
-                  <div className="mt-2 grid gap-2">
-                    <form action={uploadTaskPhoto} encType="multipart/form-data" className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-                      <input type="hidden" name="workOrderId" value={task.id} />
-                      <input type="hidden" name="projectId" value={task.projectId} />
-                      <input name="file" type="file" accept="image/*" className="h-10 w-full text-xs" required />
-                      <Input name="note" placeholder="Descriere foto progres" className="h-10" />
-                      <Button size="sm" variant="secondary" className="h-10">Incarca foto</Button>
-                    </form>
-
-                    <form action={uploadTaskSignature} encType="multipart/form-data" className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-                      <input type="hidden" name="workOrderId" value={task.id} />
-                      <input type="hidden" name="projectId" value={task.projectId} />
-                      <input name="file" type="file" accept="image/*,application/pdf" className="h-10 w-full text-xs" required />
-                      <Input name="note" placeholder="Semnatura client / PV predare" className="h-10" />
-                      <Button size="sm" className="h-10">Incarca semnatura</Button>
-                    </form>
-                  </div>
+                <div className="rounded-2xl border border-dashed border-[var(--border)] py-8 text-center text-sm text-[var(--muted)]">
+                  Nicio lucrare activă pentru probe.
                 </div>
-              ))}
+              ) : (
+                tasks.map((task) => (
+                  <div key={task.id} className="flex flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.3),rgba(15,25,37,0.3))] p-5">
+                    <div className="flex flex-col gap-1 border-b border-[var(--border)]/30 pb-3">
+                      <p className="font-bold text-[var(--foreground)]">{task.title}</p>
+                      <p className="text-xs font-medium text-[#9fb9d7]">{task.project.title}</p>
+                    </div>
+
+                    <div className="flex flex-col gap-6">
+                      <form action={uploadTaskPhoto} encType="multipart/form-data" className="flex flex-col gap-3">
+                        <input type="hidden" name="workOrderId" value={task.id} />
+                        <input type="hidden" name="projectId" value={task.projectId} />
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Foto Progres</p>
+                          <input name="file" type="file" accept="image/*" capture="environment" className="h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs text-[var(--muted-strong)]" required />
+                        </div>
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
+                          <Input name="note" placeholder="Descriere scurtă..." className="h-11 bg-[var(--surface)]" />
+                          <Button size="sm" variant="secondary" className="h-11 px-4 font-bold">Încarcă</Button>
+                        </div>
+                      </form>
+
+                      <div className="h-px bg-[var(--border)]/30" />
+
+                      <form action={uploadTaskSignature} encType="multipart/form-data" className="flex flex-col gap-3">
+                        <input type="hidden" name="workOrderId" value={task.id} />
+                        <input type="hidden" name="projectId" value={task.projectId} />
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Semnătură / PV</p>
+                          <input name="file" type="file" accept="image/*,application/pdf" className="h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-xs text-[var(--muted-strong)]" required />
+                        </div>
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
+                          <Input name="note" placeholder="Nume semnatar..." className="h-11 bg-[var(--surface)]" />
+                          <Button size="sm" className="h-11 px-4 font-bold">Încarcă</Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
 
-          <Card>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Istoric rapoarte</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele rapoarte teren</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Vezi rapid ce a fost raportat, unde exista blocaje si ce trebuie preluat mai departe.</p>
-            <div className="mt-3 space-y-2">
+          <Card className="flex flex-col gap-5 p-6">
+            <div className="flex flex-col gap-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--muted)]">Istoric rapoarte</p>
+              <h2 className="text-xl font-bold text-[var(--foreground)]">Ultimele Actualizări</h2>
+            </div>
+            <div className="flex flex-col gap-3">
               {reports.length === 0 ? (
-                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
-                  Nu exista rapoarte teren in istoricul curent.
-                </p>
-              ) : null}
-              {reports.map((report) => (
-                <div key={report.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">{report.project.title}</p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {formatDateTime(report.createdAt)} • {report.workOrder?.title || "General"}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--muted-strong)]">{report.workCompleted}</p>
-                  <p className="text-xs text-[var(--muted)]">Blocaje: {report.blockers || "-"}</p>
+                <div className="rounded-2xl border border-dashed border-[var(--border)] py-8 text-center text-sm text-[var(--muted)]">
+                  Nu există rapoarte recente.
                 </div>
-              ))}
+              ) : (
+                reports.map((report) => (
+                  <div key={report.id} className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(13,20,30,0.4),rgba(10,17,25,0.4))] p-4 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-[var(--border)]/30 pb-2">
+                      <p className="truncate text-sm font-bold text-[var(--foreground)]">{report.project.title}</p>
+                      <p className="shrink-0 font-mono text-[10px] text-[#8dc1f5]">{formatDateTime(report.createdAt)}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-xs leading-relaxed text-[var(--muted-strong)] line-clamp-2">{report.workCompleted}</p>
+                      {report.blockers && (
+                        <div className="flex items-start gap-2 rounded-lg bg-[rgba(170,66,83,0.1)] p-2">
+                          <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                          <p className="text-[11px] font-medium text-red-200 line-clamp-2">Blocaje: {report.blockers}</p>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-medium text-[var(--muted)] italic">{report.workOrder?.title || "Activitate Generală"}</p>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </section>

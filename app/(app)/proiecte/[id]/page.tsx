@@ -121,14 +121,44 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   const project = await prisma.project.findUnique({
     where: { id, deletedAt: null },
-    include: {
-      client: true,
-      manager: true,
-      phases: { orderBy: [{ position: "asc" }, { id: "asc" }] },
-      workOrders: { where: { deletedAt: null }, orderBy: [{ dueDate: "asc" }, { id: "asc" }], take: 15 },
-      materialUsage: { include: { material: true }, orderBy: [{ loggedAt: "desc" }, { id: "asc" }], take: 10 },
-      invoices: { orderBy: [{ dueDate: "desc" }, { id: "asc" }], take: 10 },
-      costs: { orderBy: [{ occurredAt: "desc" }, { id: "asc" }], take: 12 },
+    select: {
+      id: true,
+      title: true,
+      code: true,
+      siteAddress: true,
+      status: true,
+      estimatedBudget: true,
+      client: { select: { id: true, name: true } },
+      manager: { select: { id: true, firstName: true, lastName: true } },
+      phases: {
+        select: { id: true, title: true, position: true, completed: true },
+        orderBy: [{ position: "asc" }, { id: "asc" }],
+      },
+      workOrders: {
+        where: { deletedAt: null },
+        select: { id: true, title: true, status: true, priority: true, dueDate: true },
+        orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+        take: 15,
+      },
+      materialUsage: {
+        select: {
+          id: true,
+          quantityUsed: true,
+          material: { select: { name: true, unitOfMeasure: true } },
+        },
+        orderBy: [{ loggedAt: "desc" }, { id: "asc" }],
+        take: 10,
+      },
+      invoices: {
+        select: { id: true, invoiceNumber: true, totalAmount: true, dueDate: true, status: true },
+        orderBy: [{ dueDate: "desc" }, { id: "asc" }],
+        take: 10,
+      },
+      costs: {
+        select: { id: true, amount: true, type: true, description: true, occurredAt: true },
+        orderBy: [{ occurredAt: "desc" }, { id: "asc" }],
+        take: 12,
+      },
       documents: {
         orderBy: [{ createdAt: "desc" }, { id: "asc" }],
         take: 30,
@@ -147,11 +177,26 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           workOrder: { select: { id: true, title: true } },
         },
       },
-      dailyReports: { orderBy: [{ reportDate: "desc" }, { id: "asc" }], take: 10 },
-      subcontractors: { include: { subcontractor: true }, orderBy: { id: "asc" }, take: 10 },
+      dailyReports: {
+        select: { id: true, reportDate: true, workCompleted: true },
+        orderBy: [{ reportDate: "desc" }, { id: "asc" }],
+        take: 10,
+      },
+      subcontractors: {
+        select: {
+          id: true,
+          status: true,
+          contractRef: true,
+          subcontractor: { select: { name: true } },
+        },
+        orderBy: { id: "asc" },
+        take: 10,
+      },
       inventoryAssignments: {
         where: { status: { in: [InventoryAssignmentStatus.ACTIVE, InventoryAssignmentStatus.PARTIAL_RETURNED] } },
-        include: {
+        select: {
+          id: true,
+          quantity: true,
           item: {
             select: {
               id: true,

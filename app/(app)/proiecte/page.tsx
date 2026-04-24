@@ -214,56 +214,79 @@ export default async function ProjectsPage({
             <EmptyState title="Nu exista proiecte" description="Adauga primul proiect pentru a incepe planificarea." />
           ) : (
             <div>
-            <div className="space-y-3 lg:hidden">
+            <div className="space-y-4 lg:hidden">
               {projects.map((project) => {
                 const status = mapStatus(project.status);
                 return (
-                  <div key={project.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3.5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <Link href={`/proiecte/${project.id}`} className="font-semibold text-[var(--muted-strong)] hover:underline">
+                  <div key={project.id} className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(21,33,48,0.5),rgba(15,25,37,0.5))] p-5 shadow-sm active:bg-[var(--surface-2)]">
+                    <div className="mb-4 flex items-start justify-between gap-3 border-b border-[var(--border)]/50 pb-3">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/proiecte/${project.id}`} className="block truncate text-lg font-bold text-[var(--foreground)] hover:text-[#9bc2ea]">
                           {project.title}
                         </Link>
-                        <p className="text-xs text-[#9fb9d7]">{project.code}</p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">{formatProjectDates(project.startDate, project.endDate)}</p>
+                        <p className="mt-0.5 font-mono text-[11px] font-medium uppercase tracking-wider text-[#9fb9d7]">{project.code}</p>
                       </div>
-                      <Badge tone={status.tone}>{status.label}</Badge>
+                      <Badge tone={status.tone} className="shrink-0">{status.label}</Badge>
                     </div>
-                    <p className="mt-2 text-xs text-[var(--muted)]">{project.client.name}</p>
-                    <p className="text-xs text-[var(--muted)]">
-                      Coordonator: {project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "nealocat"}
-                    </p>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#cfe0f6]">
-                      <p>Buget: {formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
-                      <p>Progres: {project.progressPercent}%</p>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
+                        <div className="h-1.5 w-1.5 rounded-full bg-[#8dc1f5]" />
+                        <span className="truncate">{project.client.name}</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 rounded-xl bg-[rgba(13,20,30,0.4)] p-3">
+                        <div className="space-y-0.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Progres</p>
+                          <p className="text-sm font-semibold text-[var(--foreground)]">{project.progressPercent}%</p>
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Buget Estimat</p>
+                          <p className="text-sm font-semibold text-[var(--foreground)]">{formatCurrency(project.estimatedBudget?.toString() || 0)}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 text-xs text-[var(--muted)]">
+                        <p className="flex items-center gap-1.5">
+                          <span className="font-medium text-[var(--muted-strong)]">Interval:</span>
+                          {formatProjectDates(project.startDate, project.endDate)}
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                          <span className="font-medium text-[var(--muted-strong)]">Coordonator:</span>
+                          {project.manager ? `${project.manager.firstName} ${project.manager.lastName}` : "nealocat"}
+                        </p>
+                      </div>
                     </div>
                     {canUpdate || canDelete ? (
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-3 flex flex-col gap-2">
                         {canUpdate ? (
-                          <form action={updateProjectStatus} className="grid grid-cols-[1fr_auto] gap-2">
+                          <form action={updateProjectStatus} className="flex flex-col gap-2">
                             <input type="hidden" name="id" value={project.id} />
-                            <select name="status" defaultValue={project.status} className="h-10 rounded-md px-2 text-sm">
-                              {projectStatusOptions.map((st) => (
-                                <option key={st.value} value={st.value}>
-                                  {st.label}
-                                </option>
-                              ))}
-                            </select>
-                            <Button size="sm" variant="ghost" type="submit">
-                              Salveaza
-                            </Button>
+                            <div className="grid grid-cols-[1fr_auto] gap-2">
+                              <select name="status" defaultValue={project.status} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:border-[var(--border-strong)] focus:outline-none">
+                                {projectStatusOptions.map((st) => (
+                                  <option key={st.value} value={st.value}>
+                                    {st.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <Button variant="secondary" type="submit" className="h-11 px-4">
+                                Salveaza
+                              </Button>
+                            </div>
                           </form>
                         ) : null}
                         {canDelete ? (
                           <form action={deleteProject}>
                             <input type="hidden" name="id" value={project.id} />
-                            <Button size="sm" variant="destructive" type="submit" className="w-full">
-                              Sterge
+                            <Button variant="destructive" type="submit" className="h-11 w-full">
+                              Sterge Proiect
                             </Button>
                           </form>
                         ) : null}
                       </div>
                     ) : null}
+
                   </div>
                 );
               })}
@@ -347,11 +370,11 @@ export default async function ProjectsPage({
             </div>
             </div>
           )}
-          <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[var(--border)]/60 pt-4 text-sm text-[var(--muted)] sm:flex-row">
-            <span>
-              Pagina {currentPage} din {totalPages}
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--border)]/60 pt-6 text-sm text-[var(--muted)] sm:flex-row">
+            <span className="font-medium">
+              Pagina <span className="text-[var(--foreground)]">{currentPage}</span> din <span className="text-[var(--foreground)]">{totalPages}</span>
             </span>
-            <div className="flex gap-2">
+            <div className="flex w-full gap-3 sm:w-auto">
               {currentPage > 1 ? (
                 <Link
                   href={buildProiecteHref({
@@ -359,7 +382,7 @@ export default async function ProjectsPage({
                     q: query || undefined,
                     status: statusFilter,
                   })}
-                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]"
+                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
                 >
                   Anterior
                 </Link>
@@ -371,7 +394,7 @@ export default async function ProjectsPage({
                     q: query || undefined,
                     status: statusFilter,
                   })}
-                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]"
+                  className="flex h-11 flex-1 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-5 font-semibold text-[var(--muted-strong)] transition active:scale-95 sm:flex-none"
                 >
                   Urmator
                 </Link>

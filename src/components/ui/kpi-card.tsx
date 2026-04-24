@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { Card } from "@/src/components/ui/card";
 
-export function KpiCard({ label, value, helper }: { label: string; value: string; helper?: string }) {
+export const KpiCard = memo(function KpiCard({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
     <Card className="space-y-2 rounded-xl bg-[linear-gradient(180deg,rgba(20,31,46,0.96),rgba(13,22,33,0.96))] p-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">{label}</p>
@@ -10,4 +11,4 @@ export function KpiCard({ label, value, helper }: { label: string; value: string
       {helper ? <p className="text-xs text-[var(--muted)]">{helper}</p> : null}
     </Card>
   );
-}
+});

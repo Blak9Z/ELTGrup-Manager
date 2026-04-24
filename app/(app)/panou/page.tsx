@@ -97,70 +97,83 @@ export default async function DashboardPage() {
   const primaryRole = getPrimaryRole(userContext.roleKeys);
   const roleContext = roleExperience[primaryRole];
 
-  const delayedTasks = await prisma.workOrder.count({
-    where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } },
-  });
-  const todaySchedule = await prisma.workOrder.findMany({
-    where: { ...scopedWorkOrderWhere, startDate: { gte: startOfToday } },
-    select: {
-      id: true,
-      title: true,
-      startDate: true,
-      status: true,
-      description: true,
-      project: { select: { title: true } },
-      team: { select: { name: true } },
-    },
-    orderBy: [{ startDate: "asc" }, { id: "asc" }],
-    take: 10,
-  });
-  const clockedIn = await prisma.timeEntry.count({ where: { ...scopedProjectIdWhere, endAt: null } });
-  const pendingMaterialApprovals = await prisma.materialRequest.count({ where: { ...scopedProjectIdWhere, status: "PENDING" } });
-  const unpaidInvoices = await prisma.invoice.aggregate({
-    where: { ...scopedProjectIdWhere, status: { in: ["SENT", "OVERDUE", "PARTIAL_PAID"] } },
-    _sum: { totalAmount: true, paidAmount: true },
-  });
-  const latestActivities = await prisma.activityLog.findMany({
-    where:
-      scope.projectIds === null
-        ? undefined
-        : {
-            OR: [
-              { entityType: "PROJECT", entityId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
-              {
-                entityType: "WORK_ORDER",
-                entityId: { in: scopedWorkOrderIds && scopedWorkOrderIds.length ? scopedWorkOrderIds : ["__none__"] },
-              },
-            ],
-          },
-    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-    select: {
-      id: true,
-      action: true,
-      entityType: true,
-      entityId: true,
-      createdAt: true,
-      user: { select: { firstName: true, lastName: true } },
-    },
-    take: 8,
-  });
-  const weeklyHours = await prisma.timeEntry.groupBy({
-    by: ["projectId"],
-    where: scopedProjectIdWhere,
-    _sum: { durationMinutes: true },
-    orderBy: [{ _sum: { durationMinutes: "desc" } }, { projectId: "asc" }],
-    take: 6,
-  });
-  const projectStatusBuckets = await prisma.project.groupBy({
-    by: ["status"],
-    where: { deletedAt: null, ...scopedProjectWhere },
-    _count: { _all: true },
-  });
-  const workOrderStatusBuckets = await prisma.workOrder.groupBy({
-    by: ["status"],
-    where: scopedWorkOrderWhere,
-    _count: { _all: true },
-  });
+  // Parallelize all main dashboard data fetching
+  const [
+    delayedTasks,
+    todaySchedule,
+    clockedIn,
+    pendingMaterialApprovals,
+    unpaidInvoices,
+    latestActivities,
+    weeklyHours,
+    projectStatusBuckets,
+    workOrderStatusBuckets,
+  ] = await Promise.all([
+    prisma.workOrder.count({
+      where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } },
+    }),
+    prisma.workOrder.findMany({
+      where: { ...scopedWorkOrderWhere, startDate: { gte: startOfToday } },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        status: true,
+        description: true,
+        project: { select: { title: true } },
+        team: { select: { name: true } },
+      },
+      orderBy: [{ startDate: "asc" }, { id: "asc" }],
+      take: 10,
+    }),
+    prisma.timeEntry.count({ where: { ...scopedProjectIdWhere, endAt: null } }),
+    prisma.materialRequest.count({ where: { ...scopedProjectIdWhere, status: "PENDING" } }),
+    prisma.invoice.aggregate({
+      where: { ...scopedProjectIdWhere, status: { in: ["SENT", "OVERDUE", "PARTIAL_PAID"] } },
+      _sum: { totalAmount: true, paidAmount: true },
+    }),
+    prisma.activityLog.findMany({
+      where:
+        scope.projectIds === null
+          ? undefined
+          : {
+              OR: [
+                { entityType: "PROJECT", entityId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
+                {
+                  entityType: "WORK_ORDER",
+                  entityId: { in: scopedWorkOrderIds && scopedWorkOrderIds.length ? scopedWorkOrderIds : ["__none__"] },
+                },
+              ],
+            },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        createdAt: true,
+        user: { select: { firstName: true, lastName: true } },
+      },
+      take: 8,
+    }),
+    prisma.timeEntry.groupBy({
+      by: ["projectId"],
+      where: scopedProjectIdWhere,
+      _sum: { durationMinutes: true },
+      orderBy: [{ _sum: { durationMinutes: "desc" } }, { projectId: "asc" }],
+      take: 6,
+    }),
+    prisma.project.groupBy({
+      by: ["status"],
+      where: { deletedAt: null, ...scopedProjectWhere },
+      _count: { _all: true },
+    }),
+    prisma.workOrder.groupBy({
+      by: ["status"],
+      where: scopedWorkOrderWhere,
+      _count: { _all: true },
+    }),
+  ]);
 
   const projectsById =
     weeklyHours.length === 0

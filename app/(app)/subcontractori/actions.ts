@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { logActivity } from "@/src/lib/activity-log";
 import { ActionState, fromZodError } from "@/src/lib/action-state";
-import { assertSubcontractorAccess } from "@/src/lib/access-scope";
+import { assertSubcontractorAccess, resolveAccessScope, subcontractorScopeWhere } from "@/src/lib/access-scope";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
@@ -19,6 +19,21 @@ const subcontractorSchema = z.object({
   phone: z.string().optional(),
   approvalStatus: subcontractorStatusSchema,
 });
+
+const archiveSubcontractorSchema = z.object({
+  id: z.string().cuid(),
+});
+
+const bulkArchiveSubcontractorsSchema = z.object({
+  ids: z.array(z.string().cuid()).min(1),
+});
+
+function revalidateSubcontractorRelatedPaths(subcontractorId?: string) {
+  revalidatePath("/subcontractori");
+  revalidatePath("/proiecte");
+  revalidatePath("/lucrari");
+  if (subcontractorId) revalidatePath(`/subcontractori/${subcontractorId}`);
+}
 
 async function createSubcontractorInternal(formData: FormData) {
   const currentUser = await requirePermission("TASKS", "CREATE");
@@ -52,7 +67,7 @@ async function createSubcontractorInternal(formData: FormData) {
     action: "SUBCONTRACTOR_CREATED",
   });
 
-  revalidatePath("/subcontractori");
+  revalidateSubcontractorRelatedPaths(created.id);
 }
 
 export async function createSubcontractorAction(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -93,7 +108,7 @@ export async function updateSubcontractorStatus(formData: FormData) {
     diff: { status: approvalStatus },
   });
 
-  revalidatePath("/subcontractori");
+  revalidateSubcontractorRelatedPaths(id);
 }
 
 const updateSubcontractorSchema = z.object({
@@ -140,5 +155,87 @@ export async function updateSubcontractorAction(formData: FormData) {
     action: "SUBCONTRACTOR_UPDATED",
   });
 
-  revalidatePath("/subcontractori");
+  revalidateSubcontractorRelatedPaths(parsed.data.id);
+}
+
+export async function archiveSubcontractor(formData: FormData) {
+  const currentUser = await requirePermission("TASKS", "DELETE");
+  const parsed = archiveSubcontractorSchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) throw new Error("Subcontractor invalid pentru arhivare.");
+
+  await assertSubcontractorAccess(currentUser, parsed.data.id);
+
+  const existingSubcontractor = await prisma.subcontractor.findUnique({
+    where: { id: parsed.data.id },
+    select: { id: true, name: true, deletedAt: true },
+  });
+  if (!existingSubcontractor || existingSubcontractor.deletedAt) {
+    throw new Error("Subcontractor inexistent sau deja arhivat.");
+  }
+
+  await prisma.subcontractor.update({
+    where: { id: parsed.data.id },
+    data: { deletedAt: new Date() },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "SUBCONTRACTOR",
+    entityId: parsed.data.id,
+    action: "SUBCONTRACTOR_SOFT_DELETED",
+    diff: { name: existingSubcontractor.name },
+  });
+
+  revalidateSubcontractorRelatedPaths(parsed.data.id);
+}
+
+export async function bulkArchiveSubcontractorsAction(formData: FormData) {
+  const currentUser = await requirePermission("TASKS", "DELETE");
+  const parsed = bulkArchiveSubcontractorsSchema.safeParse({
+    ids: formData.getAll("ids").map(String).filter(Boolean),
+  });
+  if (!parsed.success) throw new Error("Selectie invalida pentru arhivarea subcontractorilor.");
+
+  const scope = await resolveAccessScope(currentUser);
+  let scopedIds = parsed.data.ids;
+
+  if (scope.projectIds !== null) {
+    const allowedIds = new Set(
+      (
+        await prisma.subcontractor.findMany({
+          where: {
+            id: { in: parsed.data.ids },
+            deletedAt: null,
+            ...subcontractorScopeWhere(scope),
+          },
+          select: { id: true },
+        })
+      ).map((subcontractor) => subcontractor.id),
+    );
+    scopedIds = parsed.data.ids.filter((id) => allowedIds.has(id));
+  }
+
+  if (scopedIds.length === 0) {
+    throw new Error("Nu ai acces la subcontractorii selectati.");
+  }
+
+  const result = await prisma.subcontractor.updateMany({
+    where: { id: { in: scopedIds }, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "SUBCONTRACTOR_BULK",
+    entityId: "MULTI",
+    action: "SUBCONTRACTORS_ARCHIVED_BULK",
+    diff: {
+      ids: scopedIds,
+      affectedRows: result.count,
+    },
+  });
+
+  revalidateSubcontractorRelatedPaths();
 }

@@ -99,7 +99,14 @@ async function createWorkOrderInternal(formData: FormData) {
       status: parsed.data.status,
       description: parsed.data.description,
     },
-    include: { project: true },
+    select: {
+      id: true,
+      title: true,
+      projectId: true,
+      responsibleId: true,
+      dueDate: true,
+      project: { select: { title: true } },
+    },
   });
 
   await logActivity({

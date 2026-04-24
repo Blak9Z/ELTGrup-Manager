@@ -15,7 +15,13 @@ import { resolveAccessScope } from "@/src/lib/access-scope";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
-import { approveAndIssueMaterialRequest, approveMaterialRequest, bulkMaterialRequestsAction } from "./actions";
+import {
+  approveAndIssueMaterialRequest,
+  approveMaterialRequest,
+  archiveMaterial,
+  bulkArchiveMaterialsAction,
+  bulkMaterialRequestsAction,
+} from "./actions";
 import { MaterialCreateForm, MaterialInvoiceUploadForm, MaterialRequestForm, StockMovementForm } from "./material-forms";
 
 const requestStatusLabels: Record<MaterialRequestStatus, string> = {
@@ -43,6 +49,9 @@ const movementTones: Record<StockMovementType, "success" | "warning" | "danger" 
   WASTE: "danger",
   ADJUSTMENT: "neutral",
 };
+
+const materialArchiveFilters = ["active", "archived", "all"] as const;
+type MaterialArchiveFilter = (typeof materialArchiveFilters)[number];
 
 const dateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
   dateStyle: "short",
@@ -85,26 +94,30 @@ function buildMaterialeHref({
   page,
   q,
   status,
+  archived,
 }: {
   page?: number;
   q?: string;
   status?: MaterialRequestStatus | null;
+  archived?: MaterialArchiveFilter;
 }) {
   return buildListHref("/materiale", {
     page,
     q,
     status: status || undefined,
+    archived: archived === "active" ? undefined : archived,
   });
 }
 
 export default async function MaterialePage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; status?: string; archived?: string }>;
 }) {
   const params = await searchParams;
   const page = parsePositiveIntParam(params.page);
   const statusFilter = parseEnumParam(params.status, Object.values(MaterialRequestStatus));
+  const archiveFilter = parseEnumParam(params.archived, materialArchiveFilters) || "active";
   const pageSize = 20;
   const session = await auth();
   const scope = session?.user
@@ -119,6 +132,7 @@ export default async function MaterialePage({
   const userEmail = session?.user?.email || null;
   const canCreateMaterials = hasPermission(roleKeys, "MATERIALS", "CREATE", userEmail);
   const canApproveRequests = hasPermission(roleKeys, "MATERIALS", "APPROVE", userEmail);
+  const canDeleteMaterials = hasPermission(roleKeys, "MATERIALS", "DELETE", userEmail);
   const canExportMaterials = hasPermission(roleKeys, "MATERIALS", "EXPORT", userEmail);
   const stockInvoiceRoles = new Set<RoleKey>([
     RoleKey.SUPER_ADMIN,
@@ -127,20 +141,34 @@ export default async function MaterialePage({
     RoleKey.ACCOUNTANT,
   ]);
   const canManageStockAndInvoices = roleKeys.some((role) => stockInvoiceRoles.has(role as RoleKey));
-  const materialWhere = params.q
+  const materialSearchWhere = params.q
     ? {
         OR: [
           { name: { contains: params.q, mode: "insensitive" as const } },
           { code: { contains: params.q, mode: "insensitive" as const } },
         ],
       }
-    : undefined;
+    : {};
+  const materialArchiveWhere =
+    archiveFilter === "archived"
+      ? { deletedAt: { not: null } }
+      : archiveFilter === "all"
+        ? {}
+        : { deletedAt: null };
+  const materialWhere = {
+    ...materialArchiveWhere,
+    ...materialSearchWhere,
+  };
+  const materialOptionWhere = {
+    deletedAt: null,
+    ...materialSearchWhere,
+  };
   const requestWhere = scope.projectIds === null ? {} : { projectId: scopedProjectFilter! };
   const requestHistoryStatuses = Object.values(MaterialRequestStatus).filter((status) => status !== MaterialRequestStatus.PENDING);
 
   const [materialOptions, totalMaterials, requests, projects, warehouses, materialInvoices, recentMovements] = await Promise.all([
     prisma.material.findMany({
-      where: materialWhere,
+      where: materialOptionWhere,
       select: { id: true, name: true },
       orderBy: [{ name: "asc" }, { id: "asc" }],
       take: 400,
@@ -219,6 +247,7 @@ export default async function MaterialePage({
       name: true,
       unitOfMeasure: true,
       minStockLevel: true,
+      deletedAt: true,
     },
   });
 
@@ -243,7 +272,8 @@ export default async function MaterialePage({
     const min = Number(material.minStockLevel || 0);
     return { ...material, stock, min };
   });
-  const lowStockRows = materialRows.filter((row) => row.stock <= row.min);
+  const lowStockRows = materialRows.filter((row) => !row.deletedAt && row.stock <= row.min);
+  const bulkArchivableMaterials = materialRows.filter((material) => !material.deletedAt);
   const pendingRequests = requests.filter((request) => request.status === MaterialRequestStatus.PENDING);
   const historyRequests = statusFilter
     ? requests.filter((request) => request.status === statusFilter)
@@ -445,7 +475,7 @@ export default async function MaterialePage({
               </p>
             </div>
           </div>
-          <form className="mb-3 mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+          <form className="mb-3 mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
             <input type="hidden" name="page" value="1" />
             <Input name="q" defaultValue={params.q || ""} placeholder="Cauta material" />
             <select name="status" defaultValue={statusFilter || ""} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)]">
@@ -456,10 +486,54 @@ export default async function MaterialePage({
                 </option>
               ))}
             </select>
+            <select
+              name="archived"
+              defaultValue={archiveFilter}
+              className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[rgba(95,142,193,0.2)]"
+            >
+              <option value="active">Materiale active</option>
+              <option value="archived">Doar arhivate</option>
+              <option value="all">Toate (active + arhivate)</option>
+            </select>
             <Button type="submit" variant="secondary">
               Filtreaza
             </Button>
           </form>
+          {archiveFilter !== "active" ? (
+            <p className="mb-3 text-xs text-[var(--muted)]">
+              Filtrul de catalog include materiale arhivate. Materialele arhivate nu mai apar in formularele operationale.
+            </p>
+          ) : null}
+
+          {canDeleteMaterials && bulkArchivableMaterials.length > 1 ? (
+            <Card className="mb-3 border-[var(--border)]/70 bg-[var(--surface-card)]">
+              <details>
+                <summary>Arhivare bulk materiale (pagina curenta)</summary>
+                <form action={bulkArchiveMaterialsAction} className="mt-3 space-y-3">
+                  <input type="hidden" name="operation" value="ARCHIVE" />
+                  <div className="flex justify-end">
+                    <ConfirmSubmitButton
+                      text="Arhiveaza selectia"
+                      variant="destructive"
+                      confirmMessage="Confirmi arhivarea materialelor selectate?"
+                    />
+                  </div>
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface)] p-3">
+                    <div className="grid gap-1 md:grid-cols-2">
+                      {bulkArchivableMaterials.map((material) => (
+                        <label key={material.id} className="flex items-center gap-2 text-sm text-[#d9e8fb]">
+                          <input type="checkbox" name="ids" value={material.id} className="h-4 w-4" />
+                          <span>
+                            {material.code} - {material.name}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </form>
+              </details>
+            </Card>
+          ) : null}
 
           {materials.length === 0 ? (
             <EmptyState title="Nu exista materiale" description="Configureaza catalogul de materiale." />
@@ -472,8 +546,21 @@ export default async function MaterialePage({
               ) : null}
               <div className="space-y-3 lg:hidden">
                 {materialRows.map((material) => {
-                  const statusTone = material.stock <= 0 ? "danger" : material.stock <= material.min ? "warning" : "success";
-                  const statusLabel = material.stock <= 0 ? "Stoc zero" : material.stock <= material.min ? "Stoc scazut" : "Stoc ok";
+                  const isArchived = Boolean(material.deletedAt);
+                  const statusTone = isArchived
+                    ? "neutral"
+                    : material.stock <= 0
+                      ? "danger"
+                      : material.stock <= material.min
+                        ? "warning"
+                        : "success";
+                  const statusLabel = isArchived
+                    ? "Arhivat"
+                    : material.stock <= 0
+                      ? "Stoc zero"
+                      : material.stock <= material.min
+                        ? "Stoc scazut"
+                        : "Stoc ok";
                   return (
                     <div key={material.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
                       <div className="flex items-start justify-between gap-3">
@@ -489,6 +576,22 @@ export default async function MaterialePage({
                         <p>Stoc: {formatQuantity(material.stock)}</p>
                         <p>Prag: {formatQuantity(material.min)}</p>
                       </div>
+                      {canDeleteMaterials ? (
+                        <div className="mt-3">
+                          {material.deletedAt ? (
+                            <p className="text-xs text-[var(--muted)]">Arhivat la {formatDateTime(material.deletedAt)}</p>
+                          ) : (
+                            <form action={archiveMaterial}>
+                              <input type="hidden" name="id" value={material.id} />
+                              <ConfirmSubmitButton
+                                text="Arhiveaza"
+                                variant="destructive"
+                                confirmMessage={`Confirmi arhivarea materialului ${material.name}?`}
+                              />
+                            </form>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -503,12 +606,26 @@ export default async function MaterialePage({
                       <TH>Stoc curent</TH>
                       <TH>Prag minim</TH>
                       <TH>Stare</TH>
+                      <TH>Actiuni</TH>
                     </tr>
                   </thead>
                   <tbody>
                     {materialRows.map((material) => {
-                      const statusTone = material.stock <= 0 ? "danger" : material.stock <= material.min ? "warning" : "success";
-                      const statusLabel = material.stock <= 0 ? "Stoc zero" : material.stock <= material.min ? "Stoc scazut" : "Stoc ok";
+                      const isArchived = Boolean(material.deletedAt);
+                      const statusTone = isArchived
+                        ? "neutral"
+                        : material.stock <= 0
+                          ? "danger"
+                          : material.stock <= material.min
+                            ? "warning"
+                            : "success";
+                      const statusLabel = isArchived
+                        ? "Arhivat"
+                        : material.stock <= 0
+                          ? "Stoc zero"
+                          : material.stock <= material.min
+                            ? "Stoc scazut"
+                            : "Stoc ok";
                       return (
                         <tr key={material.id}>
                           <TD>{material.code}</TD>
@@ -518,6 +635,24 @@ export default async function MaterialePage({
                           <TD>{formatQuantity(material.min)}</TD>
                           <TD>
                             <Badge tone={statusTone}>{statusLabel}</Badge>
+                          </TD>
+                          <TD>
+                            {canDeleteMaterials ? (
+                              material.deletedAt ? (
+                                <span className="text-xs text-[var(--muted)]">Arhivat la {formatDateTime(material.deletedAt)}</span>
+                              ) : (
+                                <form action={archiveMaterial}>
+                                  <input type="hidden" name="id" value={material.id} />
+                                  <ConfirmSubmitButton
+                                    text="Arhiveaza"
+                                    variant="destructive"
+                                    confirmMessage={`Confirmi arhivarea materialului ${material.name}?`}
+                                  />
+                                </form>
+                              )
+                            ) : (
+                              <span className="text-xs text-[var(--muted)]">Fara drept de arhivare</span>
+                            )}
                           </TD>
                         </tr>
                       );
@@ -539,6 +674,7 @@ export default async function MaterialePage({
                     page: currentPage - 1,
                     q: params.q || undefined,
                     status: statusFilter,
+                    archived: archiveFilter,
                   })}
                 >
                   Anterior
@@ -551,6 +687,7 @@ export default async function MaterialePage({
                     page: currentPage + 1,
                     q: params.q || undefined,
                     status: statusFilter,
+                    archived: archiveFilter,
                   })}
                 >
                   Urmator

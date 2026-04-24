@@ -515,6 +515,99 @@ const bulkMaterialRequestSchema = z.object({
   ids: z.array(z.string().cuid()).min(1),
 });
 
+const archiveMaterialSchema = z.object({
+  id: z.string().cuid(),
+});
+
+const bulkMaterialSchema = z.object({
+  operation: z.enum(["ARCHIVE"]),
+  ids: z.array(z.string().cuid()).min(1),
+});
+
+export async function archiveMaterial(formData: FormData) {
+  const currentUser = await requirePermission("MATERIALS", "DELETE");
+  const parsed = archiveMaterialSchema.safeParse({
+    id: formData.get("id"),
+  });
+
+  if (!parsed.success) {
+    throw new Error("Material invalid pentru arhivare.");
+  }
+
+  const material = await prisma.material.findUnique({
+    where: { id: parsed.data.id },
+    select: { id: true, name: true, deletedAt: true },
+  });
+  if (!material) {
+    throw new Error("Materialul selectat nu exista.");
+  }
+  if (material.deletedAt) {
+    throw new Error("Materialul este deja arhivat.");
+  }
+
+  await prisma.material.update({
+    where: { id: parsed.data.id },
+    data: { deletedAt: new Date() },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "MATERIAL",
+    entityId: parsed.data.id,
+    action: "MATERIAL_ARCHIVED",
+    diff: { name: material.name },
+  });
+
+  revalidatePath("/materiale");
+  revalidatePath("/panou");
+}
+
+export async function bulkArchiveMaterialsAction(formData: FormData) {
+  const currentUser = await requirePermission("MATERIALS", "DELETE");
+  const operation = String(formData.get("operation") || "");
+  const ids = formData.getAll("ids").map(String).filter(Boolean);
+  const parsed = bulkMaterialSchema.safeParse({
+    operation,
+    ids,
+  });
+  if (!parsed.success) {
+    throw new Error("Selectie bulk invalida pentru materiale.");
+  }
+
+  const archivableMaterials = await prisma.material.findMany({
+    where: {
+      id: { in: parsed.data.ids },
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+  const archivableIds = archivableMaterials.map((material) => material.id);
+  if (archivableIds.length === 0) {
+    throw new Error("Materialele selectate sunt deja arhivate sau inexistente.");
+  }
+
+  const result = await prisma.material.updateMany({
+    where: {
+      id: { in: archivableIds },
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+
+  await logActivity({
+    userId: currentUser.id,
+    entityType: "MATERIAL_BULK",
+    entityId: "MULTI",
+    action: "MATERIALS_ARCHIVED_BULK",
+    diff: { ids: archivableIds, affectedRows: result.count },
+  });
+
+  revalidatePath("/materiale");
+  revalidatePath("/panou");
+}
+
 export async function bulkMaterialRequestsAction(formData: FormData) {
   const currentUser = await requirePermission("MATERIALS", "APPROVE");
   const operation = String(formData.get("operation") || "");

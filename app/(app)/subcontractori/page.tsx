@@ -1,6 +1,7 @@
 import { AssignmentStatus, Prisma, SubcontractorApprovalStatus } from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
@@ -12,7 +13,12 @@ import { resolveAccessScope, subcontractorScopeWhere } from "@/src/lib/access-sc
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
-import { updateSubcontractorAction, updateSubcontractorStatus } from "./actions";
+import {
+  archiveSubcontractor,
+  bulkArchiveSubcontractorsAction,
+  updateSubcontractorAction,
+  updateSubcontractorStatus,
+} from "./actions";
 import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
 import { SubcontractorCreateForm } from "./subcontractor-create-form";
 
@@ -24,22 +30,32 @@ const subcontractorStatusLabels: Record<SubcontractorApprovalStatus, string> = {
 };
 
 const subcontractorStatusOptions = [...SUBCONTRACTOR_APPROVAL_STATUSES];
+const archiveVisibilityOptions = ["active", "archived", "all"] as const;
+type ArchiveVisibility = (typeof archiveVisibilityOptions)[number];
+const archiveVisibilityLabels: Record<ArchiveVisibility, string> = {
+  active: "Active",
+  archived: "Arhivate",
+  all: "Toate",
+};
 
 function buildSubcontractoriHref({
   page,
   q,
   status,
+  archived,
   dialog,
 }: {
   page?: number;
   q?: string;
   status?: SubcontractorApprovalStatus | null;
+  archived?: ArchiveVisibility;
   dialog?: "create";
 }) {
   return buildListHref("/subcontractori", {
     page,
     q,
     status: status || undefined,
+    archived: archived === "active" ? undefined : archived,
     dialog,
   });
 }
@@ -60,11 +76,12 @@ function getStatusTone(status: SubcontractorApprovalStatus) {
 export default async function SubcontractoriPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string; dialog?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; status?: string; dialog?: string; archived?: string }>;
 }) {
   const params = await searchParams;
   const query = params.q?.trim() || "";
   const statusFilter = parseEnumParam(params.status, subcontractorStatusOptions);
+  const archivedFilter = parseEnumParam(params.archived, archiveVisibilityOptions) || "active";
   const page = parsePositiveIntParam(params.page);
   const pageSize = 12;
   const createDialogOpen = params.dialog === "create";
@@ -76,11 +93,18 @@ export default async function SubcontractoriPage({
   };
   const canCreate = hasPermission(userContext.roleKeys, "TASKS", "CREATE", userContext.email);
   const canUpdate = hasPermission(userContext.roleKeys, "TASKS", "UPDATE", userContext.email);
+  const canDelete = hasPermission(userContext.roleKeys, "TASKS", "DELETE", userContext.email);
   const scope = session?.user
     ? await resolveAccessScope(userContext)
     : { projectIds: null, teamId: null };
-  const where: Prisma.SubcontractorWhereInput = { deletedAt: null, ...subcontractorScopeWhere(scope) };
+  const where: Prisma.SubcontractorWhereInput = { ...subcontractorScopeWhere(scope) };
   const andFilters: Prisma.SubcontractorWhereInput[] = [];
+
+  if (archivedFilter === "active") {
+    where.deletedAt = null;
+  } else if (archivedFilter === "archived") {
+    where.deletedAt = { not: null };
+  }
 
   if (statusFilter) {
     andFilters.push({ approvalStatus: statusFilter });
@@ -127,23 +151,35 @@ export default async function SubcontractoriPage({
   });
   const subcontractors = await prisma.subcontractor.findMany({
     where: filteredWhere,
-    include: {
+    select: {
+      id: true,
+      name: true,
+      approvalStatus: true,
+      contactName: true,
+      email: true,
+      phone: true,
+      cui: true,
+      notes: true,
+      deletedAt: true,
+      updatedAt: true,
       assignments: {
         where: {
           status: AssignmentStatus.ACTIV,
           ...assignmentProjectFilter,
         },
+        select: { id: true },
       },
     },
     orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     skip,
     take,
   });
-  const hasFilters = Boolean(query || statusFilter);
-  const createHref = buildSubcontractoriHref({ page: currentPage, q: query, status: statusFilter, dialog: "create" });
-  const closeHref = buildSubcontractoriHref({ page: currentPage, q: query, status: statusFilter });
-  const prevHref = currentPage > 1 ? buildSubcontractoriHref({ page: currentPage - 1, q: query, status: statusFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
-  const nextHref = currentPage < totalPages ? buildSubcontractoriHref({ page: currentPage + 1, q: query, status: statusFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
+  const hasFilters = Boolean(query || statusFilter || archivedFilter !== "active");
+  const activeSubcontractorsOnPage = subcontractors.filter((company) => !company.deletedAt);
+  const createHref = buildSubcontractoriHref({ page: currentPage, q: query, status: statusFilter, archived: archivedFilter, dialog: "create" });
+  const closeHref = buildSubcontractoriHref({ page: currentPage, q: query, status: statusFilter, archived: archivedFilter });
+  const prevHref = currentPage > 1 ? buildSubcontractoriHref({ page: currentPage - 1, q: query, status: statusFilter, archived: archivedFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
+  const nextHref = currentPage < totalPages ? buildSubcontractoriHref({ page: currentPage + 1, q: query, status: statusFilter, archived: archivedFilter, dialog: createDialogOpen ? "create" : undefined }) : null;
 
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
@@ -165,8 +201,8 @@ export default async function SubcontractoriPage({
             <Badge tone="neutral">{totalSubcontractors} subcontractori gasiti</Badge>
             {hasFilters ? <Badge tone="info">Filtru activ</Badge> : <Badge tone="success">Fara filtre</Badge>}
           </div>
-          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(220px,0.85fr)_auto]">
-            <form method="get" action="/subcontractori" className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.85fr)_auto] lg:col-span-2">
+          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto]">
+            <form method="get" action="/subcontractori" className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.85fr)_minmax(200px,0.85fr)_auto] lg:col-span-2">
               <input type="hidden" name="page" value="1" />
               <Input name="q" defaultValue={query} placeholder="Cauta dupa nume, CUI, contact, email, telefon sau nota" />
               <select
@@ -178,6 +214,17 @@ export default async function SubcontractoriPage({
                 {subcontractorStatusOptions.map((status) => (
                   <option key={status} value={status}>
                     {subcontractorStatusLabels[status]}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="archived"
+                defaultValue={archivedFilter}
+                className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm text-[var(--foreground)]"
+              >
+                {archiveVisibilityOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {archiveVisibilityLabels[option]}
                   </option>
                 ))}
               </select>
@@ -226,6 +273,38 @@ export default async function SubcontractoriPage({
           </div>
         ) : null}
 
+        {canDelete ? (
+          <Card className="bulk-zone">
+            <details>
+              <summary>Actiuni bulk subcontractori</summary>
+              <form action={bulkArchiveSubcontractorsAction} className="mt-3 space-y-3">
+                <div className="bulk-controls flex flex-wrap items-center gap-2">
+                  <Badge tone="warning">Arhivare soft delete</Badge>
+                  <ConfirmSubmitButton
+                    text="Arhiveaza selectia"
+                    confirmMessage="Confirmi arhivarea subcontractorilor selectati?"
+                    variant="destructive"
+                  />
+                </div>
+                <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  {activeSubcontractorsOnPage.length > 0 ? (
+                    <div className="grid gap-1 md:grid-cols-2">
+                      {activeSubcontractorsOnPage.map((company) => (
+                        <label key={company.id} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
+                          <input type="checkbox" name="ids" value={company.id} className="h-4 w-4" />
+                          <span>{company.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[var(--muted)]">Nu exista subcontractori activi pe pagina curenta pentru arhivare.</p>
+                  )}
+                </div>
+              </form>
+            </details>
+          </Card>
+        ) : null}
+
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Companii active</p>
@@ -263,6 +342,7 @@ export default async function SubcontractoriPage({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {subcontractors.map((company) => (
             <Card key={company.id} className="space-y-3">
+              {company.deletedAt ? <Badge tone="warning">Arhivat</Badge> : null}
               <div className="flex items-center justify-between gap-3">
                 <p className="font-semibold text-[var(--foreground)]">{company.name}</p>
                 <Badge tone={getStatusTone(company.approvalStatus)}>{subcontractorStatusLabels[company.approvalStatus]}</Badge>
@@ -275,7 +355,7 @@ export default async function SubcontractoriPage({
               </div>
               <p className="text-xs text-[var(--muted)]">Nota: {company.notes || "-"}</p>
 
-              {canUpdate ? (
+              {canUpdate && !company.deletedAt ? (
                 <>
                   <form action={updateSubcontractorAction} className="mt-3 grid gap-2">
                     <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Date comerciale</p>
@@ -301,8 +381,22 @@ export default async function SubcontractoriPage({
                   </form>
                 </>
               ) : (
-                <p className="mt-3 text-xs text-[var(--muted)]">Doar utilizatorii cu drept de actualizare lucrari pot modifica subcontractorii.</p>
+                <p className="mt-3 text-xs text-[var(--muted)]">
+                  {company.deletedAt
+                    ? "Subcontractor arhivat. Poti consulta doar datele istorice."
+                    : "Doar utilizatorii cu drept de actualizare lucrari pot modifica subcontractorii."}
+                </p>
               )}
+              {canDelete && !company.deletedAt ? (
+                <form action={archiveSubcontractor} className="mt-2">
+                  <input type="hidden" name="id" value={company.id} />
+                  <ConfirmSubmitButton
+                    text="Arhiveaza subcontractor"
+                    confirmMessage={`Confirmi arhivarea subcontractorului ${company.name}?`}
+                    variant="destructive"
+                  />
+                </form>
+              ) : null}
             </Card>
           ))}
         </div>

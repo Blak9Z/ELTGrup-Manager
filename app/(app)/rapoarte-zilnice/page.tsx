@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
+import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { FormModal } from "@/src/components/forms/form-modal";
@@ -10,6 +11,7 @@ import { buildListHref, parsePositiveIntParam, resolvePagination } from "@/src/l
 import { hasPermission } from "@/src/lib/rbac";
 import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
+import { bulkDeleteDailyReports, deleteDailyReport } from "./actions";
 import { DailyReportCreateForm } from "./daily-report-create-form";
 
 function buildRapoarteHref({
@@ -41,6 +43,7 @@ export default async function RapoarteZilnicePage({
   const userEmail = session?.user?.email || null;
   const canCreate = hasPermission(roleKeys, "REPORTS", "CREATE", userEmail);
   const canExport = hasPermission(roleKeys, "REPORTS", "EXPORT", userEmail);
+  const canDelete = hasPermission(roleKeys, "REPORTS", "DELETE", userEmail);
   const scope = session?.user
     ? await resolveAccessScope({
         id: session.user.id,
@@ -188,6 +191,36 @@ export default async function RapoarteZilnicePage({
           </Card>
         ) : null}
 
+        {canDelete && reports.length > 0 ? (
+          <Card className="bulk-zone">
+            <details>
+              <summary>Stergere bulk rapoarte</summary>
+              <form action={bulkDeleteDailyReports} className="mt-3 space-y-3">
+                <p className="text-sm text-[var(--muted)]">
+                  Selecteaza rapoartele din pagina curenta si confirma stergerea permanenta.
+                </p>
+                <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3">
+                  <div className="grid gap-1 md:grid-cols-2">
+                    {reports.map((report) => (
+                      <label key={`bulk-${report.id}`} className="flex items-center gap-2 text-sm text-[var(--muted-strong)]">
+                        <input type="checkbox" name="ids" value={report.id} className="h-4 w-4" />
+                        <span>
+                          {report.project.title} - {formatDate(report.reportDate)}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <ConfirmSubmitButton
+                  text="Sterge rapoartele selectate"
+                  confirmMessage="Confirmi stergerea permanenta a rapoartelor selectate?"
+                  variant="destructive"
+                />
+              </form>
+            </details>
+          </Card>
+        ) : null}
+
         <div className="space-y-3">
           {reports.map((report) => (
             <Card key={report.id}>
@@ -199,9 +232,21 @@ export default async function RapoarteZilnicePage({
                   <p className="mt-1 text-xs text-[var(--muted)]">Blocaje: {report.blockers || "N/A"}</p>
                   <p className="mt-1 text-xs text-[var(--muted)]">Creat de: {report.createdBy ? `${report.createdBy.firstName} ${report.createdBy.lastName}` : "-"}</p>
                 </div>
-                <Link href={`/api/rapoarte-zilnice/${report.id}/pdf`}>
-                  <Button size="sm" variant="secondary">Export PDF</Button>
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/api/rapoarte-zilnice/${report.id}/pdf`}>
+                    <Button size="sm" variant="secondary">Export PDF</Button>
+                  </Link>
+                  {canDelete ? (
+                    <form action={deleteDailyReport}>
+                      <input type="hidden" name="id" value={report.id} />
+                      <ConfirmSubmitButton
+                        text="Sterge"
+                        confirmMessage={`Confirmi stergerea raportului din ${formatDate(report.reportDate)}?`}
+                        variant="destructive"
+                      />
+                    </form>
+                  ) : null}
+                </div>
               </div>
             </Card>
           ))}

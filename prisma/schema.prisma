@@ -7,6 +7,813 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                       String                      @id @default(cuid())
+  email                    String                      @unique
+  passwordHash             String
+  firstName                String
+  lastName                 String
+  phone                    String?
+  isActive                 Boolean                     @default(true)
+  locale                   String                      @default("ro")
+  avatarUrl                String?
+  lastLoginAt              DateTime?
+  deletedAt                DateTime?
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
+  accounts                 Account[]
+  activityLogs             ActivityLog[]
+  attendance               Attendance[]
+  comments                 Comment[]
+  costsApproved            CostEntry[]                 @relation("CostApprovedBy")
+  createdDailyReports      DailySiteReport[]           @relation("ReportCreatedBy")
+  documents                Document[]                  @relation("UploadedBy")
+  equipmentUsage           EquipmentAssignment[]
+  issuedInventoryItems     InventoryAssignment[]       @relation("InventoryIssuedBy")
+  receivedInventoryItems   InventoryAssignment[]       @relation("InventoryReceivedBy")
+  returnedInventoryItems   InventoryAssignment[]       @relation("InventoryReturnedBy")
+  inventoryInspections     InventoryInspectionRecord[] @relation("InventoryInspectionPerformedBy")
+  createdInventoryItems    InventoryItem[]             @relation("InventoryItemCreatedBy")
+  inventoryMovements       InventoryMovement[]         @relation("InventoryMovementPerformedBy")
+  approvedMaterialRequests MaterialRequest[]           @relation("MaterialApprovedBy")
+  requestedMaterials       MaterialRequest[]           @relation("RequestedBy")
+  notifications            Notification[]
+  managerProjects          Project[]                   @relation("ProjectManager")
+  sessions                 Session[]
+  leadingTeams             Team[]                      @relation("TeamLead")
+  approvedTimeEntries      TimeEntry[]                 @relation("TimeEntryApprovedBy")
+  timeEntries              TimeEntry[]
+  roles                    UserRole[]
+  approvedWorkOrders       WorkOrder[]                 @relation("WorkOrderApprovedBy")
+  assignedOrders           WorkOrder[]                 @relation("AssignedResponsible")
+  workerProfile            WorkerProfile?
+
+  @@index([email, isActive])
+  @@index([createdAt])
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  key         RoleKey          @unique
+  label       String
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id       String             @id @default(cuid())
+  resource PermissionResource
+  action   PermissionAction
+  label    String
+  roles    RolePermission[]
+
+  @@unique([resource, action])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId String
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Team {
+  id         String          @id @default(cuid())
+  name       String
+  code       String          @unique
+  region     String?
+  leadUserId String?
+  isActive   Boolean         @default(true)
+  deletedAt  DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  attendance Attendance[]
+  leadUser   User?           @relation("TeamLead", fields: [leadUserId], references: [id])
+  workOrders WorkOrder[]
+  workers    WorkerProfile[]
+
+  @@index([region])
+}
+
+model WorkerProfile {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  teamId           String?
+  employeeCode     String    @unique
+  positionTitle    String
+  hourlyRate       Decimal?  @db.Decimal(10, 2)
+  hireDate         DateTime?
+  emergencyContact String?
+  canApproveTime   Boolean   @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  team             Team?     @relation(fields: [teamId], references: [id])
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id                 String          @id @default(cuid())
+  type               ClientType      @default(COMPANY)
+  name               String
+  cui                String?
+  registrationNumber String?
+  vatCode            String?
+  email              String?
+  phone              String?
+  billingAddress     String?
+  notes              String?
+  deletedAt          DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  contacts           ClientContact[]
+  documents          Document[]
+  invoices           Invoice[]
+  projects           Project[]
+
+  @@index([name])
+  @@index([type, deletedAt])
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  clientId  String
+  fullName  String
+  roleTitle String?
+  phone     String?
+  email     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id                   String                    @id @default(cuid())
+  code                 String                    @unique
+  title                String
+  description          String?
+  status               ProjectStatus
+  type                 ProjectType
+  siteAddress          String
+  siteLatitude         Decimal?                  @db.Decimal(10, 7)
+  siteLongitude        Decimal?                  @db.Decimal(10, 7)
+  contractValue        Decimal?                  @db.Decimal(14, 2)
+  estimatedBudget      Decimal?                  @db.Decimal(14, 2)
+  progressPercent      Int                       @default(0)
+  startDate            DateTime?
+  endDate              DateTime?
+  managerId            String?
+  clientId             String
+  internalNotes        String?
+  riskIssuesLog        String?
+  deletedAt            DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  costs                CostEntry[]
+  dailyReports         DailySiteReport[]
+  documents            Document[]
+  equipmentAssignments EquipmentAssignment[]
+  inventoryAssignments InventoryAssignment[]
+  inventoryMovements   InventoryMovement[]
+  invoices             Invoice[]
+  materialRequests     MaterialRequest[]
+  client               Client                    @relation(fields: [clientId], references: [id])
+  manager              User?                     @relation("ProjectManager", fields: [managerId], references: [id])
+  materialUsage        ProjectMaterialUsage[]
+  phases               ProjectPhase[]
+  stockMovements       StockMovement[]
+  subcontractors       SubcontractorAssignment[]
+  timeEntries          TimeEntry[]
+  workOrders           WorkOrder[]
+
+  @@index([status, managerId])
+  @@index([startDate, endDate])
+  @@index([clientId])
+}
+
+model ProjectPhase {
+  id         String      @id @default(cuid())
+  projectId  String
+  title      String
+  position   Int
+  startDate  DateTime?
+  endDate    DateTime?
+  completed  Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workOrders WorkOrder[]
+
+  @@index([projectId, position])
+}
+
+model WorkOrder {
+  id                       String                    @id @default(cuid())
+  projectId                String
+  phaseId                  String?
+  title                    String
+  description              String?
+  siteLocation             String?
+  responsibleId            String?
+  teamId                   String?
+  startDate                DateTime?
+  dueDate                  DateTime?
+  estimatedHours           Decimal?                  @db.Decimal(8, 2)
+  actualHours              Decimal?                  @db.Decimal(8, 2)
+  status                   WorkOrderStatus           @default(TODO)
+  priority                 TaskPriority              @default(MEDIUM)
+  checklistProgress        Int                       @default(0)
+  dependencyIds            String[]
+  isRecurring              Boolean                   @default(false)
+  recurrenceRule           String?
+  approvalRequired         Boolean                   @default(false)
+  approvedAt               DateTime?
+  approvedById             String?
+  deletedAt                DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  comments                 Comment[]
+  dailyReports             DailySiteReport[]
+  documents                Document[]
+  materialUsage            ProjectMaterialUsage[]
+  subcontractorAssignments SubcontractorAssignment[]
+  checklistItems           TaskChecklistItem[]
+  timeEntries              TimeEntry[]
+  approvedBy               User?                     @relation("WorkOrderApprovedBy", fields: [approvedById], references: [id])
+  phase                    ProjectPhase?             @relation(fields: [phaseId], references: [id])
+  project                  Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  responsible              User?                     @relation("AssignedResponsible", fields: [responsibleId], references: [id])
+  team                     Team?                     @relation(fields: [teamId], references: [id])
+
+  @@index([teamId, startDate])
+  @@index([dueDate, priority])
+  @@index([projectId, status])
+}
+
+model TaskChecklistItem {
+  id          String    @id @default(cuid())
+  workOrderId String
+  label       String
+  isDone      Boolean   @default(false)
+  doneAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, isDone])
+}
+
+model TimeEntry {
+  id                      String             @id @default(cuid())
+  userId                  String
+  projectId               String
+  workOrderId             String?
+  startAt                 DateTime
+  endAt                   DateTime?
+  breakMinutes            Int                @default(0)
+  overtimeMinutes         Int                @default(0)
+  durationMinutes         Int                @default(0)
+  note                    String?
+  status                  TimeEntryStatus    @default(DRAFT)
+  gpsLatitude             Decimal?           @db.Decimal(10, 7)
+  gpsLongitude            Decimal?           @db.Decimal(10, 7)
+  approvedById            String?
+  approvedAt              DateTime?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  liveState               TimeEntryLiveState @default(STOPPED)
+  pauseAccumulatedMinutes Int                @default(0)
+  pausedAt                DateTime?
+  approvedBy              User?              @relation("TimeEntryApprovedBy", fields: [approvedById], references: [id])
+  project                 Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workOrder               WorkOrder?         @relation(fields: [workOrderId], references: [id])
+
+  @@index([userId, startAt])
+  @@index([projectId, status])
+  @@index([userId, liveState, endAt])
+}
+
+model Attendance {
+  id           String           @id @default(cuid())
+  userId       String
+  teamId       String?
+  date         DateTime
+  checkInAt    DateTime?
+  checkOutAt   DateTime?
+  status       AttendanceStatus @default(PRESENT)
+  gpsLatitude  Decimal?         @db.Decimal(10, 7)
+  gpsLongitude Decimal?         @db.Decimal(10, 7)
+  note         String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  team         Team?            @relation(fields: [teamId], references: [id])
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date, teamId])
+}
+
+model Material {
+  id             String                 @id @default(cuid())
+  code           String                 @unique
+  name           String
+  category       String?
+  unitOfMeasure  String
+  supplierName   String?
+  purchasePrice  Decimal?               @db.Decimal(10, 2)
+  internalCost   Decimal?               @db.Decimal(10, 2)
+  minStockLevel  Decimal?               @db.Decimal(10, 2)
+  deletedAt      DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  requests       MaterialRequest[]
+  usageLogs      ProjectMaterialUsage[]
+  stockMovements StockMovement[]
+
+  @@index([name])
+}
+
+model Warehouse {
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  name               String
+  address            String?
+  managerName        String?
+  deletedAt          DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  inventoryItems     InventoryItem[]
+  inventoryLocations InventoryLocation[]
+  inventoryMovements InventoryMovement[]
+  stockMovements     StockMovement[]
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  materialId  String
+  warehouseId String
+  projectId   String?
+  type        StockMovementType
+  quantity    Decimal           @db.Decimal(12, 2)
+  unitCost    Decimal?          @db.Decimal(10, 2)
+  documentRef String?
+  note        String?
+  movedAt     DateTime          @default(now())
+  createdAt   DateTime          @default(now())
+  material    Material          @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  project     Project?          @relation(fields: [projectId], references: [id])
+  warehouse   Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@index([warehouseId, movedAt])
+  @@index([materialId, type])
+}
+
+model MaterialRequest {
+  id            String                @id @default(cuid())
+  projectId     String
+  materialId    String
+  requestedById String
+  approvedById  String?
+  quantity      Decimal               @db.Decimal(12, 2)
+  status        MaterialRequestStatus @default(PENDING)
+  requestedAt   DateTime              @default(now())
+  approvedAt    DateTime?
+  note          String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  approvedBy    User?                 @relation("MaterialApprovedBy", fields: [approvedById], references: [id])
+  material      Material              @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  project       Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requestedBy   User                  @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([requestedAt])
+}
+
+model ProjectMaterialUsage {
+  id              String     @id @default(cuid())
+  projectId       String
+  workOrderId     String?
+  materialId      String
+  quantityPlanned Decimal?   @db.Decimal(12, 2)
+  quantityIssued  Decimal?   @db.Decimal(12, 2)
+  quantityUsed    Decimal    @db.Decimal(12, 2)
+  loggedAt        DateTime   @default(now())
+  note            String?
+  material        Material   @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workOrder       WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  @@index([projectId, loggedAt])
+  @@index([materialId])
+}
+
+model Equipment {
+  id               String                @id @default(cuid())
+  code             String                @unique
+  name             String
+  serialNumber     String?
+  category         String?
+  status           EquipmentStatus       @default(AVAILABLE)
+  maintenanceDueAt DateTime?
+  qrCode           String?
+  deletedAt        DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  assignments      EquipmentAssignment[]
+}
+
+model EquipmentAssignment {
+  id             String    @id @default(cuid())
+  equipmentId    String
+  projectId      String?
+  assignedUserId String?
+  startAt        DateTime
+  endAt          DateTime?
+  usageHours     Decimal?  @db.Decimal(8, 2)
+  note           String?
+  assignedUser   User?     @relation(fields: [assignedUserId], references: [id])
+  equipment      Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  project        Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([equipmentId, startAt])
+  @@index([projectId])
+}
+
+model InventoryCategory {
+  id          String          @id @default(cuid())
+  code        String          @unique
+  name        String          @unique
+  description String?
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       InventoryItem[]
+
+  @@index([name, isActive])
+}
+
+model InventoryLocation {
+  id            String              @id @default(cuid())
+  warehouseId   String
+  code          String              @unique
+  name          String
+  zone          String?
+  shelf         String?
+  notes         String?
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  items         InventoryItem[]
+  warehouse     Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  fromMovements InventoryMovement[] @relation("InventoryMovementFromLocation")
+  toMovements   InventoryMovement[] @relation("InventoryMovementToLocation")
+
+  @@index([warehouseId, isActive])
+}
+
+model InventoryItem {
+  id                 String                      @id @default(cuid())
+  name               String
+  itemType           InventoryItemType           @default(TOOL)
+  categoryId         String?
+  warehouseId        String
+  locationId         String?
+  internalCode       String                      @unique
+  serialNumber       String?
+  brand              String?
+  model              String?
+  unitOfMeasure      String                      @default("buc")
+  quantityTotal      Decimal                     @default(0) @db.Decimal(12, 2)
+  quantityAvailable  Decimal                     @default(0) @db.Decimal(12, 2)
+  minimumStock       Decimal?                    @db.Decimal(12, 2)
+  status             InventoryItemStatus         @default(AVAILABLE)
+  purchaseDate       DateTime?
+  warrantyUntil      DateTime?
+  expiryDate         DateTime?
+  inspectionDate     DateTime?
+  nextInspectionDate DateTime?
+  notes              String?
+  requiresReturn     Boolean                     @default(true)
+  createdById        String?
+  deletedAt          DateTime?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  assignments        InventoryAssignment[]
+  inspections        InventoryInspectionRecord[]
+  category           InventoryCategory?          @relation(fields: [categoryId], references: [id])
+  createdBy          User?                       @relation("InventoryItemCreatedBy", fields: [createdById], references: [id])
+  location           InventoryLocation?          @relation(fields: [locationId], references: [id])
+  warehouse          Warehouse                   @relation(fields: [warehouseId], references: [id])
+  movements          InventoryMovement[]
+
+  @@index([name, deletedAt])
+  @@index([categoryId, status])
+  @@index([warehouseId, status])
+  @@index([status, quantityAvailable])
+  @@index([nextInspectionDate])
+  @@index([expiryDate])
+  @@index([serialNumber])
+}
+
+model InventoryAssignment {
+  id                String                    @id @default(cuid())
+  itemId            String
+  projectId         String?
+  issuedToUserId    String
+  issuedById        String
+  returnedById      String?
+  quantity          Decimal                   @db.Decimal(12, 2)
+  issuedAt          DateTime                  @default(now())
+  expectedReturnAt  DateTime?
+  returnedAt        DateTime?
+  conditionAtIssue  InventoryCondition        @default(GOOD)
+  conditionAtReturn InventoryCondition?
+  status            InventoryAssignmentStatus @default(ACTIVE)
+  notes             String?
+  returnNotes       String?
+  isDamaged         Boolean                   @default(false)
+  isLost            Boolean                   @default(false)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  issuedBy          User                      @relation("InventoryIssuedBy", fields: [issuedById], references: [id])
+  issuedToUser      User                      @relation("InventoryReceivedBy", fields: [issuedToUserId], references: [id])
+  item              InventoryItem             @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  project           Project?                  @relation(fields: [projectId], references: [id])
+  returnedBy        User?                     @relation("InventoryReturnedBy", fields: [returnedById], references: [id])
+  movements         InventoryMovement[]
+
+  @@index([itemId, status, issuedAt])
+  @@index([projectId, status])
+  @@index([issuedToUserId, status])
+  @@index([returnedAt])
+}
+
+model InventoryMovement {
+  id             String                @id @default(cuid())
+  itemId         String
+  assignmentId   String?
+  warehouseId    String
+  projectId      String?
+  performedById  String?
+  fromLocationId String?
+  toLocationId   String?
+  type           InventoryMovementType
+  quantity       Decimal               @db.Decimal(12, 2)
+  reason         String?
+  notes          String?
+  movedAt        DateTime              @default(now())
+  createdAt      DateTime              @default(now())
+  assignment     InventoryAssignment?  @relation(fields: [assignmentId], references: [id])
+  fromLocation   InventoryLocation?    @relation("InventoryMovementFromLocation", fields: [fromLocationId], references: [id])
+  item           InventoryItem         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  performedBy    User?                 @relation("InventoryMovementPerformedBy", fields: [performedById], references: [id])
+  project        Project?              @relation(fields: [projectId], references: [id])
+  toLocation     InventoryLocation?    @relation("InventoryMovementToLocation", fields: [toLocationId], references: [id])
+  warehouse      Warehouse             @relation(fields: [warehouseId], references: [id])
+
+  @@index([itemId, movedAt])
+  @@index([warehouseId, movedAt])
+  @@index([projectId, movedAt])
+  @@index([assignmentId])
+}
+
+model InventoryInspectionRecord {
+  id            String                    @id @default(cuid())
+  itemId        String
+  performedById String?
+  type          InventoryInspectionType
+  result        InventoryInspectionResult
+  performedAt   DateTime                  @default(now())
+  nextDueAt     DateTime?
+  notes         String?
+  createdAt     DateTime                  @default(now())
+  item          InventoryItem             @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  performedBy   User?                     @relation("InventoryInspectionPerformedBy", fields: [performedById], references: [id])
+
+  @@index([itemId, performedAt])
+  @@index([nextDueAt, result])
+}
+
+model Subcontractor {
+  id             String                      @id @default(cuid())
+  name           String
+  cui            String?
+  contactName    String?
+  email          String?
+  phone          String?
+  approvalStatus SubcontractorApprovalStatus @default(IN_VERIFICARE)
+  notes          String?
+  deletedAt      DateTime?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+  assignments    SubcontractorAssignment[]
+
+  @@index([approvalStatus, deletedAt])
+}
+
+model SubcontractorAssignment {
+  id              String           @id @default(cuid())
+  subcontractorId String
+  projectId       String
+  workOrderId     String?
+  contractRef     String?
+  startDate       DateTime?
+  endDate         DateTime?
+  status          AssignmentStatus @default(ACTIV)
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subcontractor   Subcontractor    @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+  workOrder       WorkOrder?       @relation(fields: [workOrderId], references: [id])
+
+  @@index([projectId, status])
+  @@index([status, startDate])
+}
+
+model Document {
+  id           String           @id @default(cuid())
+  projectId    String?
+  clientId     String?
+  category     DocumentCategory
+  title        String
+  fileName     String
+  mimeType     String?
+  storagePath  String
+  version      Int              @default(1)
+  tags         String[]
+  expiresAt    DateTime?
+  uploadedById String?
+  isPrivate    Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  workOrderId  String?
+  client       Client?          @relation(fields: [clientId], references: [id])
+  project      Project?         @relation(fields: [projectId], references: [id])
+  uploadedBy   User?            @relation("UploadedBy", fields: [uploadedById], references: [id])
+  workOrder    WorkOrder?       @relation(fields: [workOrderId], references: [id])
+
+  @@index([projectId, category])
+  @@index([expiresAt])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  projectId     String
+  clientId      String
+  invoiceNumber String        @unique
+  issueDate     DateTime
+  dueDate       DateTime
+  baseAmount    Decimal       @db.Decimal(14, 2)
+  vatRate       Decimal       @db.Decimal(5, 2)
+  vatAmount     Decimal       @db.Decimal(14, 2)
+  totalAmount   Decimal       @db.Decimal(14, 2)
+  paidAmount    Decimal       @default(0) @db.Decimal(14, 2)
+  status        InvoiceStatus @default(DRAFT)
+  sentAt        DateTime?
+  paidAt        DateTime?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([status, dueDate])
+  @@index([projectId])
+}
+
+model CostEntry {
+  id           String   @id @default(cuid())
+  projectId    String
+  type         CostType
+  description  String
+  amount       Decimal  @db.Decimal(14, 2)
+  occurredAt   DateTime
+  approvedById String?
+  createdAt    DateTime @default(now())
+  approvedBy   User?    @relation("CostApprovedBy", fields: [approvedById], references: [id])
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type])
+  @@index([occurredAt])
+}
+
+model DailySiteReport {
+  id                    String     @id @default(cuid())
+  projectId             String
+  workOrderId           String?
+  reportDate            DateTime
+  weather               String?
+  workersCount          Int        @default(0)
+  subcontractorsPresent String?
+  workCompleted         String
+  blockers              String?
+  safetyIncidents       String?
+  materialsReceived     String?
+  equipmentUsed         String?
+  signatures            String?
+  photos                String[]
+  createdById           String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+  createdBy             User?      @relation("ReportCreatedBy", fields: [createdById], references: [id])
+  project               Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workOrder             WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  @@index([projectId, reportDate])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  actionUrl String?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  workOrderId String
+  userId      String
+  content     String
+  mentions    String[]
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, createdAt])
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  entityType String
+  entityId   String
+  action     String
+  diff       Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
 enum RoleKey {
   SUPER_ADMIN
   ADMINISTRATOR
@@ -239,855 +1046,4 @@ enum AssignmentStatus {
   INTRERUPT
   FINALIZAT
   ANULAT
-}
-
-model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  firstName    String
-  lastName     String
-  phone        String?
-  isActive     Boolean   @default(true)
-  locale       String    @default("ro")
-  avatarUrl    String?
-  lastLoginAt  DateTime?
-  deletedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  roles                    UserRole[]
-  workerProfile            WorkerProfile?
-  managerProjects          Project[]                   @relation("ProjectManager")
-  assignedOrders           WorkOrder[]                 @relation("AssignedResponsible")
-  comments                 Comment[]
-  notifications            Notification[]
-  activityLogs             ActivityLog[]
-  documents                Document[]                  @relation("UploadedBy")
-  attendance               Attendance[]
-  timeEntries              TimeEntry[]
-  equipmentUsage           EquipmentAssignment[]
-  costsApproved            CostEntry[]                 @relation("CostApprovedBy")
-  leadingTeams             Team[]                      @relation("TeamLead")
-  requestedMaterials       MaterialRequest[]           @relation("RequestedBy")
-  approvedMaterialRequests MaterialRequest[]           @relation("MaterialApprovedBy")
-  approvedWorkOrders       WorkOrder[]                 @relation("WorkOrderApprovedBy")
-  approvedTimeEntries      TimeEntry[]                 @relation("TimeEntryApprovedBy")
-  createdDailyReports      DailySiteReport[]           @relation("ReportCreatedBy")
-  createdInventoryItems    InventoryItem[]             @relation("InventoryItemCreatedBy")
-  issuedInventoryItems     InventoryAssignment[]       @relation("InventoryIssuedBy")
-  receivedInventoryItems   InventoryAssignment[]       @relation("InventoryReceivedBy")
-  returnedInventoryItems   InventoryAssignment[]       @relation("InventoryReturnedBy")
-  inventoryMovements       InventoryMovement[]         @relation("InventoryMovementPerformedBy")
-  inventoryInspections     InventoryInspectionRecord[] @relation("InventoryInspectionPerformedBy")
-
-  accounts Account[]
-  sessions Session[]
-
-  @@index([email, isActive])
-  @@index([createdAt])
-}
-
-model Role {
-  id          String   @id @default(cuid())
-  key         RoleKey  @unique
-  label       String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  users       UserRole[]
-  permissions RolePermission[]
-}
-
-model Permission {
-  id       String             @id @default(cuid())
-  resource PermissionResource
-  action   PermissionAction
-  label    String
-
-  roles RolePermission[]
-
-  @@unique([resource, action])
-}
-
-model RolePermission {
-  roleId       String
-  permissionId String
-
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, permissionId])
-}
-
-model UserRole {
-  userId String
-  roleId String
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@id([userId, roleId])
-}
-
-model Team {
-  id         String    @id @default(cuid())
-  name       String
-  code       String    @unique
-  region     String?
-  leadUserId String?
-  isActive   Boolean   @default(true)
-  deletedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  leadUser   User?           @relation("TeamLead", fields: [leadUserId], references: [id])
-  workers    WorkerProfile[]
-  workOrders WorkOrder[]
-  attendance Attendance[]
-
-  @@index([region])
-}
-
-model WorkerProfile {
-  id               String    @id @default(cuid())
-  userId           String    @unique
-  teamId           String?
-  employeeCode     String    @unique
-  positionTitle    String
-  hourlyRate       Decimal?  @db.Decimal(10, 2)
-  hireDate         DateTime?
-  emergencyContact String?
-  canApproveTime   Boolean   @default(false)
-  deletedAt        DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team Team? @relation(fields: [teamId], references: [id])
-}
-
-model Client {
-  id                 String     @id @default(cuid())
-  type               ClientType @default(COMPANY)
-  name               String
-  cui                String?
-  registrationNumber String?
-  vatCode            String?
-  email              String?
-  phone              String?
-  billingAddress     String?
-  notes              String?
-  deletedAt          DateTime?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-
-  contacts  ClientContact[]
-  projects  Project[]
-  documents Document[]
-  invoices  Invoice[]
-
-  @@index([name])
-  @@index([type, deletedAt])
-}
-
-model ClientContact {
-  id        String   @id @default(cuid())
-  clientId  String
-  fullName  String
-  roleTitle String?
-  phone     String?
-  email     String?
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-}
-
-model Project {
-  id              String        @id @default(cuid())
-  code            String        @unique
-  title           String
-  description     String?
-  status          ProjectStatus
-  type            ProjectType
-  siteAddress     String
-  siteLatitude    Decimal?      @db.Decimal(10, 7)
-  siteLongitude   Decimal?      @db.Decimal(10, 7)
-  contractValue   Decimal?      @db.Decimal(14, 2)
-  estimatedBudget Decimal?      @db.Decimal(14, 2)
-  progressPercent Int           @default(0)
-  startDate       DateTime?
-  endDate         DateTime?
-  managerId       String?
-  clientId        String
-  internalNotes   String?
-  riskIssuesLog   String?
-  deletedAt       DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  manager              User?                     @relation("ProjectManager", fields: [managerId], references: [id])
-  client               Client                    @relation(fields: [clientId], references: [id])
-  phases               ProjectPhase[]
-  workOrders           WorkOrder[]
-  timeEntries          TimeEntry[]
-  materialUsage        ProjectMaterialUsage[]
-  materialRequests     MaterialRequest[]
-  subcontractors       SubcontractorAssignment[]
-  invoices             Invoice[]
-  costs                CostEntry[]
-  dailyReports         DailySiteReport[]
-  documents            Document[]
-  equipmentAssignments EquipmentAssignment[]
-  stockMovements       StockMovement[]
-  inventoryAssignments InventoryAssignment[]
-  inventoryMovements   InventoryMovement[]
-
-  @@index([status, managerId])
-  @@index([clientId])
-  @@index([startDate, endDate])
-  @@index([deletedAt, status])
-}
-
-model ProjectPhase {
-  id        String    @id @default(cuid())
-  projectId String
-  title     String
-  position  Int
-  startDate DateTime?
-  endDate   DateTime?
-  completed Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  workOrders WorkOrder[]
-
-  @@index([projectId, position])
-}
-
-model WorkOrder {
-  id                String          @id @default(cuid())
-  projectId         String
-  phaseId           String?
-  title             String
-  description       String?
-  siteLocation      String?
-  responsibleId     String?
-  teamId            String?
-  startDate         DateTime?
-  dueDate           DateTime?
-  estimatedHours    Decimal?        @db.Decimal(8, 2)
-  actualHours       Decimal?        @db.Decimal(8, 2)
-  status            WorkOrderStatus @default(TODO)
-  priority          TaskPriority    @default(MEDIUM)
-  checklistProgress Int             @default(0)
-  dependencyIds     String[]
-  isRecurring       Boolean         @default(false)
-  recurrenceRule    String?
-  approvalRequired  Boolean         @default(false)
-  approvedAt        DateTime?
-  approvedById      String?
-  deletedAt         DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  project                  Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  phase                    ProjectPhase?             @relation(fields: [phaseId], references: [id])
-  responsible              User?                     @relation("AssignedResponsible", fields: [responsibleId], references: [id])
-  approvedBy               User?                     @relation("WorkOrderApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  team                     Team?                     @relation(fields: [teamId], references: [id])
-  checklistItems           TaskChecklistItem[]
-  timeEntries              TimeEntry[]
-  comments                 Comment[]
-  materialUsage            ProjectMaterialUsage[]
-  dailyReports             DailySiteReport[]
-  subcontractorAssignments SubcontractorAssignment[]
-  documents                Document[]
-
-  @@index([projectId, status])
-  @@index([teamId, startDate])
-  @@index([dueDate, priority])
-  @@index([deletedAt, dueDate, status])
-}
-
-model TaskChecklistItem {
-  id          String    @id @default(cuid())
-  workOrderId String
-  label       String
-  isDone      Boolean   @default(false)
-  doneAt      DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-
-  @@index([workOrderId, isDone])
-}
-
-model TimeEntry {
-  id                      String             @id @default(cuid())
-  userId                  String
-  projectId               String
-  workOrderId             String?
-  startAt                 DateTime
-  endAt                   DateTime?
-  breakMinutes            Int                @default(0)
-  overtimeMinutes         Int                @default(0)
-  durationMinutes         Int                @default(0)
-  note                    String?
-  status                  TimeEntryStatus    @default(DRAFT)
-  liveState               TimeEntryLiveState @default(STOPPED)
-  pausedAt                DateTime?
-  pauseAccumulatedMinutes Int                @default(0)
-  gpsLatitude             Decimal?           @db.Decimal(10, 7)
-  gpsLongitude            Decimal?           @db.Decimal(10, 7)
-  approvedById            String?
-  approvedAt              DateTime?
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  workOrder  WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
-  approvedBy User?      @relation("TimeEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-
-  @@index([userId, startAt])
-  @@index([projectId, status])
-  @@index([userId, liveState, endAt])
-  @@index([projectId, endAt])
-}
-
-model Attendance {
-  id           String           @id @default(cuid())
-  userId       String
-  teamId       String?
-  date         DateTime
-  checkInAt    DateTime?
-  checkOutAt   DateTime?
-  status       AttendanceStatus @default(PRESENT)
-  gpsLatitude  Decimal?         @db.Decimal(10, 7)
-  gpsLongitude Decimal?         @db.Decimal(10, 7)
-  note         String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team Team? @relation(fields: [teamId], references: [id])
-
-  @@unique([userId, date])
-  @@index([date, teamId])
-}
-
-model Material {
-  id            String    @id @default(cuid())
-  code          String    @unique
-  name          String
-  category      String?
-  unitOfMeasure String
-  supplierName  String?
-  purchasePrice Decimal?  @db.Decimal(10, 2)
-  internalCost  Decimal?  @db.Decimal(10, 2)
-  minStockLevel Decimal?  @db.Decimal(10, 2)
-  deletedAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  stockMovements StockMovement[]
-  requests       MaterialRequest[]
-  usageLogs      ProjectMaterialUsage[]
-
-  @@index([name])
-}
-
-model Warehouse {
-  id          String    @id @default(cuid())
-  code        String    @unique
-  name        String
-  address     String?
-  managerName String?
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  stockMovements     StockMovement[]
-  inventoryItems     InventoryItem[]
-  inventoryLocations InventoryLocation[]
-  inventoryMovements InventoryMovement[]
-}
-
-model StockMovement {
-  id          String            @id @default(cuid())
-  materialId  String
-  warehouseId String
-  projectId   String?
-  type        StockMovementType
-  quantity    Decimal           @db.Decimal(12, 2)
-  unitCost    Decimal?          @db.Decimal(10, 2)
-  documentRef String?
-  note        String?
-  movedAt     DateTime          @default(now())
-  createdAt   DateTime          @default(now())
-
-  material  Material  @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-
-  @@index([warehouseId, movedAt])
-  @@index([materialId, type])
-  @@index([materialId, warehouseId, type, documentRef])
-}
-
-model MaterialRequest {
-  id            String                @id @default(cuid())
-  projectId     String
-  materialId    String
-  requestedById String
-  approvedById  String?
-  quantity      Decimal               @db.Decimal(12, 2)
-  status        MaterialRequestStatus @default(PENDING)
-  requestedAt   DateTime              @default(now())
-  approvedAt    DateTime?
-  note          String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  material    Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
-  requestedBy User     @relation("RequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
-  approvedBy  User?    @relation("MaterialApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-
-  @@index([projectId, status])
-  @@index([requestedAt])
-}
-
-model ProjectMaterialUsage {
-  id              String   @id @default(cuid())
-  projectId       String
-  workOrderId     String?
-  materialId      String
-  quantityPlanned Decimal? @db.Decimal(12, 2)
-  quantityIssued  Decimal? @db.Decimal(12, 2)
-  quantityUsed    Decimal  @db.Decimal(12, 2)
-  loggedAt        DateTime @default(now())
-  note            String?
-
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
-  material  Material   @relation(fields: [materialId], references: [id], onDelete: Cascade)
-
-  @@index([projectId, loggedAt])
-  @@index([materialId])
-}
-
-model Equipment {
-  id               String          @id @default(cuid())
-  code             String          @unique
-  name             String
-  serialNumber     String?
-  category         String?
-  status           EquipmentStatus @default(AVAILABLE)
-  maintenanceDueAt DateTime?
-  qrCode           String?
-  deletedAt        DateTime?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-
-  assignments EquipmentAssignment[]
-}
-
-model EquipmentAssignment {
-  id             String    @id @default(cuid())
-  equipmentId    String
-  projectId      String?
-  assignedUserId String?
-  startAt        DateTime
-  endAt          DateTime?
-  usageHours     Decimal?  @db.Decimal(8, 2)
-  note           String?
-
-  equipment    Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  project      Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  assignedUser User?     @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
-
-  @@index([equipmentId, startAt])
-  @@index([projectId])
-}
-
-model InventoryCategory {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  name        String   @unique
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  items InventoryItem[]
-
-  @@index([name, isActive])
-}
-
-model InventoryLocation {
-  id          String   @id @default(cuid())
-  warehouseId String
-  code        String   @unique
-  name        String
-  zone        String?
-  shelf       String?
-  notes       String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  warehouse     Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  items         InventoryItem[]
-  fromMovements InventoryMovement[] @relation("InventoryMovementFromLocation")
-  toMovements   InventoryMovement[] @relation("InventoryMovementToLocation")
-
-  @@index([warehouseId, isActive])
-}
-
-model InventoryItem {
-  id                 String              @id @default(cuid())
-  name               String
-  itemType           InventoryItemType   @default(TOOL)
-  categoryId         String?
-  warehouseId        String
-  locationId         String?
-  internalCode       String              @unique
-  serialNumber       String?
-  brand              String?
-  model              String?
-  unitOfMeasure      String              @default("buc")
-  quantityTotal      Decimal             @default(0) @db.Decimal(12, 2)
-  quantityAvailable  Decimal             @default(0) @db.Decimal(12, 2)
-  minimumStock       Decimal?            @db.Decimal(12, 2)
-  status             InventoryItemStatus @default(AVAILABLE)
-  purchaseDate       DateTime?
-  warrantyUntil      DateTime?
-  expiryDate         DateTime?
-  inspectionDate     DateTime?
-  nextInspectionDate DateTime?
-  notes              String?
-  requiresReturn     Boolean             @default(true)
-  createdById        String?
-  deletedAt          DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  category    InventoryCategory?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  warehouse   Warehouse                   @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
-  location    InventoryLocation?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  createdBy   User?                       @relation("InventoryItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  assignments InventoryAssignment[]
-  movements   InventoryMovement[]
-  inspections InventoryInspectionRecord[]
-
-  @@index([name, deletedAt])
-  @@index([categoryId, status])
-  @@index([warehouseId, status])
-  @@index([status, quantityAvailable])
-  @@index([nextInspectionDate])
-  @@index([expiryDate])
-  @@index([serialNumber])
-}
-
-model InventoryAssignment {
-  id                String                    @id @default(cuid())
-  itemId            String
-  projectId         String?
-  issuedToUserId    String
-  issuedById        String
-  returnedById      String?
-  quantity          Decimal                   @db.Decimal(12, 2)
-  issuedAt          DateTime                  @default(now())
-  expectedReturnAt  DateTime?
-  returnedAt        DateTime?
-  conditionAtIssue  InventoryCondition        @default(GOOD)
-  conditionAtReturn InventoryCondition?
-  status            InventoryAssignmentStatus @default(ACTIVE)
-  notes             String?
-  returnNotes       String?
-  isDamaged         Boolean                   @default(false)
-  isLost            Boolean                   @default(false)
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-
-  item         InventoryItem       @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  project      Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  issuedToUser User                @relation("InventoryReceivedBy", fields: [issuedToUserId], references: [id], onDelete: Restrict)
-  issuedBy     User                @relation("InventoryIssuedBy", fields: [issuedById], references: [id], onDelete: Restrict)
-  returnedBy   User?               @relation("InventoryReturnedBy", fields: [returnedById], references: [id], onDelete: SetNull)
-  movements    InventoryMovement[]
-
-  @@index([itemId, status, issuedAt])
-  @@index([projectId, status])
-  @@index([issuedToUserId, status])
-  @@index([returnedAt])
-}
-
-model InventoryMovement {
-  id             String                @id @default(cuid())
-  itemId         String
-  assignmentId   String?
-  warehouseId    String
-  projectId      String?
-  performedById  String?
-  fromLocationId String?
-  toLocationId   String?
-  type           InventoryMovementType
-  quantity       Decimal               @db.Decimal(12, 2)
-  reason         String?
-  notes          String?
-  movedAt        DateTime              @default(now())
-  createdAt      DateTime              @default(now())
-
-  item         InventoryItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  assignment   InventoryAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
-  warehouse    Warehouse            @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
-  project      Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  performedBy  User?                @relation("InventoryMovementPerformedBy", fields: [performedById], references: [id], onDelete: SetNull)
-  fromLocation InventoryLocation?   @relation("InventoryMovementFromLocation", fields: [fromLocationId], references: [id], onDelete: SetNull)
-  toLocation   InventoryLocation?   @relation("InventoryMovementToLocation", fields: [toLocationId], references: [id], onDelete: SetNull)
-
-  @@index([itemId, movedAt])
-  @@index([warehouseId, movedAt])
-  @@index([projectId, movedAt])
-  @@index([assignmentId])
-}
-
-model InventoryInspectionRecord {
-  id            String                    @id @default(cuid())
-  itemId        String
-  performedById String?
-  type          InventoryInspectionType
-  result        InventoryInspectionResult
-  performedAt   DateTime                  @default(now())
-  nextDueAt     DateTime?
-  notes         String?
-  createdAt     DateTime                  @default(now())
-
-  item        InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  performedBy User?         @relation("InventoryInspectionPerformedBy", fields: [performedById], references: [id], onDelete: SetNull)
-
-  @@index([itemId, performedAt])
-  @@index([nextDueAt, result])
-}
-
-model Subcontractor {
-  id             String                      @id @default(cuid())
-  name           String
-  cui            String?
-  contactName    String?
-  email          String?
-  phone          String?
-  approvalStatus SubcontractorApprovalStatus @default(IN_VERIFICARE)
-  notes          String?
-  deletedAt      DateTime?
-  createdAt      DateTime                    @default(now())
-  updatedAt      DateTime                    @updatedAt
-
-  assignments SubcontractorAssignment[]
-
-  @@index([approvalStatus, deletedAt])
-}
-
-model SubcontractorAssignment {
-  id              String           @id @default(cuid())
-  subcontractorId String
-  projectId       String
-  workOrderId     String?
-  contractRef     String?
-  startDate       DateTime?
-  endDate         DateTime?
-  status          AssignmentStatus @default(ACTIV)
-
-  subcontractor Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
-  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  workOrder     WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
-
-  @@index([projectId, status])
-  @@index([status, startDate])
-}
-
-model Document {
-  id           String           @id @default(cuid())
-  projectId    String?
-  clientId     String?
-  workOrderId  String?
-  category     DocumentCategory
-  title        String
-  fileName     String
-  mimeType     String?
-  storagePath  String
-  version      Int              @default(1)
-  tags         String[]
-  expiresAt    DateTime?
-  uploadedById String?
-  isPrivate    Boolean          @default(true)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-
-  project    Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  client     Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  workOrder  WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
-  uploadedBy User?      @relation("UploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
-
-  @@index([projectId, category])
-  @@index([expiresAt])
-}
-
-model Invoice {
-  id            String        @id @default(cuid())
-  projectId     String
-  clientId      String
-  invoiceNumber String        @unique
-  issueDate     DateTime
-  dueDate       DateTime
-  baseAmount    Decimal       @db.Decimal(14, 2)
-  vatRate       Decimal       @db.Decimal(5, 2)
-  vatAmount     Decimal       @db.Decimal(14, 2)
-  totalAmount   Decimal       @db.Decimal(14, 2)
-  paidAmount    Decimal       @default(0) @db.Decimal(14, 2)
-  status        InvoiceStatus @default(DRAFT)
-  sentAt        DateTime?
-  paidAt        DateTime?
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@index([status, dueDate])
-  @@index([projectId])
-}
-
-model CostEntry {
-  id           String   @id @default(cuid())
-  projectId    String
-  type         CostType
-  description  String
-  amount       Decimal  @db.Decimal(14, 2)
-  occurredAt   DateTime
-  approvedById String?
-  createdAt    DateTime @default(now())
-
-  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  approvedBy User?   @relation("CostApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-
-  @@index([projectId, type])
-  @@index([occurredAt])
-}
-
-model DailySiteReport {
-  id                    String   @id @default(cuid())
-  projectId             String
-  workOrderId           String?
-  reportDate            DateTime
-  weather               String?
-  workersCount          Int      @default(0)
-  subcontractorsPresent String?
-  workCompleted         String
-  blockers              String?
-  safetyIncidents       String?
-  materialsReceived     String?
-  equipmentUsed         String?
-  signatures            String?
-  photos                String[]
-  createdById           String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
-  createdBy User?      @relation("ReportCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-
-  @@index([projectId, reportDate])
-}
-
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  isRead    Boolean          @default(false)
-  actionUrl String?
-  createdAt DateTime         @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead, createdAt])
-}
-
-model Comment {
-  id          String   @id @default(cuid())
-  workOrderId String
-  userId      String
-  content     String
-  mentions    String[]
-  createdAt   DateTime @default(now())
-
-  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([workOrderId, createdAt])
-}
-
-model ActivityLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  entityType String
-  entityId   String
-  action     String
-  diff       Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([entityType, entityId, createdAt])
-  @@index([userId, createdAt])
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
 }

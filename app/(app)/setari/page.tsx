@@ -1,3 +1,4 @@
+import { RoleKey } from "@prisma/client";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { auth } from "@/src/lib/auth";
 import { Badge } from "@/src/components/ui/badge";
@@ -13,6 +14,8 @@ export default async function SetariPage() {
   const canCreateUsers = hasPermission(roleKeys, "USERS", "CREATE", userEmail);
   const canUpdateUsers = hasPermission(roleKeys, "USERS", "UPDATE", userEmail);
   const canDeleteUsers = hasPermission(roleKeys, "USERS", "DELETE", userEmail);
+  const canRunDemoCleanup =
+    roleKeys.includes(RoleKey.SUPER_ADMIN) || roleKeys.includes(RoleKey.ADMINISTRATOR);
 
   const [users, roles] = await Promise.all([
     prisma.user.findMany({
@@ -100,6 +103,7 @@ export default async function SetariPage() {
           canCreateUsers={canCreateUsers}
           canUpdateUsers={canUpdateUsers}
           canDeleteUsers={canDeleteUsers}
+          canRunDemoCleanup={canRunDemoCleanup}
           roles={roles.map((role) => ({ id: role.id, key: role.key, label: role.label }))}
           users={users.map((user) => ({
             id: user.id,

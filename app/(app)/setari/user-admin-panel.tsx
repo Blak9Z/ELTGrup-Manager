@@ -8,7 +8,7 @@ import { Button } from "@/src/components/ui/button";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { Input } from "@/src/components/ui/input";
 import { initialActionState } from "@/src/lib/action-state";
-import { createUserAction, deleteUserAction, toggleUserActiveAction, updateUserRolesAction } from "./actions";
+import { cleanupDemoDataAction, createUserAction, deleteUserAction, toggleUserActiveAction, updateUserRolesAction } from "./actions";
 
 type RoleOption = { id: string; key: RoleKey; label: string };
 type UserItem = {
@@ -27,6 +27,8 @@ function resolveSingleRole(user: UserItem): RoleKey {
   return user.roleKeys[0] || RoleKey.WORKER;
 }
 
+const DEMO_CLEANUP_CONFIRM_TEXT = "STERGE DATELE DEMO";
+
 export function UserAdminPanel({
   users,
   roles,
@@ -34,6 +36,7 @@ export function UserAdminPanel({
   canCreateUsers,
   canUpdateUsers,
   canDeleteUsers,
+  canRunDemoCleanup,
 }: {
   users: UserItem[];
   roles: RoleOption[];
@@ -41,10 +44,13 @@ export function UserAdminPanel({
   canCreateUsers: boolean;
   canUpdateUsers: boolean;
   canDeleteUsers: boolean;
+  canRunDemoCleanup: boolean;
 }) {
   const [state, formAction, pending] = useActionState(createUserAction, initialActionState);
+  const [cleanupState, cleanupFormAction, cleanupPending] = useActionState(cleanupDemoDataAction, initialActionState);
   const [newUserRole, setNewUserRole] = useState<RoleKey>(RoleKey.WORKER);
   const [confirmNewSuperAdmin, setConfirmNewSuperAdmin] = useState(false);
+  const [cleanupConfirmationText, setCleanupConfirmationText] = useState("");
   const initialRoleSelections = useMemo(
     () => Object.fromEntries(users.map((user) => [user.id, resolveSingleRole(user)])) as Record<string, RoleKey>,
     [users],
@@ -56,6 +62,14 @@ export function UserAdminPanel({
     if (state.ok && state.message) toast.success(state.message);
     if (!state.ok && state.message) toast.error(state.message);
   }, [state]);
+
+  useEffect(() => {
+    if (cleanupState.ok && cleanupState.message) {
+      toast.success(cleanupState.message);
+      setCleanupConfirmationText("");
+    }
+    if (!cleanupState.ok && cleanupState.message) toast.error(cleanupState.message);
+  }, [cleanupState]);
 
   useEffect(() => {
     setRoleSelections(initialRoleSelections);
@@ -218,6 +232,51 @@ export function UserAdminPanel({
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#f4b87a]/60 bg-[rgba(88,45,12,0.16)] p-4">
+        <p className="text-[11px] uppercase tracking-[0.12em] text-[#ffd8ad]">Curatare demo / onboarding</p>
+        <h2 className="mt-1 text-lg font-semibold text-[#ffe7ca]">Sterge datele boilerplate de seed</h2>
+        <p className="mt-2 text-sm text-[#ffd8ad]">
+          Actiunea curata doar inregistrarile demo identificate explicit in <code>prisma/seed.ts</code>, fara a atinge metadata RBAC
+          (roluri/permisiuni) si fara a sterge contul administratorului conectat.
+        </p>
+        {canRunDemoCleanup ? (
+          <form action={cleanupFormAction} className="mt-3 space-y-3 rounded-xl border border-[#f4b87a]/50 bg-[rgba(44,19,2,0.35)] p-3">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.16em] text-[#ffd8ad]">Confirmare obligatorie</p>
+              <p className="text-xs text-[#ffd8ad]/90">
+                Scrie exact <span className="font-semibold text-[#ffe7ca]">{DEMO_CLEANUP_CONFIRM_TEXT}</span> pentru a executa curatarea.
+              </p>
+            </div>
+            <Input
+              name="confirmationText"
+              value={cleanupConfirmationText}
+              onChange={(event) => setCleanupConfirmationText(event.target.value)}
+              placeholder={DEMO_CLEANUP_CONFIRM_TEXT}
+              required
+            />
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                variant="destructive"
+                size="sm"
+                disabled={cleanupPending || cleanupConfirmationText.trim() !== DEMO_CLEANUP_CONFIRM_TEXT}
+                onClick={(event) => {
+                  if (!window.confirm("Confirmi eliminarea datelor demo/onboarding? Actiunea este ireversibila pentru datele hard-delete.")) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                {cleanupPending ? "Se curata..." : "Curata date demo"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <p className="mt-3 text-sm text-[#ffd8ad]">
+            Doar rolurile SUPER_ADMIN si ADMINISTRATOR pot executa curatarea datelor demo.
+          </p>
+        )}
       </section>
     </div>
   );
