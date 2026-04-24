@@ -56,7 +56,7 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
     routePrefixes: ["/teren"],
     roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.WORKER],
   },
-  materials: { resource: "MATERIALS", action: "VIEW", routePrefixes: ["/materiale", "/echipamente"] },
+  materials: { resource: "MATERIALS", action: "VIEW", routePrefixes: ["/materiale", "/echipamente", "/gestiune-scule"] },
   documents: { resource: "DOCUMENTS", action: "VIEW", routePrefixes: ["/documente"] },
   clients: {
     resource: "PROJECTS",
@@ -75,7 +75,7 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
     resource: "INVOICES",
     action: "VIEW",
     routePrefixes: ["/financiar"],
-    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.BACKOFFICE, RoleKey.ACCOUNTANT],
+    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.ACCOUNTANT],
   },
   analytics: {
     resource: "REPORTS",

@@ -32,7 +32,7 @@ const roleExperience: Record<RoleKey, { subtitle: string; focus: string[] }> = {
   },
   ADMINISTRATOR: {
     subtitle: "Coordonare executie: proiecte active, alocare echipe, aprobari materiale",
-    focus: ["Confirma cererile de materiale ramase in pending.", "Verifica lucrarile care depasesc termenul."],
+    focus: ["Confirma cererile de materiale ramase in asteptare.", "Verifica lucrarile care depasesc termenul."],
   },
   PROJECT_MANAGER: {
     subtitle: "Management proiect: termene, progres, consum materiale, buget",
@@ -48,7 +48,7 @@ const roleExperience: Record<RoleKey, { subtitle: string; focus: string[] }> = {
   },
   ACCOUNTANT: {
     subtitle: "Control financiar: costuri proiect, facturare, plati si restante",
-    focus: ["Verifica costurile nou inregistrate.", "Urmareste facturile overdue si soldul neincasat."],
+    focus: ["Verifica costurile nou inregistrate.", "Urmareste facturile scadente si soldul neincasat."],
   },
   WORKER: {
     subtitle: "Executie personala: lucrari alocate, pontaj, update progres",
@@ -90,6 +90,7 @@ export default async function DashboardPage() {
           await prisma.workOrder.findMany({
             where: scopedWorkOrderWhere,
             select: { id: true },
+            orderBy: { id: "asc" },
             take: 250,
           })
         ).map((item) => item.id);
@@ -110,7 +111,7 @@ export default async function DashboardPage() {
       project: { select: { title: true } },
       team: { select: { name: true } },
     },
-    orderBy: { startDate: "asc" },
+    orderBy: [{ startDate: "asc" }, { id: "asc" }],
     take: 10,
   });
   const clockedIn = await prisma.timeEntry.count({ where: { ...scopedProjectIdWhere, endAt: null } });
@@ -132,7 +133,7 @@ export default async function DashboardPage() {
               },
             ],
           },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     select: {
       id: true,
       action: true,
@@ -147,7 +148,7 @@ export default async function DashboardPage() {
     by: ["projectId"],
     where: scopedProjectIdWhere,
     _sum: { durationMinutes: true },
-    orderBy: { _sum: { durationMinutes: "desc" } },
+    orderBy: [{ _sum: { durationMinutes: "desc" } }, { projectId: "asc" }],
     take: 6,
   });
   const projectStatusBuckets = await prisma.project.groupBy({
@@ -192,7 +193,7 @@ export default async function DashboardPage() {
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
       <div className="page-stack">
-        <PageHeader title="Operational Control Center" subtitle={roleContext.subtitle} />
+        <PageHeader title="Panou operational" subtitle={roleContext.subtitle} />
 
         <section className="page-kpis">
           <KpiCard label="Proiecte active" value={String(activeProjects)} helper="in executie" />
@@ -205,7 +206,7 @@ export default async function DashboardPage() {
         <section className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
           <Card className="p-0">
             <div className="border-b border-[var(--border)] px-5 py-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Overview</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Privire generala</p>
               <h2 className="mt-1 text-xl font-semibold text-[var(--foreground)]">Ore facturabile pe proiect</h2>
               <p className="text-sm text-[var(--muted)]">Distribuie atentia manageriala pe proiectele cu incarcare ridicata.</p>
             </div>
@@ -223,13 +224,13 @@ export default async function DashboardPage() {
               </div>
               <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-card)] p-3">
                 <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">Aprobari materiale</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{pendingMaterialApprovals} in backlog</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">{pendingMaterialApprovals} in asteptare</p>
               </div>
             </div>
           </Card>
 
           <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Recent Activity</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Activitate recenta</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ultimele miscari in sistem</h2>
             <div className="mt-3 space-y-2">
               {latestActivities.length === 0 ? (
@@ -252,7 +253,7 @@ export default async function DashboardPage() {
 
         <section className="grid gap-4 xl:grid-cols-3">
           <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Project Status</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Status proiecte</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Portofoliu proiecte</h2>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
@@ -275,7 +276,7 @@ export default async function DashboardPage() {
           </Card>
 
           <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Team Status</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Status echipe</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Task si echipe</h2>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
@@ -298,7 +299,7 @@ export default async function DashboardPage() {
           </Card>
 
           <Card>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Role Focus</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Focus pe rol</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Prioritati pentru rolul tau</h2>
             <div className="mt-3 space-y-2">
               {roleContext.focus.map((item, index) => (
@@ -313,7 +314,7 @@ export default async function DashboardPage() {
 
         <Card className="p-0">
           <div className="border-b border-[var(--border)] px-5 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Execution Planning</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Planificare executie</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Program echipe astazi</h2>
           </div>
           <div className="p-3 sm:p-4">

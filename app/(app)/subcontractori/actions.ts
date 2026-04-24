@@ -103,7 +103,7 @@ const updateSubcontractorSchema = z.object({
   contactName: z.string().optional(),
   email: z.email().optional().or(z.literal("")),
   phone: z.string().optional(),
-  approvalStatus: subcontractorStatusSchema,
+  approvalStatus: subcontractorStatusSchema.optional(),
 });
 
 export async function updateSubcontractorAction(formData: FormData) {
@@ -116,7 +116,7 @@ export async function updateSubcontractorAction(formData: FormData) {
     contactName: formData.get("contactName") || undefined,
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
-    approvalStatus: formData.get("approvalStatus") || "IN_VERIFICARE",
+    approvalStatus: formData.get("approvalStatus") || undefined,
   });
   if (!parsed.success) throw parsed.error;
   await assertSubcontractorAccess(currentUser, parsed.data.id);
@@ -129,7 +129,7 @@ export async function updateSubcontractorAction(formData: FormData) {
       contactName: parsed.data.contactName,
       email: parsed.data.email || null,
       phone: parsed.data.phone,
-      approvalStatus: parsed.data.approvalStatus,
+      ...(parsed.data.approvalStatus ? { approvalStatus: parsed.data.approvalStatus } : {}),
     },
   });
 

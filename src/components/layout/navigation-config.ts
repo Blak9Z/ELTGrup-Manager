@@ -16,6 +16,7 @@ import {
   Timer,
   Truck,
   Users,
+  Wrench,
 } from 'lucide-react';
 
 export type NavItem = {
@@ -23,25 +24,26 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  section: 'Core' | 'Execution' | 'Business' | 'System';
+  section: "Baza" | "Executie" | "Comercial" | "Sistem";
 };
 
 export const navItems: NavItem[] = [
-  { module: 'dashboard', href: '/panou', label: 'Panou', icon: LayoutDashboard, section: 'Core' },
-  { module: 'projects', href: '/proiecte', label: 'Proiecte', icon: BriefcaseBusiness, section: 'Core' },
-  { module: 'work_orders', href: '/lucrari', label: 'Lucrari', icon: ClipboardList, section: 'Execution' },
-  { module: 'calendar', href: '/calendar', label: 'Calendar', icon: CalendarDays, section: 'Execution' },
-  { module: 'time_tracking', href: '/pontaj', label: 'Pontaj', icon: Timer, section: 'Execution' },
-  { module: 'field', href: '/teren', label: 'Teren', icon: Smartphone, section: 'Execution' },
-  { module: 'materials', href: '/materiale', label: 'Materiale', icon: Package, section: 'Execution' },
-  { module: 'documents', href: '/documente', label: 'Documente', icon: FileText, section: 'Business' },
-  { module: 'clients', href: '/clienti', label: 'Clienti', icon: Users, section: 'Business' },
-  { module: 'reports', href: '/rapoarte-zilnice', label: 'Rapoarte', icon: HardHat, section: 'Business' },
-  { module: 'subcontractors', href: '/subcontractori', label: 'Subcontractori', icon: Truck, section: 'Business' },
-  { module: 'financial', href: '/financiar', label: 'Financiar', icon: Receipt, section: 'Business' },
-  { module: 'analytics', href: '/analitice', label: 'Analitice', icon: ChartColumn, section: 'System' },
-  { module: 'notifications', href: '/notificari', label: 'Notificari', icon: Bell, section: 'System' },
-  { module: 'settings', href: '/setari', label: 'Setari', icon: Settings, section: 'System' },
+  { module: "dashboard", href: "/panou", label: "Panou", icon: LayoutDashboard, section: "Baza" },
+  { module: "projects", href: "/proiecte", label: "Proiecte", icon: BriefcaseBusiness, section: "Baza" },
+  { module: "work_orders", href: "/lucrari", label: "Lucrari", icon: ClipboardList, section: "Executie" },
+  { module: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, section: "Executie" },
+  { module: "time_tracking", href: "/pontaj", label: "Pontaj", icon: Timer, section: "Executie" },
+  { module: "field", href: "/teren", label: "Teren", icon: Smartphone, section: "Executie" },
+  { module: "materials", href: "/materiale", label: "Materiale", icon: Package, section: "Executie" },
+  { module: "materials", href: "/gestiune-scule", label: "Gestiune scule", icon: Wrench, section: "Executie" },
+  { module: "documents", href: "/documente", label: "Documente", icon: FileText, section: "Comercial" },
+  { module: "clients", href: "/clienti", label: "Clienti", icon: Users, section: "Comercial" },
+  { module: "reports", href: "/rapoarte-zilnice", label: "Rapoarte", icon: HardHat, section: "Comercial" },
+  { module: "subcontractors", href: "/subcontractori", label: "Subcontractori", icon: Truck, section: "Comercial" },
+  { module: "financial", href: "/financiar", label: "Financiar", icon: Receipt, section: "Comercial" },
+  { module: "analytics", href: "/analitice", label: "Analitice", icon: ChartColumn, section: "Sistem" },
+  { module: "notifications", href: "/notificari", label: "Notificari", icon: Bell, section: "Sistem" },
+  { module: "settings", href: "/setari", label: "Setari", icon: Settings, section: "Sistem" },
 ];
 
-export const navSections: Array<NavItem['section']> = ['Core', 'Execution', 'Business', 'System'];
+export const navSections: Array<NavItem["section"]> = ["Baza", "Executie", "Comercial", "Sistem"];

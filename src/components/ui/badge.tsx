@@ -13,7 +13,10 @@ export function Badge({ children, tone = "neutral" }: { children: React.ReactNod
   return (
     <Chip
       variant="soft"
-      className={cn("h-auto min-h-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.06em]", styles[tone])}
+      className={cn(
+        "h-auto min-h-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+        styles[tone],
+      )}
     >
       {children}
     </Chip>

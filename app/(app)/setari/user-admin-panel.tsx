@@ -45,12 +45,21 @@ export function UserAdminPanel({
   const [state, formAction, pending] = useActionState(createUserAction, initialActionState);
   const [newUserRole, setNewUserRole] = useState<RoleKey>(RoleKey.WORKER);
   const [confirmNewSuperAdmin, setConfirmNewSuperAdmin] = useState(false);
+  const initialRoleSelections = useMemo(
+    () => Object.fromEntries(users.map((user) => [user.id, resolveSingleRole(user)])) as Record<string, RoleKey>,
+    [users],
+  );
+  const [roleSelections, setRoleSelections] = useState<Record<string, RoleKey>>(initialRoleSelections);
   const roleLabelByKey = useMemo(() => new Map(roles.map((role) => [role.key, role.label])), [roles]);
 
   useEffect(() => {
     if (state.ok && state.message) toast.success(state.message);
     if (!state.ok && state.message) toast.error(state.message);
   }, [state]);
+
+  useEffect(() => {
+    setRoleSelections(initialRoleSelections);
+  }, [initialRoleSelections]);
 
   const orderedRoles = useMemo(() => [...roles].sort((a, b) => a.label.localeCompare(b.label, "ro")), [roles]);
   const creatableRoles = useMemo(
@@ -148,7 +157,11 @@ export function UserAdminPanel({
                       <span className="mb-1 block uppercase tracking-[0.2em] text-[10px] text-[var(--muted)]">Rol activ</span>
                       <select
                         name="roleKey"
-                        defaultValue={resolveSingleRole(user)}
+                        value={roleSelections[user.id] || resolveSingleRole(user)}
+                        onChange={(event) => {
+                          const nextRole = event.target.value as RoleKey;
+                          setRoleSelections((current) => ({ ...current, [user.id]: nextRole }));
+                        }}
                         disabled={user.roleKeys.includes(RoleKey.SUPER_ADMIN) && !canAssignSuperAdmin}
                         className="h-10 w-full rounded-lg border border-[var(--border)] bg-transparent px-3 text-sm text-[var(--foreground)]"
                       >
@@ -164,10 +177,10 @@ export function UserAdminPanel({
                           ))}
                       </select>
                     </label>
-                    {user.roleKeys.includes(RoleKey.SUPER_ADMIN) && canAssignSuperAdmin ? (
+                    {(roleSelections[user.id] || resolveSingleRole(user)) === RoleKey.SUPER_ADMIN && canAssignSuperAdmin ? (
                       <label className="flex items-center gap-2 rounded-lg border border-[#f4b87a] bg-[rgba(88,45,12,0.35)] px-3 py-2 text-xs text-[#ffd8ad]">
-                        <input type="checkbox" name="confirmSuperAdminAssignment" value="CONFIRM_SUPER_ADMIN" />
-                        Confirm explicit mentinerea rolului SUPER_ADMIN.
+                        <input type="checkbox" name="confirmSuperAdminAssignment" value="CONFIRM_SUPER_ADMIN" required />
+                        Confirm explicit atribuirea rolului SUPER_ADMIN.
                       </label>
                     ) : null}
                   </div>

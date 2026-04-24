@@ -23,7 +23,7 @@ export async function GET() {
         ? {}
         : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
     include: { project: true, createdBy: true },
-    orderBy: { reportDate: "desc" },
+    orderBy: [{ reportDate: "desc" }, { id: "asc" }],
   });
   const data = reports.map((report) => ({
     Data: report.reportDate.toLocaleDateString("ro-RO"),

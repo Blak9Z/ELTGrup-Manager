@@ -1,4 +1,4 @@
-import { DocumentCategory } from "@prisma/client";
+import { DocumentCategory, InventoryAssignmentStatus, InventoryItemStatus, ProjectStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
@@ -8,6 +8,7 @@ import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { assertProjectAccess } from "@/src/lib/access-scope";
+import { inventoryItemStatusLabels } from "@/src/lib/inventory-labels";
 import { buildProjectTimeline } from "@/src/lib/timeline";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
@@ -24,6 +25,15 @@ const documentCategoryLabels: Record<DocumentCategory, string> = {
   PERMIT: "Autorizatie",
   HANDOVER: "Predare",
   OTHER: "Altele",
+};
+
+const projectStatusLabels: Record<ProjectStatus, string> = {
+  DRAFT: "Schita",
+  PLANNED: "Planificat",
+  ACTIVE: "Activ",
+  BLOCKED: "Blocat",
+  COMPLETED: "Finalizat",
+  CANCELED: "Anulat",
 };
 
 const planSections = [
@@ -114,13 +124,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     include: {
       client: true,
       manager: true,
-      phases: { orderBy: { position: "asc" } },
-      workOrders: { where: { deletedAt: null }, orderBy: { dueDate: "asc" }, take: 15 },
-      materialUsage: { include: { material: true }, orderBy: { loggedAt: "desc" }, take: 10 },
-      invoices: { orderBy: { dueDate: "desc" }, take: 10 },
-      costs: { orderBy: { occurredAt: "desc" }, take: 12 },
+      phases: { orderBy: [{ position: "asc" }, { id: "asc" }] },
+      workOrders: { where: { deletedAt: null }, orderBy: [{ dueDate: "asc" }, { id: "asc" }], take: 15 },
+      materialUsage: { include: { material: true }, orderBy: [{ loggedAt: "desc" }, { id: "asc" }], take: 10 },
+      invoices: { orderBy: [{ dueDate: "desc" }, { id: "asc" }], take: 10 },
+      costs: { orderBy: [{ occurredAt: "desc" }, { id: "asc" }], take: 12 },
       documents: {
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
         take: 30,
         select: {
           id: true,
@@ -137,8 +147,26 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           workOrder: { select: { id: true, title: true } },
         },
       },
-      dailyReports: { orderBy: { reportDate: "desc" }, take: 10 },
-      subcontractors: { include: { subcontractor: true }, take: 10 },
+      dailyReports: { orderBy: [{ reportDate: "desc" }, { id: "asc" }], take: 10 },
+      subcontractors: { include: { subcontractor: true }, orderBy: { id: "asc" }, take: 10 },
+      inventoryAssignments: {
+        where: { status: { in: [InventoryAssignmentStatus.ACTIVE, InventoryAssignmentStatus.PARTIAL_RETURNED] } },
+        include: {
+          item: {
+            select: {
+              id: true,
+              name: true,
+              internalCode: true,
+              quantityAvailable: true,
+              unitOfMeasure: true,
+              status: true,
+            },
+          },
+          issuedToUser: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: [{ issuedAt: "desc" }, { id: "asc" }],
+        take: 15,
+      },
     },
   });
 
@@ -184,7 +212,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card>
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Status</p>
             <div className="mt-2">
-              <Badge tone={project.status === "ACTIVE" ? "success" : project.status === "BLOCKED" ? "danger" : "neutral"}>{project.status}</Badge>
+              <Badge tone={project.status === "ACTIVE" ? "success" : project.status === "BLOCKED" ? "danger" : "neutral"}>
+                {projectStatusLabels[project.status]}
+              </Badge>
             </div>
           </Card>
           <Card>
@@ -242,11 +272,51 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </section>
 
         <Card>
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Scule si echipamente pe proiect</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">Trasabilitate pentru ce este in teren, la cine este predat si ce stoc mai ramane disponibil.</p>
+            </div>
+            <Link
+              href={`/gestiune-scule?q=${encodeURIComponent(project.code)}`}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--border)] px-3 text-xs font-semibold text-[var(--muted-strong)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+            >
+              Deschide gestiune scule
+            </Link>
+          </div>
+          <div className="mt-3 space-y-2">
+            {project.inventoryAssignments.length === 0 ? (
+              <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                Nu exista scule active alocate pe acest proiect.
+              </p>
+            ) : null}
+            {project.inventoryAssignments.map((assignment) => (
+              <div key={assignment.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold text-[var(--foreground)]">
+                    {assignment.item.name} ({assignment.item.internalCode})
+                  </p>
+                  <Badge tone={assignment.item.status === InventoryItemStatus.AVAILABLE ? "success" : assignment.item.status === InventoryItemStatus.ASSIGNED ? "info" : "warning"}>
+                    {inventoryItemStatusLabels[assignment.item.status]}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Predat catre {assignment.issuedToUser.firstName} {assignment.issuedToUser.lastName} • Cantitate {Number(assignment.quantity).toFixed(2)} {assignment.item.unitOfMeasure}
+                </p>
+                <p className="text-xs text-[var(--muted)]">
+                  Disponibil in stoc: {Number(assignment.item.quantityAvailable).toFixed(2)} {assignment.item.unitOfMeasure}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] pb-3">
             <div>
               <h2 className="text-lg font-semibold text-[var(--foreground)]">Planuri proiect</h2>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                Folosim documentele deja incarcate si le grupam dupa disciplina. Pune tag-uri ca <span className="font-semibold text-[var(--foreground)]">{planSections[0].sampleTag}</span> pentru o clasificare mai precisa.
+                Documentele deja incarcate sunt grupate automat pe discipline. Adauga tag-ul disciplinei (ex. <span className="font-semibold text-[var(--foreground)]">{planSections[0].sampleTag}</span>) pentru clasificare corecta.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -302,7 +372,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   </div>
                 ) : (
                   <div className="mt-3 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface)] p-3 text-xs text-[var(--muted)]">
-                    Niciun document identificat inca. Foloseste tag-ul <span className="font-semibold text-[var(--foreground)]">{group.sampleTag}</span> sau include disciplina in titlu.
+                    Nu am gasit documente pentru aceasta disciplina. Adauga tag-ul <span className="font-semibold text-[var(--foreground)]">{group.sampleTag}</span> sau include disciplina in titlu.
                   </div>
                 )}
               </div>

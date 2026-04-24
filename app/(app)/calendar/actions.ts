@@ -40,11 +40,48 @@ function dateForWeekday(dayLabel: string) {
   return date;
 }
 
+async function assertActiveProjectAccess(user: Awaited<ReturnType<typeof requirePermission>>, projectId: string) {
+  await assertProjectAccess(user, projectId);
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { deletedAt: true },
+  });
+
+  if (!project || project.deletedAt) {
+    throw new Error("Proiect inexistent sau deja arhivat.");
+  }
+}
+
+async function loadActiveWorkOrder(user: Awaited<ReturnType<typeof requirePermission>>, workOrderId: string) {
+  await assertWorkOrderAccess(user, workOrderId);
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    select: { deletedAt: true, projectId: true },
+  });
+
+  if (!workOrder || workOrder.deletedAt) {
+    throw new Error("Lucrare inexistenta sau deja arhivata.");
+  }
+
+  const project = await prisma.project.findUnique({
+    where: { id: workOrder.projectId },
+    select: { deletedAt: true },
+  });
+
+  if (!project || project.deletedAt) {
+    throw new Error("Proiect inexistent sau deja arhivat.");
+  }
+
+  return workOrder;
+}
+
 export async function updateWorkOrderScheduleAction(input: { id: string; dayLabel: string; startDateIso: string }) {
   const currentUser = await requirePermission("TASKS", "UPDATE");
   const parsed = updateScheduleSchema.safeParse(input);
   if (!parsed.success) throw new Error("Date invalide pentru replanificare.");
-  await assertWorkOrderAccess(currentUser, parsed.data.id);
+  await loadActiveWorkOrder(currentUser, parsed.data.id);
 
   const nextStart = dateForWeekday(parsed.data.dayLabel);
   const nextDue = new Date(nextStart);
@@ -73,7 +110,7 @@ export async function createCalendarTaskAction(formData: FormData) {
   });
 
   if (!parsed.success) throw new Error("Date invalide pentru task calendar.");
-  await assertProjectAccess(currentUser, parsed.data.projectId);
+  await assertActiveProjectAccess(currentUser, parsed.data.projectId);
 
   const startDate = dateForWeekday(parsed.data.dayLabel);
   const dueDate = new Date(startDate);

@@ -6,8 +6,10 @@ import {
   getDefaultModulePath,
   getModuleForPath,
   getVisibleModules,
+  modulePolicies,
 } from "./access-control";
 import { navItems } from "../components/layout/navigation-config";
+import { RoleKey } from "@prisma/client";
 
 describe("module visibility", () => {
   it("denies settings module for non-admin roles", () => {
@@ -21,6 +23,10 @@ describe("module visibility", () => {
   it("keeps navigation modules and access modules aligned", () => {
     const navModuleSet = new Set(navItems.map((item) => item.module));
     expect(new Set(appModules)).toEqual(navModuleSet);
+  });
+
+  it("keeps financial module role allowlist aligned with invoice restrictions", () => {
+    expect(modulePolicies.financial.roles).not.toContain(RoleKey.BACKOFFICE);
   });
 });
 

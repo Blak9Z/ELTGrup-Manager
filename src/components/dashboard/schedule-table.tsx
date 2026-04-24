@@ -1,7 +1,8 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { WorkOrderStatus } from "@prisma/client";
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { Badge } from "@/src/components/ui/badge";
 import { TD, TH, Table } from "@/src/components/ui/table";
 
@@ -28,10 +29,60 @@ function getStatusTone(status: WorkOrderStatus): "neutral" | "info" | "danger" |
   return "neutral";
 }
 
+const columnHelper = createColumnHelper<Item>();
+
+const workOrderStatusLabels: Record<WorkOrderStatus, string> = {
+  TODO: "De facut",
+  IN_PROGRESS: "In lucru",
+  BLOCKED: "Blocat",
+  REVIEW: "In verificare",
+  DONE: "Finalizat",
+  CANCELED: "Anulat",
+};
+
 export const DashboardScheduleTable = memo(function DashboardScheduleTable({ items }: { items: Item[] }) {
   const [active, setActive] = useState<Item | null>(null);
   const handleClose = useCallback(() => setActive(null), []);
   const handleOpen = useCallback((item: Item) => setActive(item), []);
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor("startLabel", {
+        id: "startLabel",
+        header: "Ora",
+        cell: ({ getValue }) => getValue(),
+      }),
+      columnHelper.accessor("title", {
+        id: "title",
+        header: "Lucrare",
+        cell: ({ getValue }) => <span className="font-semibold text-[#ecf6ff]">{getValue()}</span>,
+      }),
+      columnHelper.accessor("projectTitle", {
+        id: "projectTitle",
+        header: "Proiect",
+        cell: ({ getValue }) => getValue(),
+      }),
+      columnHelper.accessor("teamName", {
+        id: "teamName",
+        header: "Echipa",
+        cell: ({ getValue }) => getValue(),
+      }),
+      columnHelper.accessor("status", {
+        id: "status",
+        header: "Status",
+        cell: ({ getValue }) => {
+          const status = getValue();
+          return <Badge tone={getStatusTone(status)}>{workOrderStatusLabels[status]}</Badge>;
+        },
+      }),
+    ],
+    [],
+  );
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table hook is safe in this client component.
+  const table = useReactTable({
+    data: items,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   if (items.length === 0) {
     return (
@@ -57,7 +108,7 @@ export const DashboardScheduleTable = memo(function DashboardScheduleTable({ ite
             <div className="mt-2 flex items-center justify-between gap-2">
               <p className="text-xs text-[var(--muted)]">{item.teamName}</p>
               <Badge tone={getStatusTone(item.status)}>
-                {item.status}
+                {workOrderStatusLabels[item.status]}
               </Badge>
             </div>
           </button>
@@ -67,30 +118,26 @@ export const DashboardScheduleTable = memo(function DashboardScheduleTable({ ite
       <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface-card)] md:block">
         <Table>
           <thead>
-            <tr>
-              <TH>Ora</TH>
-              <TH>Lucrare</TH>
-              <TH>Proiect</TH>
-              <TH>Echipa</TH>
-              <TH>Status</TH>
-            </tr>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TH key={header.id}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TH>
+                ))}
+              </tr>
+            ))}
           </thead>
           <tbody>
-            {items.map((item) => (
+            {table.getRowModel().rows.map((row) => (
               <tr
-                key={item.id}
+                key={row.id}
                 className="cursor-pointer hover:bg-[var(--surface-2)]"
-                onClick={() => handleOpen(item)}
+                onClick={() => handleOpen(row.original)}
               >
-                <TD>{item.startLabel}</TD>
-                <TD className="font-semibold text-[#ecf6ff]">{item.title}</TD>
-                <TD>{item.projectTitle}</TD>
-                <TD>{item.teamName}</TD>
-                <TD>
-                  <Badge tone={getStatusTone(item.status)}>
-                    {item.status}
-                  </Badge>
-                </TD>
+                {row.getVisibleCells().map((cell) => (
+                  <TD key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TD>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -139,7 +186,7 @@ export const DashboardScheduleTable = memo(function DashboardScheduleTable({ ite
               <div>
                 <p className="text-xs text-[var(--muted)]">Status</p>
                 <Badge tone={getStatusTone(active.status)}>
-                  {active.status}
+                  {workOrderStatusLabels[active.status]}
                 </Badge>
               </div>
               <div className="md:col-span-2">

@@ -114,7 +114,7 @@ export function WorkOrderCreateForm({
         <label className="md:col-span-2">
           <span className="block text-sm font-semibold text-[var(--foreground)]">Titlu lucrare</span>
           <span className="mt-1 block text-xs text-[var(--muted)]">Numele scurt folosit in lista, notificari si agenda.</span>
-          <Input name="title" required placeholder="De exemplu: Montaj tabla acoperis" className="mt-2" />
+          <Input name="title" required placeholder="Montaj tabla acoperis - corp B" className="mt-2" />
           <FieldError message={state.errors?.title} />
         </label>
 

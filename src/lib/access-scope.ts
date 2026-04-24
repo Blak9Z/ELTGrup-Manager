@@ -1,4 +1,4 @@
-import { RoleKey } from "@prisma/client";
+import { InventoryAssignmentStatus, RoleKey } from "@prisma/client";
 import { AuthUserLike, isCompanyWideNonAdminRole, isPrivilegedUser } from "@/src/lib/access-control";
 import { prisma } from "@/src/lib/prisma";
 
@@ -108,6 +108,27 @@ export function equipmentScopeWhere(user: AuthUserLike, scope: AccessScope) {
   };
 }
 
+export function inventoryItemScopeWhere(user: AuthUserLike, scope: AccessScope) {
+  if (scope.projectIds === null) return {};
+  return {
+    OR: [
+      { assignments: { none: { status: { in: [InventoryAssignmentStatus.ACTIVE, InventoryAssignmentStatus.PARTIAL_RETURNED] } } } },
+      {
+        assignments: {
+          some: {
+            status: { in: [InventoryAssignmentStatus.ACTIVE, InventoryAssignmentStatus.PARTIAL_RETURNED] },
+            OR: [
+              { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
+              { issuedToUserId: user.id },
+            ],
+          },
+        },
+      },
+      { createdById: user.id },
+    ],
+  };
+}
+
 export async function assertProjectAccess(user: AuthUserLike, projectId: string) {
   const scope = await resolveAccessScope(user);
   if (scope.projectIds === null) return;
@@ -170,6 +191,40 @@ export async function assertEquipmentAccess(user: AuthUserLike, equipmentId: str
   });
 
   if (!exists) throw new Error("Nu ai acces la echipamentul selectat.");
+}
+
+export async function assertInventoryItemAccess(user: AuthUserLike, inventoryItemId: string) {
+  const scope = await resolveAccessScope(user);
+  if (scope.projectIds === null) return;
+
+  const exists = await prisma.inventoryItem.findFirst({
+    where: {
+      id: inventoryItemId,
+      deletedAt: null,
+      ...inventoryItemScopeWhere(user, scope),
+    },
+    select: { id: true },
+  });
+
+  if (!exists) throw new Error("Nu ai acces la articolul de inventar selectat.");
+}
+
+export async function assertInventoryAssignmentAccess(user: AuthUserLike, assignmentId: string) {
+  const scope = await resolveAccessScope(user);
+  if (scope.projectIds === null) return;
+
+  const exists = await prisma.inventoryAssignment.findFirst({
+    where: {
+      id: assignmentId,
+      OR: [
+        { issuedToUserId: user.id },
+        { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
+      ],
+    },
+    select: { id: true },
+  });
+
+  if (!exists) throw new Error("Nu ai acces la alocarea selectata.");
 }
 
 export async function assertClientAccess(user: AuthUserLike, clientId: string) {

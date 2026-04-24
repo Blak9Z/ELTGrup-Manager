@@ -2,6 +2,7 @@ import dynamic from "next/dynamic";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
@@ -50,12 +51,12 @@ export default async function CalendarPage({
         ...(scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
       },
       select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
     }),
     prisma.team.findMany({
       where: scope.teamId ? { deletedAt: null, id: scope.teamId } : { deletedAt: null },
       select: { id: true, name: true },
-      orderBy: { name: "asc" },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     }),
     prisma.workOrder.findMany({
       where: {
@@ -79,7 +80,7 @@ export default async function CalendarPage({
         project: { select: { title: true } },
         team: { select: { name: true } },
       },
-      orderBy: { startDate: "asc" },
+      orderBy: [{ startDate: "asc" }, { id: "asc" }],
       take: 80,
     }),
   ]);
@@ -129,65 +130,82 @@ export default async function CalendarPage({
           </form>
 
           {canCreate ? (
-            <form action={createCalendarTaskAction} className="grid gap-3 rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3 sm:grid-cols-2 xl:grid-cols-4">
-              <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                <span>Titlu lucrare</span>
-                <Input name="title" placeholder="Ex: Montaj tablou electric" required />
-              </label>
-              <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                <span>Proiect</span>
-                <select
-                  name="projectId"
-                  required
-                  defaultValue=""
-                  disabled={projects.length === 0}
-                  className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+            <div className="rounded-xl border border-[var(--border)] bg-[rgba(12,22,39,0.8)] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-[var(--muted)]">
+                  Creeaza lucrari noi din dialog fara sa pierzi vizibilitatea planificarii curente.
+                </p>
+                <FormModal
+                  triggerLabel="Creeaza lucrare in calendar"
+                  title="Lucrare noua in calendar"
+                  description="Seteaza proiectul, echipa si ziua de inceput."
                 >
-                  <option value="" disabled>
-                    Selecteaza proiectul
-                  </option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                <span>Echipa</span>
-                <select name="teamId" defaultValue="" className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]">
-                  <option value="">Fara echipa / de completat ulterior</option>
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
-                  <span>Zi de inceput</span>
-                  <select
-                    name="dayLabel"
-                    defaultValue="Luni"
-                    className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
-                  >
-                    {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
-                      <option key={day} value={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Button type="submit" className="h-10 w-full sm:w-auto" disabled={projects.length === 0}>
-                  Creeaza si plaseaza
-                </Button>
+                  <form action={createCalendarTaskAction} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                      <span>Titlu lucrare</span>
+                      <Input name="title" placeholder="Ex: Montaj tablou electric" required />
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                      <span>Proiect</span>
+                      <select
+                        name="projectId"
+                        required
+                        defaultValue=""
+                        disabled={projects.length === 0}
+                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                      >
+                        <option value="" disabled>
+                          Selecteaza proiectul
+                        </option>
+                        {projects.map((project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                      <span>Echipa</span>
+                      <select
+                        name="teamId"
+                        defaultValue=""
+                        className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                      >
+                        <option value="">Fara echipa / de completat ulterior</option>
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                      <label className="space-y-1 text-xs font-medium text-[var(--muted)]">
+                        <span>Zi de inceput</span>
+                        <select
+                          name="dayLabel"
+                          defaultValue="Luni"
+                          className="h-10 w-full rounded-lg border border-[var(--border)] bg-[rgba(9,18,32,0.7)] px-3 text-sm text-[var(--muted-strong)]"
+                        >
+                          {["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"].map((day) => (
+                            <option key={day} value={day}>
+                              {day}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <Button type="submit" className="h-10 w-full sm:w-auto" disabled={projects.length === 0}>
+                        Creeaza si plaseaza
+                      </Button>
+                    </div>
+                    <p className="sm:col-span-2 xl:col-span-4 text-[11px] leading-5 text-[var(--muted)]">
+                      Lucrarea va porni automat la 08:00 si va primi termen la 17:00 in ziua selectata. Daca ramane fara responsabil sau
+                      depaseste termenul, cardul va afisa avertismente explicite.
+                    </p>
+                  </form>
+                </FormModal>
               </div>
-              <p className="sm:col-span-2 xl:col-span-4 text-[11px] leading-5 text-[var(--muted)]">
-                Lucrarea va porni automat la 08:00 si va primi termen la 17:00 in ziua selectata. Daca ramane fara responsabil sau
-                depaseste termenul, cardul va afisa avertismente explicite.
-              </p>
-            </form>
+            </div>
           ) : null}
 
           {tasks.length === 0 ? (

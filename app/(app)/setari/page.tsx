@@ -20,7 +20,7 @@ export default async function SetariPage() {
       include: { roles: { include: { role: true } } },
       orderBy: [{ isActive: "desc" }, { firstName: "asc" }],
     }),
-    prisma.role.findMany({ orderBy: { label: "asc" } }),
+    prisma.role.findMany({ orderBy: [{ label: "asc" }, { id: "asc" }] }),
   ]);
 
   const roleCards = roles.map((role) => ({
@@ -31,7 +31,7 @@ export default async function SetariPage() {
   return (
     <PermissionGuard resource="SETTINGS" action="VIEW">
       <div className="space-y-6">
-        <PageHeader title="Setari / Administrare" subtitle="Identity & access control: conturi, roluri operationale, activare/dezactivare si audit de acces." />
+        <PageHeader title="Setari / Administrare" subtitle="Identitate si control acces: conturi, roluri operationale, activare/dezactivare si audit de acces." />
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Utilizatori total</p>

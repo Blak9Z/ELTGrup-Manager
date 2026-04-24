@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import type { AppModule } from "@/src/lib/access-control";
 import { cn } from "@/src/lib/utils";
@@ -15,6 +15,12 @@ type SearchTarget = {
 const targetPriority: SearchTarget[] = [
   { module: "work_orders", href: "/lucrari" },
   { module: "projects", href: "/proiecte" },
+  { module: "clients", href: "/clienti" },
+  { module: "subcontractors", href: "/subcontractori" },
+  { module: "financial", href: "/financiar" },
+  { module: "reports", href: "/rapoarte-zilnice" },
+  { module: "notifications", href: "/notificari" },
+  { module: "time_tracking", href: "/pontaj" },
   { module: "documents", href: "/documente" },
   { module: "materials", href: "/materiale" },
   { module: "calendar", href: "/calendar" },
@@ -27,8 +33,20 @@ const prefixToModule: Array<{ prefix: string; module: AppModule }> = [
   { prefix: "proiecte:", module: "projects" },
   { prefix: "document:", module: "documents" },
   { prefix: "doc:", module: "documents" },
+  { prefix: "client:", module: "clients" },
+  { prefix: "clienti:", module: "clients" },
+  { prefix: "subcontractor:", module: "subcontractors" },
+  { prefix: "sub:", module: "subcontractors" },
   { prefix: "material:", module: "materials" },
   { prefix: "mat:", module: "materials" },
+  { prefix: "scula:", module: "materials" },
+  { prefix: "scule:", module: "materials" },
+  { prefix: "depozit:", module: "materials" },
+  { prefix: "financiar:", module: "financial" },
+  { prefix: "factura:", module: "financial" },
+  { prefix: "raport:", module: "reports" },
+  { prefix: "notificare:", module: "notifications" },
+  { prefix: "pontaj:", module: "time_tracking" },
   { prefix: "calendar:", module: "calendar" },
 ];
 
@@ -105,9 +123,22 @@ export function TopbarGlobalSearch({
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder={placeholder || "Cauta in modulul activ sau foloseste proiect:, lucrare:, document:"}
-        className={cn("h-10 rounded-lg border-[var(--border)] bg-[var(--surface-card)] pl-9 pr-20", inputClassName)}
+        placeholder={placeholder || "Cauta in modulul activ sau foloseste proiect:, lucrare:, client:, document:, financiar:"}
+        className={cn(
+          "h-10 rounded-lg border-[var(--border)] bg-[linear-gradient(180deg,rgba(20,31,45,0.95),rgba(15,25,37,0.95))] pl-9 pr-28",
+          inputClassName,
+        )}
       />
+      {query ? (
+        <button
+          type="button"
+          onClick={() => setQuery("")}
+          className="absolute right-[4.4rem] top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-[var(--border)] bg-[rgba(15,24,34,0.9)] text-[var(--muted)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+          aria-label="Curata cautarea"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
       <button
         type="submit"
         className="absolute right-1.5 top-1/2 inline-flex h-7 -translate-y-1/2 items-center rounded-md border border-[var(--border)] bg-[rgba(15,24,34,0.85)] px-2.5 text-[11px] font-semibold text-[var(--muted-strong)] transition hover:border-[var(--border-strong)]"

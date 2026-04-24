@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       ...timeEntryScopeWhere(userContext, scope),
     },
     include: { user: true, project: true, workOrder: true },
-    orderBy: { startAt: "asc" },
+    orderBy: [{ startAt: "asc" }, { id: "asc" }],
   });
 
   const data = rows.map((entry) => ({

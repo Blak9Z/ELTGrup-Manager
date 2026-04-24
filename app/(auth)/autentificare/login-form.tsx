@@ -44,7 +44,7 @@ export function LoginForm() {
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
       <div>
         <label className="mb-1 block text-sm font-medium text-[#cfdbed]">Email</label>
-        <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required autoComplete="username" />
+        <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required autoComplete="username" autoFocus />
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-[#cfdbed]">Parola</label>
@@ -54,6 +54,7 @@ export function LoginForm() {
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Se autentifica..." : "Autentificare"}
       </Button>
+      <p className="text-center text-xs text-[#84a4c5]">Suport tehnic: administrator ELTGRUP</p>
     </form>
   );
 }

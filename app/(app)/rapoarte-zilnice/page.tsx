@@ -2,14 +2,31 @@ import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
-import { parsePositiveIntParam } from "@/src/lib/query-params";
+import { buildListHref, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { DailyReportCreateForm } from "./daily-report-create-form";
+
+function buildRapoarteHref({
+  page,
+  projectId,
+  workOrderId,
+}: {
+  page?: number;
+  projectId?: string;
+  workOrderId?: string;
+}) {
+  return buildListHref("/rapoarte-zilnice", {
+    page,
+    projectId,
+    workOrderId,
+  });
+}
 
 export default async function RapoarteZilnicePage({
   searchParams,
@@ -48,40 +65,54 @@ export default async function RapoarteZilnicePage({
           workOrderId: params.workOrderId || undefined,
         };
 
-  const [projects, workOrders, reports, totalReports] = await Promise.all([
+  const [projects, workOrders, totalReports, blockersCount, workersSummary] = await Promise.all([
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
       select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
     }),
     prisma.workOrder.findMany({
       where: workOrdersWhere,
-      select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      select: { id: true, title: true, projectId: true },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
       take: 100,
     }),
-    prisma.dailySiteReport.findMany({
-      where: reportsWhere,
-      select: {
-        id: true,
-        reportDate: true,
-        weather: true,
-        workCompleted: true,
-        blockers: true,
-        workersCount: true,
-        createdBy: { select: { firstName: true, lastName: true } },
-        project: { select: { title: true } },
-        workOrder: { select: { title: true } },
-      },
-      orderBy: { reportDate: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
     prisma.dailySiteReport.count({ where: reportsWhere }),
+    prisma.dailySiteReport.count({
+      where: {
+        ...reportsWhere,
+        blockers: { not: null },
+        NOT: { blockers: "" },
+      },
+    }),
+    prisma.dailySiteReport.aggregate({
+      where: reportsWhere,
+      _sum: { workersCount: true },
+    }),
   ]);
-  const totalPages = Math.max(1, Math.ceil(totalReports / pageSize));
-  const blockersCount = reports.filter((item) => Boolean(item.blockers)).length;
-  const totalWorkers = reports.reduce((sum, item) => sum + item.workersCount, 0);
+  const { totalPages, currentPage, skip, take } = resolvePagination({
+    page,
+    totalItems: totalReports,
+    pageSize,
+  });
+  const reports = await prisma.dailySiteReport.findMany({
+    where: reportsWhere,
+    select: {
+      id: true,
+      reportDate: true,
+      weather: true,
+      workCompleted: true,
+      blockers: true,
+      workersCount: true,
+      createdBy: { select: { firstName: true, lastName: true } },
+      project: { select: { title: true } },
+      workOrder: { select: { title: true } },
+    },
+    orderBy: [{ reportDate: "desc" }, { id: "asc" }],
+    skip,
+    take,
+  });
+  const totalWorkers = workersSummary._sum.workersCount ?? 0;
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
@@ -120,7 +151,7 @@ export default async function RapoarteZilnicePage({
         <section className="grid gap-3 md:grid-cols-3">
           <Card>
             <p className="text-xs text-[#9fb2ce]">Rapoarte recente</p>
-            <p className="mt-2 text-2xl font-semibold">{reports.length}</p>
+            <p className="mt-2 text-2xl font-semibold">{totalReports}</p>
           </Card>
           <Card>
             <p className="text-xs text-[#9fb2ce]">Rapoarte cu blocaje</p>
@@ -135,12 +166,25 @@ export default async function RapoarteZilnicePage({
         {canCreate ? (
           <Card>
             <h2 className="text-lg font-extrabold">Raport nou</h2>
-            <DailyReportCreateForm
-              projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-              workOrders={workOrders.map((workOrder) => ({ id: workOrder.id, label: workOrder.title }))}
-              defaultProjectId={selectedProjectId}
-              defaultWorkOrderId={params.workOrderId}
-            />
+            <p className="mt-1 text-sm text-[var(--muted)]">Deschide formularul in dialog pentru completare rapida fara pierderea contextului.</p>
+            <div className="mt-3">
+              <FormModal
+                triggerLabel="Adauga raport zilnic"
+                title="Raport zilnic santier"
+                description="Completeaza vremea, progresul si blocajele pentru ziua curenta."
+              >
+                <DailyReportCreateForm
+                  projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+                  workOrders={workOrders.map((workOrder) => ({
+                    id: workOrder.id,
+                    label: workOrder.title,
+                    projectId: workOrder.projectId,
+                  }))}
+                  defaultProjectId={selectedProjectId}
+                  defaultWorkOrderId={params.workOrderId}
+                />
+              </FormModal>
+            </div>
           </Card>
         ) : null}
 
@@ -163,19 +207,27 @@ export default async function RapoarteZilnicePage({
           ))}
         </div>
         <div className="flex items-center justify-between text-sm text-[var(--muted)]">
-          <span>Pagina {page} din {totalPages}</span>
+          <span>Pagina {currentPage} din {totalPages}</span>
           <div className="flex gap-2">
-            {page > 1 ? (
+            {currentPage > 1 ? (
               <Link
-                href={`/rapoarte-zilnice?page=${page - 1}&projectId=${selectedProjectId || ""}&workOrderId=${params.workOrderId || ""}`}
+                href={buildRapoarteHref({
+                  page: currentPage - 1,
+                  projectId: selectedProjectId,
+                  workOrderId: params.workOrderId || undefined,
+                })}
                 className="rounded-md border border-[var(--border)] px-3 py-1"
               >
                 Anterior
               </Link>
             ) : null}
-            {page < totalPages ? (
+            {currentPage < totalPages ? (
               <Link
-                href={`/rapoarte-zilnice?page=${page + 1}&projectId=${selectedProjectId || ""}&workOrderId=${params.workOrderId || ""}`}
+                href={buildRapoarteHref({
+                  page: currentPage + 1,
+                  projectId: selectedProjectId,
+                  workOrderId: params.workOrderId || undefined,
+                })}
                 className="rounded-md border border-[var(--border)] px-3 py-1"
               >
                 Urmator

@@ -346,47 +346,63 @@ async function createStockMovementInternal(formData: FormData) {
     }
   }
 
-  const movement = await prisma.stockMovement.create({
-    data: {
-      materialId: parsed.data.materialId,
-      warehouseId: parsed.data.warehouseId,
-      projectId: parsed.data.projectId,
-      quantity: parsed.data.quantity,
-      type: parsed.data.type,
-      note: parsed.data.note,
-    },
-  });
+  const isProjectLinkedConsumption =
+    Boolean(parsed.data.projectId) && (parsed.data.type === StockMovementType.OUT || parsed.data.type === StockMovementType.WASTE);
 
-  if (movement.projectId && (movement.type === StockMovementType.OUT || movement.type === StockMovementType.WASTE)) {
-    const material = await prisma.material.findUnique({
-      where: { id: movement.materialId },
-      select: { internalCost: true, name: true },
-    });
-    const unitCost = Number(material?.internalCost || 0);
-    const quantity = Number(movement.quantity);
-    const amount = unitCost * quantity;
+  const movement = isProjectLinkedConsumption
+    ? await prisma.$transaction(async (tx) => {
+        const material = await tx.material.findUnique({
+          where: { id: parsed.data.materialId },
+          select: { internalCost: true, name: true },
+        });
+        const createdMovement = await tx.stockMovement.create({
+          data: {
+            materialId: parsed.data.materialId,
+            warehouseId: parsed.data.warehouseId,
+            projectId: parsed.data.projectId,
+            quantity: parsed.data.quantity,
+            type: parsed.data.type,
+            note: parsed.data.note,
+          },
+        });
 
-    await prisma.projectMaterialUsage.create({
-      data: {
-        projectId: movement.projectId,
-        materialId: movement.materialId,
-        quantityUsed: quantity,
-        quantityIssued: movement.type === StockMovementType.OUT ? quantity : 0,
-        note: `Miscare stoc #${movement.id}`,
-      },
-    });
+        const unitCost = Number(material?.internalCost || 0);
+        const quantity = Number(createdMovement.quantity);
+        const amount = unitCost * quantity;
 
-    await prisma.costEntry.create({
-      data: {
-        projectId: movement.projectId,
-        type: "MATERIAL",
-        description: `Consum material ${material?.name || movement.materialId} (#${movement.id})`,
-        amount,
-        occurredAt: movement.movedAt,
-        approvedById: currentUser.id,
-      },
-    });
-  }
+        await tx.projectMaterialUsage.create({
+          data: {
+            projectId: createdMovement.projectId as string,
+            materialId: createdMovement.materialId,
+            quantityUsed: quantity,
+            quantityIssued: createdMovement.type === StockMovementType.OUT ? quantity : 0,
+            note: `Miscare stoc #${createdMovement.id}`,
+          },
+        });
+
+        await tx.costEntry.create({
+          data: {
+            projectId: createdMovement.projectId as string,
+            type: "MATERIAL",
+            description: `Consum material ${material?.name || createdMovement.materialId} (#${createdMovement.id})`,
+            amount,
+            occurredAt: createdMovement.movedAt,
+            approvedById: currentUser.id,
+          },
+        });
+
+        return createdMovement;
+      })
+    : await prisma.stockMovement.create({
+        data: {
+          materialId: parsed.data.materialId,
+          warehouseId: parsed.data.warehouseId,
+          projectId: parsed.data.projectId,
+          quantity: parsed.data.quantity,
+          type: parsed.data.type,
+          note: parsed.data.note,
+        },
+      });
 
   await logActivity({
     userId: currentUser.id,
@@ -397,6 +413,10 @@ async function createStockMovementInternal(formData: FormData) {
   });
 
   revalidatePath("/materiale");
+  if (movement.projectId && (movement.type === StockMovementType.OUT || movement.type === StockMovementType.WASTE)) {
+    revalidatePath("/financiar");
+    revalidatePath("/proiecte");
+  }
   revalidatePath("/panou");
 }
 

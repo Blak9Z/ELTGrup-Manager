@@ -11,10 +11,10 @@ const mobileQuickLinks = [
   { module: "projects" as AppModule, href: "/proiecte", label: "Proiecte" },
   { module: "work_orders" as AppModule, href: "/lucrari", label: "Lucrari" },
   { module: "time_tracking" as AppModule, href: "/pontaj", label: "Pontaj" },
-  { module: "field" as AppModule, href: "/teren", label: "Teren" },
+  { module: "materials" as AppModule, href: "/gestiune-scule", label: "Depozit" },
 ];
 
-const globalSearchPlaceholder = "Cauta in modulul activ sau foloseste proiect:, lucrare:, document:";
+const globalSearchPlaceholder = "Cauta in modulul activ sau foloseste proiect:, lucrare:, document:, depozit:";
 
 function formatTodayLabel() {
   return new Intl.DateTimeFormat("ro-RO", {
@@ -37,12 +37,15 @@ export async function Topbar({
   const todayLabel = formatTodayLabel();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[rgba(11,17,24,0.92)] px-3 py-2.5 backdrop-blur-xl sm:px-5 lg:px-8">
+    <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[linear-gradient(180deg,rgba(11,17,24,0.96),rgba(9,15,22,0.92))] px-3 py-2.5 backdrop-blur-xl sm:px-5 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <MobileNavDrawer visibleModules={visibleModules} />
 
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Operations Console</p>
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#8dc1f5]" />
+            Consola operationala
+          </p>
           <p className="truncate text-sm font-semibold text-[var(--foreground)]">ELTGRUP Manager</p>
         </div>
 
@@ -91,7 +94,7 @@ export async function Topbar({
           <Link
             key={item.href}
             href={item.href}
-            className="inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-xs font-semibold text-[var(--muted-strong)]"
+            className="inline-flex h-11 min-w-[78px] items-center justify-center rounded-lg border border-[var(--border)] bg-[linear-gradient(180deg,rgba(22,35,50,0.94),rgba(16,27,40,0.94))] px-3 text-xs font-semibold text-[var(--muted-strong)]"
           >
             {item.label}
           </Link>

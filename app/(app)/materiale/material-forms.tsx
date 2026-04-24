@@ -60,7 +60,7 @@ export function MaterialRequestForm({ projects, materials }: { projects: Option[
   useActionFeedback(state);
 
   return (
-    <form action={formAction} encType="multipart/form-data" className="mt-3 grid gap-3 md:grid-cols-2">
+    <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2">
       <Field label="Proiect" hint="Cererea merge catre aprobarea de santier." >
         <select name="projectId" required defaultValue="" className={selectClassName}>
           <option value="" disabled>
@@ -221,7 +221,7 @@ export function MaterialInvoiceUploadForm({ projects }: { projects: Option[] }) 
   useActionFeedback(state);
 
   return (
-    <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2">
+    <form action={formAction} encType="multipart/form-data" className="mt-3 grid gap-3 md:grid-cols-2">
       <Field label="Proiect" hint="Leaga factura de proiectul corect pentru trasabilitate.">
         <select name="projectId" required defaultValue="" className={selectClassName}>
           <option value="" disabled>

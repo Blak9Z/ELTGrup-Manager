@@ -96,13 +96,18 @@ export async function addClientNote(formData: FormData) {
   const { id, note } = parsed.data;
   await assertClientAccess(currentUser, id);
 
-  const client = await prisma.client.findUnique({ where: { id }, select: { notes: true } });
-  await prisma.client.update({
-    where: { id },
-    data: {
-      notes: [client?.notes, note].filter(Boolean).join("\n"),
-    },
-  });
+  const affectedRows = await prisma.$executeRaw`
+    UPDATE "Client"
+    SET "notes" = CASE
+      WHEN "notes" IS NULL OR "notes" = '' THEN ${note}
+      ELSE "notes" || E'\n' || ${note}
+    END
+    WHERE id = ${id}
+  `;
+
+  if (affectedRows === 0) {
+    throw new Error("Clientul nu a fost gasit.");
+  }
 
   await logActivity({
     userId: currentUser.id,

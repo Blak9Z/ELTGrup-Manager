@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ReactQueryProvider } from "@/src/components/providers/react-query-provider";
 import "./globals.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -38,8 +39,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ro" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className="antialiased">
-        {children}
-        <Toaster richColors position="top-right" />
+        <ReactQueryProvider>
+          {children}
+          <Toaster richColors position="top-right" />
+        </ReactQueryProvider>
         <SpeedInsights />
       </body>
     </html>

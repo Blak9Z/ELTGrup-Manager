@@ -47,7 +47,7 @@ Toate modulele sunt filtrate dupa rol + acces in scope (proiect/echipa), cu veri
 
 - Node.js 20+
 - npm 10+
-- PostgreSQL (local, Docker sau Supabase)
+- PostgreSQL (local, Docker sau server extern)
 
 ## Setup local rapid
 
@@ -70,7 +70,38 @@ cp .env.example .env
 ```bash
 npm run db:generate
 npm run db:migrate -- --name init
+```
+
+Seed mode-ul implicit este `safe`.
+
+- `safe` - refresh RBAC only, fara date demo
+- `bootstrap` - creeaza un singur `SUPER_ADMIN` initial pe o baza fara useri
+- `demo` - date de onboarding, doar pe o baza noua/disposable
+
+Pentru primul utilizator pe o baza goala:
+
+```bash
+SEED_MODE=bootstrap \
+SEED_BOOTSTRAP_EMAIL="admin@eltgrup.local" \
+SEED_BOOTSTRAP_FIRST_NAME="Admin" \
+SEED_BOOTSTRAP_LAST_NAME="Platforma" \
+SEED_BOOTSTRAP_PASSWORD="schimba-cu-o-parola-lunga" \
 npm run db:seed
+```
+
+Pentru un refresh RBAC fara date demo:
+
+```bash
+npm run db:seed
+```
+
+Nu folosi niciodata `demo` pe baze migrate sau live.
+Nu pastra variabilele pentru `demo` permanent in `.env`; foloseste comenzi one-off.
+
+Exemplu one-off pentru demo (numai local/test):
+
+```bash
+NODE_ENV=development SEED_MODE=demo SEED_DEMO_CONFIRM=RUN_DEMO_SEED SEED_PASSWORD="<parola-lunga>" npm run db:seed
 ```
 
 5. Porneste aplicatia:
@@ -85,12 +116,12 @@ Aplicatia este disponibila la `http://localhost:3000`.
 
 Minim necesar:
 
-- `DATABASE_URL` - conexiune aplicatie (pooler recomandat in Supabase)
+- `DATABASE_URL` - conexiune aplicatie
 - `DIRECT_URL` - conexiune directa pentru migrari Prisma
 - `NEXTAUTH_SECRET` - secret semnare sesiuni
 - `NEXTAUTH_URL` - URL-ul public al aplicatiei
 
-Nota importanta pentru Supabase + Prisma:
+Nota importanta pentru Postgres + Prisma:
 
 - Evita `connection_limit=1` in `DATABASE_URL` pentru runtime.
 - Pentru modulele acestui proiect (care ruleaza query-uri paralele) foloseste minim `connection_limit=5` (recomandat `10+` pentru trafic real).
@@ -104,6 +135,13 @@ Optional pentru upload S3 compatibil:
 
 Daca variabilele de storage lipsesc, upload-ul merge pe fallback local in `public/uploads`.
 
+Seed vars:
+
+- `SEED_MODE` - `safe` / `bootstrap` / `demo`
+- `SEED_BOOTSTRAP_EMAIL`, `SEED_BOOTSTRAP_FIRST_NAME`, `SEED_BOOTSTRAP_LAST_NAME`, `SEED_BOOTSTRAP_PASSWORD` - folosite o singura data, pentru primul `SUPER_ADMIN`
+- `SEED_DEMO_CONFIRM` - trebuie sa fie exact `RUN_DEMO_SEED` pentru `demo`
+- `SEED_PASSWORD` - parola explicita pentru utilizatorii demo; nu exista fallback implicit
+
 ## Scripturi utile
 
 ```bash
@@ -116,7 +154,24 @@ npm run test:coverage
 npm run db:generate
 npm run db:migrate -- --name <nume>
 npm run db:seed
+npm run db:verify
+npm run db:migrate:postgres
+npm run db:migrate:supabase
 ```
+
+Seed safety:
+
+- `SEED_MODE=safe` este implicit si face doar refresh RBAC.
+- `SEED_MODE=bootstrap` se foloseste o singura data, cand `users` este gol.
+- `SEED_MODE=demo` cere `SEED_DEMO_CONFIRM=RUN_DEMO_SEED` si `SEED_PASSWORD`, si este permis doar pe o baza noua/disposable.
+- `SEED_MODE=demo` este permis doar cand `NODE_ENV` este `development` sau `test`.
+- `SEED_MODE=demo` este blocat daca oricare dintre `VERCEL_ENV`, `APP_ENV`, `DEPLOY_ENV` indica `production` / `prod` / `staging` / `stage` / `preview` sau alt context necunoscut.
+- Nu rula `demo` pe baze migrate sau live.
+
+Migrare DB catre server Postgres:
+
+- rulebook complet: `docs/postgres-db-migration.md`
+- script automat: `scripts/migrate-postgres.sh`
 
 ## Calitate / productie
 
@@ -155,6 +210,7 @@ npx prisma migrate deploy
 ```
 
 3. Verifica dupa deploy:
+
 - login
 - acces pe module in functie de rol
 - creare/actualizare date pe fluxurile critice (lucrari, pontaj, materiale, facturi)

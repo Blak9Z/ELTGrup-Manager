@@ -1,11 +1,29 @@
 -- CreateEnum
-CREATE TYPE "ClientType" AS ENUM ('COMPANY', 'INDIVIDUAL', 'PUBLIC_INSTITUTION', 'NGO', 'OTHER');
+DO $$
+BEGIN
+  CREATE TYPE "ClientType" AS ENUM ('COMPANY', 'INDIVIDUAL', 'PUBLIC_INSTITUTION', 'NGO', 'OTHER');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
 
 -- CreateEnum
-CREATE TYPE "SubcontractorApprovalStatus" AS ENUM ('IN_VERIFICARE', 'APROBAT', 'RESPINS', 'SUSPENDAT');
+DO $$
+BEGIN
+  CREATE TYPE "SubcontractorApprovalStatus" AS ENUM ('IN_VERIFICARE', 'APROBAT', 'RESPINS', 'SUSPENDAT');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
 
 -- CreateEnum
-CREATE TYPE "AssignmentStatus" AS ENUM ('PLANIFICAT', 'ACTIV', 'INTRERUPT', 'FINALIZAT', 'ANULAT');
+DO $$
+BEGIN
+  CREATE TYPE "AssignmentStatus" AS ENUM ('PLANIFICAT', 'ACTIV', 'INTRERUPT', 'FINALIZAT', 'ANULAT');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
 
 -- Normalize free-text values before enum casts (backward compatibility).
 UPDATE "Client"
@@ -41,18 +59,21 @@ END;
 
 -- AlterTable
 ALTER TABLE "Client"
-  ALTER COLUMN "type" SET DEFAULT 'COMPANY',
-  ALTER COLUMN "type" TYPE "ClientType" USING ("type"::"ClientType");
+  ALTER COLUMN "type" DROP DEFAULT,
+  ALTER COLUMN "type" TYPE "ClientType" USING ("type"::"ClientType"),
+  ALTER COLUMN "type" SET DEFAULT 'COMPANY';
 
 -- AlterTable
 ALTER TABLE "Subcontractor"
-  ALTER COLUMN "approvalStatus" SET DEFAULT 'IN_VERIFICARE',
-  ALTER COLUMN "approvalStatus" TYPE "SubcontractorApprovalStatus" USING ("approvalStatus"::"SubcontractorApprovalStatus");
+  ALTER COLUMN "approvalStatus" DROP DEFAULT,
+  ALTER COLUMN "approvalStatus" TYPE "SubcontractorApprovalStatus" USING ("approvalStatus"::"SubcontractorApprovalStatus"),
+  ALTER COLUMN "approvalStatus" SET DEFAULT 'IN_VERIFICARE';
 
 -- AlterTable
 ALTER TABLE "SubcontractorAssignment"
-  ALTER COLUMN "status" SET DEFAULT 'ACTIV',
-  ALTER COLUMN "status" TYPE "AssignmentStatus" USING ("status"::"AssignmentStatus");
+  ALTER COLUMN "status" DROP DEFAULT,
+  ALTER COLUMN "status" TYPE "AssignmentStatus" USING ("status"::"AssignmentStatus"),
+  ALTER COLUMN "status" SET DEFAULT 'ACTIV';
 
 -- Clamp out-of-range project progress and enforce DB-level bounds.
 UPDATE "Project"

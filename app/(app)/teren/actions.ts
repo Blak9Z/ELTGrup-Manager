@@ -42,6 +42,42 @@ function todayDateAtMidnight() {
   return date;
 }
 
+async function assertActiveProjectAccess(user: Awaited<ReturnType<typeof requirePermission>>, projectId: string) {
+  await assertProjectAccess(user, projectId);
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { deletedAt: true },
+  });
+
+  if (!project || project.deletedAt) {
+    throw new Error("Proiect inexistent sau deja arhivat.");
+  }
+}
+
+async function loadActiveWorkOrder(
+  user: Awaited<ReturnType<typeof requirePermission>>,
+  workOrderId: string,
+  options?: { projectId?: string },
+) {
+  await assertWorkOrderAccess(user, workOrderId, options);
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    select: { deletedAt: true, projectId: true },
+  });
+
+  if (!workOrder || workOrder.deletedAt) {
+    throw new Error("Lucrare inexistenta sau deja arhivata.");
+  }
+
+  if (options?.projectId && workOrder.projectId !== options.projectId) {
+    throw new Error("Lucrarea selectata nu apartine proiectului selectat.");
+  }
+
+  return workOrder;
+}
+
 export async function startLivePontaj(formData: FormData) {
   const currentUser = await requirePermission("TIME_TRACKING", "CREATE");
 
@@ -52,8 +88,8 @@ export async function startLivePontaj(formData: FormData) {
   });
 
   if (!parsed.success) throw new Error("Date invalide pentru start pontaj.");
-  await assertProjectAccess(currentUser, parsed.data.projectId);
-  await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
+  await assertActiveProjectAccess(currentUser, parsed.data.projectId);
+  await loadActiveWorkOrder(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
 
   const existing = await prisma.timeEntry.findFirst({
     where: {
@@ -245,8 +281,8 @@ export async function uploadTaskPhoto(formData: FormData) {
     note: formData.get("note") || undefined,
   });
   if (!parsed.success) throw new Error("Date foto invalide");
-  await assertProjectAccess(currentUser, parsed.data.projectId);
-  await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
+  await assertActiveProjectAccess(currentUser, parsed.data.projectId);
+  await loadActiveWorkOrder(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
 
   const file = formData.get("file");
   if (!(file instanceof File)) throw new Error("Fisier foto lipsa");
@@ -287,8 +323,8 @@ export async function uploadTaskSignature(formData: FormData) {
     note: formData.get("note") || undefined,
   });
   if (!parsed.success) throw new Error("Date semnatura invalide");
-  await assertProjectAccess(currentUser, parsed.data.projectId);
-  await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
+  await assertActiveProjectAccess(currentUser, parsed.data.projectId);
+  await loadActiveWorkOrder(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
 
   const file = formData.get("file");
   if (!(file instanceof File)) throw new Error("Fisier semnatura lipsa");
@@ -334,9 +370,9 @@ export async function createFieldUpdate(formData: FormData) {
     note: formData.get("note") || undefined,
   });
   if (!parsed.success) throw new Error("Date update teren invalide.");
-  await assertProjectAccess(currentUser, parsed.data.projectId);
+  await assertActiveProjectAccess(currentUser, parsed.data.projectId);
   if (parsed.data.workOrderId) {
-    await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
+    await loadActiveWorkOrder(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
   }
 
   await prisma.dailySiteReport.create({

@@ -27,7 +27,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           deletedAt: null,
           ...(scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
         },
-        orderBy: { updatedAt: "desc" },
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         take: 20,
       },
       invoices: {
@@ -35,7 +35,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           scope.projectIds === null
             ? {}
             : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
-        orderBy: { dueDate: "desc" },
+        orderBy: [{ dueDate: "desc" }, { id: "asc" }],
         take: 20,
       },
       documents: {
@@ -48,7 +48,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                   { projectId: null, clientId: id },
                 ],
               },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
         take: 20,
       },
     },

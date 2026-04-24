@@ -39,7 +39,7 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
       </Button>
 
       <Drawer isOpen={open} onOpenChange={(next) => setOpenPath(next ? pathname : null)}>
-        <DrawerContent className="max-w-[320px] border-r border-[var(--border)] bg-[var(--shell)] text-[var(--foreground)]">
+        <DrawerContent className="max-w-[320px] border-r border-[var(--border)] bg-[linear-gradient(180deg,rgba(13,20,30,0.98),rgba(10,17,25,0.98))] text-[var(--foreground)]">
           <DrawerHeader className="flex items-center justify-between border-b border-[var(--border)] py-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">ELTGRUP Manager</p>
@@ -74,12 +74,13 @@ export function MobileNavDrawer({ visibleModules }: { visibleModules: AppModule[
                           href={item.href}
                           onClick={() => setOpenPath(null)}
                           className={cn(
-                            "flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition",
+                            "relative flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition",
                             active
-                              ? "border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--foreground)]"
+                              ? "border-[var(--border-strong)] bg-[linear-gradient(180deg,rgba(30,44,61,0.96),rgba(23,36,50,0.96))] text-[var(--foreground)]"
                               : "border-transparent text-[var(--muted-strong)] hover:border-[var(--border)] hover:bg-[var(--surface-card)]",
                           )}
                         >
+                          {active ? <span className="absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full bg-[#9bc2ea]" /> : null}
                           <Icon className={cn("h-4 w-4", active ? "text-[#aac4e2]" : "text-[#8098b5]")} />
                           <span>{item.label}</span>
                         </Link>

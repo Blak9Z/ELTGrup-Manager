@@ -9,9 +9,10 @@ import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { Table, TD, TH } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, timeEntryScopeWhere } from "@/src/lib/access-scope";
-import { parseDateParam, parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { buildListHref, parseDateParam, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatDate, formatDateTime } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
@@ -21,7 +22,7 @@ import { PontajCreateForm } from "./pontaj-create-form";
 const timeEntryStatusMeta: Record<TimeEntryStatus, { label: string; tone: "success" | "danger" | "warning" | "neutral"; description: string }> = {
   DRAFT: { label: "Draft", tone: "neutral", description: "Inregistrare nefinalizata" },
   SUBMITTED: { label: "Asteapta aprobare", tone: "warning", description: "Trimis la verificare" },
-  APPROVED: { label: "Aprobat", tone: "success", description: "Validat pentru payroll" },
+  APPROVED: { label: "Aprobat", tone: "success", description: "Validat pentru salarizare" },
   REJECTED: { label: "Respins", tone: "danger", description: "Cerere respinsa" },
 };
 
@@ -30,13 +31,13 @@ function getTimeEntryStatusMeta(status: TimeEntryStatus) {
 }
 
 function buildPontajHref(page: number, params: { status?: string; projectId?: string; from?: string; to?: string }) {
-  const searchParams = new URLSearchParams();
-  searchParams.set("page", String(page));
-  if (params.status) searchParams.set("status", params.status);
-  if (params.projectId) searchParams.set("projectId", params.projectId);
-  if (params.from) searchParams.set("from", params.from);
-  if (params.to) searchParams.set("to", params.to);
-  return `/pontaj?${searchParams.toString()}`;
+  return buildListHref("/pontaj", {
+    page,
+    status: params.status,
+    projectId: params.projectId,
+    from: params.from,
+    to: params.to,
+  });
 }
 
 export default async function PontajPage({
@@ -79,22 +80,22 @@ export default async function PontajPage({
     startAt: startAtFilter,
   };
 
-  const [projects, workOrders, users, entries, total] = await Promise.all([
+  const [projects, workOrders, users, total] = await Promise.all([
     prisma.project.findMany({
       where: {
         deletedAt: null,
         ...(scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
       },
       select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
     }),
     prisma.workOrder.findMany({
       where: {
         deletedAt: null,
         ...(scope.projectIds === null ? {} : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
       },
-      select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      select: { id: true, title: true, projectId: true },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
       take: 100,
     }),
     prisma.user.findMany({
@@ -102,29 +103,33 @@ export default async function PontajPage({
         ? { isActive: true, deletedAt: null }
         : { id: userContext.id, isActive: true, deletedAt: null },
       select: { id: true, firstName: true, lastName: true },
-      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
-    }),
-    prisma.timeEntry.findMany({
-      where,
-      select: {
-        id: true,
-        startAt: true,
-        endAt: true,
-        durationMinutes: true,
-        breakMinutes: true,
-        status: true,
-        approvedAt: true,
-        user: { select: { firstName: true, lastName: true } },
-        project: { select: { title: true } },
-        workOrder: { select: { title: true } },
-      },
-      orderBy: { startAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { id: "asc" }],
     }),
     prisma.timeEntry.count({ where }),
   ]);
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const { totalPages, currentPage, skip, take } = resolvePagination({
+    page,
+    totalItems: total,
+    pageSize,
+  });
+  const entries = await prisma.timeEntry.findMany({
+    where,
+    select: {
+      id: true,
+      startAt: true,
+      endAt: true,
+      durationMinutes: true,
+      breakMinutes: true,
+      status: true,
+      approvedAt: true,
+      user: { select: { firstName: true, lastName: true } },
+      project: { select: { title: true } },
+      workOrder: { select: { title: true } },
+    },
+    orderBy: [{ startAt: "desc" }, { id: "asc" }],
+    skip,
+    take,
+  });
   const submittedEntries = entries.filter((item) => item.status === TimeEntryStatus.SUBMITTED);
   const currentStatusMeta = statusFilter ? getTimeEntryStatusMeta(statusFilter) : null;
 
@@ -133,7 +138,7 @@ export default async function PontajPage({
       <div className="space-y-6">
         <PageHeader
           title="Pontaj si timp lucrat"
-          subtitle="Inregistrare clara, aprobari rapide si export pentru payroll - cu statusuri explicitate si tura standard vs. tura custom."
+          subtitle="Inregistrare clara, aprobari rapide si export pentru salarizare - cu statusuri explicate si tura standard vs. tura personalizata."
         />
         {canExport ? (
           <div className="flex justify-end">
@@ -151,9 +156,9 @@ export default async function PontajPage({
                 <p className="text-sm text-[var(--muted)]">Selecteaza proiectul si intervalul, apoi restrange dupa statusul operational.</p>
               </div>
               <div className="text-xs text-[var(--muted)]">
-                <p>SUBMITTED = la aprobare</p>
-                <p>APPROVED = validat pentru payroll</p>
-                <p>REJECTED = respins si vizibil in istoric</p>
+                <p>In asteptare aprobare = trimis la verificare</p>
+                <p>Aprobat = validat pentru plata</p>
+                <p>Respins = ramane in istoric</p>
               </div>
             </div>
             <form className="grid gap-3 md:grid-cols-5" method="get">
@@ -199,7 +204,7 @@ export default async function PontajPage({
             </form>
             <div className="flex flex-wrap gap-2 text-xs text-[var(--muted)]">
               <span className="rounded-full border border-[var(--border)] px-2.5 py-1">Tura standard = final implicit 17:00</span>
-              <span className="rounded-full border border-[var(--border)] px-2.5 py-1">Tura custom = final completat explicit</span>
+              <span className="rounded-full border border-[var(--border)] px-2.5 py-1">Tura personalizata = final completat explicit</span>
               {currentStatusMeta ? (
                 <span className="rounded-full border border-[var(--border)] px-2.5 py-1">Filtru activ: {currentStatusMeta.label}</span>
               ) : null}
@@ -213,15 +218,21 @@ export default async function PontajPage({
               <div>
                 <h2 className="text-lg font-semibold text-[var(--foreground)]">Adauga pontaj</h2>
                 <p className="text-sm text-[var(--muted)]">
-                  Completeaza startul, apoi alege intre tura standard si tura custom. Daca finalizezi tura acum, seteaza si ora de final.
+                  Completeaza startul, apoi alege intre tura standard si tura personalizata. Daca finalizezi tura acum, seteaza si ora de final.
                 </p>
               </div>
-              <PontajCreateForm
-                projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-                workOrders={workOrders.map((item) => ({ id: item.id, label: item.title }))}
-                users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
-                canSelectUser={canManageTeamPontaj}
-              />
+              <FormModal
+                triggerLabel="Adauga pontaj"
+                title="Inregistrare pontaj"
+                description="Selecteaza proiectul, utilizatorul si intervalul orar."
+              >
+                <PontajCreateForm
+                  projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+                  workOrders={workOrders.map((item) => ({ id: item.id, label: item.title, projectId: item.projectId }))}
+                  users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
+                  canSelectUser={canManageTeamPontaj}
+                />
+              </FormModal>
             </div>
           </Card>
         ) : null}
@@ -230,7 +241,7 @@ export default async function PontajPage({
           <Card className="bulk-zone">
             <details>
               <summary>Actiuni bulk pentru pontajele in asteptare</summary>
-              <div className="mt-2 text-xs text-[var(--muted)]">Se pot procesa doar inregistrarile SUBMITTED. Selecteaza doar ce verifici acum.</div>
+              <div className="mt-2 text-xs text-[var(--muted)]">Se pot procesa doar inregistrarile in asteptare de aprobare. Selecteaza doar ce verifici acum.</div>
               <form action={bulkTimeEntriesAction} className="mt-3 space-y-3">
                 <div className="bulk-controls grid gap-2 md:grid-cols-3">
                   <select name="operation" defaultValue="APPROVE">
@@ -242,7 +253,7 @@ export default async function PontajPage({
                 </div>
                 <div className="max-h-36 overflow-y-auto rounded-xl border border-[var(--border)] p-3">
                   {submittedEntries.length === 0 ? (
-                    <p className="text-sm text-[var(--muted)]">Nu exista pontaje SUBMITTED in pagina curenta.</p>
+                    <p className="text-sm text-[var(--muted)]">Nu exista pontaje in asteptare de aprobare in pagina curenta.</p>
                   ) : (
                     <div className="grid gap-1 md:grid-cols-2">
                       {submittedEntries.map((entry) => (
@@ -266,7 +277,7 @@ export default async function PontajPage({
             <EmptyState title="Nu exista pontaj" description="Adauga prima inregistrare de timp sau schimba filtrele." />
           ) : (
             <div>
-              <div className="space-y-3 md:hidden">
+              <div className="space-y-3 lg:hidden">
                 {entries.map((entry) => {
                   const meta = getTimeEntryStatusMeta(entry.status);
                   return (
@@ -300,7 +311,7 @@ export default async function PontajPage({
                   );
                 })}
               </div>
-              <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] md:block">
+              <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] lg:block">
                 <Table aria-label="Pontaj">
                   <thead>
                     <tr>
@@ -358,17 +369,17 @@ export default async function PontajPage({
           )}
         </Card>
         <div className="flex items-center justify-between text-sm text-[#9cb0cb]">
-          <span>
-            Pagina {page} din {totalPages}
+            <span>
+            Pagina {currentPage} din {totalPages}
           </span>
           <div className="flex gap-2">
-            {page > 1 ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildPontajHref(page - 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}>
+            {currentPage > 1 ? (
+              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildPontajHref(currentPage - 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}>
                 Anterior
               </Link>
             ) : null}
-            {page < totalPages ? (
-              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildPontajHref(page + 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}>
+            {currentPage < totalPages ? (
+              <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildPontajHref(currentPage + 1, { status: statusFilter || undefined, projectId: params.projectId, from: params.from, to: params.to })}>
                 Urmator
               </Link>
             ) : null}

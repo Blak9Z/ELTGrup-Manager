@@ -5,6 +5,7 @@
   --background: #0b1118;
   --shell: #0e141d;
   --surface: #141d28;
+  --surface-soft: #172233;
   --surface-2: #192432;
   --surface-3: #223143;
   --surface-card: #111a25;
@@ -19,6 +20,9 @@
   --success: #4f9c76;
   --warning: #b88e43;
   --info: #5e86be;
+  --ring: rgba(124, 170, 223, 0.44);
+  --glow-primary: rgba(101, 151, 204, 0.23);
+  --glow-secondary: rgba(79, 120, 169, 0.18);
   --shadow-panel: 0 24px 52px -36px rgba(4, 8, 15, 0.85);
   --shadow-float: 0 18px 34px -24px rgba(0, 0, 0, 0.74);
 }
@@ -41,16 +45,45 @@ body {
 }
 
 body {
+  position: relative;
+  isolation: isolate;
   margin: 0;
   background:
-    radial-gradient(1200px 560px at -8% -10%, rgba(79, 121, 168, 0.16), transparent 58%),
-    radial-gradient(920px 420px at 105% -6%, rgba(76, 117, 158, 0.12), transparent 62%),
+    radial-gradient(1300px 620px at -8% -12%, var(--glow-primary), transparent 58%),
+    radial-gradient(980px 440px at 106% -4%, var(--glow-secondary), transparent 62%),
     linear-gradient(180deg, #0b1118 0%, #0a1017 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-ibm-sans), "IBM Plex Sans", "Segoe UI", sans-serif;
   line-height: 1.5;
   letter-spacing: 0.004em;
   text-rendering: geometricPrecision;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(360px 280px at 15% 20%, rgba(130, 178, 228, 0.06), transparent 80%),
+    radial-gradient(420px 320px at 86% 6%, rgba(109, 145, 196, 0.07), transparent 82%),
+    radial-gradient(640px 380px at 78% 84%, rgba(67, 99, 137, 0.08), transparent 82%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(transparent 96%, rgba(179, 205, 233, 0.08) 100%),
+    linear-gradient(90deg, transparent 96%, rgba(179, 205, 233, 0.08) 100%);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.85));
 }
 
 h1,
@@ -78,8 +111,21 @@ p {
 
 .panel-muted {
   border: 1px solid color-mix(in oklab, var(--border) 90%, transparent);
-  background: color-mix(in oklab, var(--surface-card) 84%, #0f1722 16%);
+  background: color-mix(in oklab, var(--surface-soft) 82%, #0f1722 18%);
   box-shadow: var(--shadow-panel);
+}
+
+.surface-interactive {
+  transition:
+    border-color 170ms ease,
+    background-color 170ms ease,
+    transform 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.surface-interactive:hover {
+  border-color: color-mix(in oklab, var(--border-strong) 86%, white 14%);
+  box-shadow: 0 12px 32px -24px rgba(95, 143, 196, 0.48);
 }
 
 .field-label {
@@ -110,6 +156,24 @@ a {
   text-decoration: none;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    border-color 170ms ease,
+    color 170ms ease,
+    background-color 170ms ease,
+    box-shadow 170ms ease,
+    transform 140ms ease;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 input,
 textarea,
 select,
@@ -128,13 +192,14 @@ input[type="file"] {
   padding: 0 0.8rem;
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease, transform 120ms ease;
 }
 
 select:focus,
 input[type="file"]:focus {
   border-color: #607d9f;
   box-shadow: 0 0 0 3px rgba(80, 123, 169, 0.22);
+  transform: translateY(-1px);
 }
 
 input[type="file"]::file-selector-button {
@@ -184,4 +249,35 @@ table {
 table tr td,
 table tr th {
   border-color: #2c3b4c;
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(100deg, transparent 25%, rgba(173, 205, 238, 0.12) 45%, transparent 70%);
+  animation: shimmer 2.3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }

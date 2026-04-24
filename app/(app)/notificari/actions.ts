@@ -2,18 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { auth } from "@/src/lib/auth";
+import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
 import { resolveNotificationTarget } from "@/src/lib/notifications";
 
 export async function markNotificationRead(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Sesiune invalida");
+  const currentUser = await requirePermission("REPORTS", "VIEW");
 
   const id = String(formData.get("id") || "");
   if (!id) throw new Error("Notificare invalida.");
   await prisma.notification.updateMany({
-    where: { id, userId: session.user.id, isRead: false },
+    where: { id, userId: currentUser.id, isRead: false },
     data: { isRead: true },
   });
 
@@ -21,21 +20,20 @@ export async function markNotificationRead(formData: FormData) {
 }
 
 export async function markNotificationReadAndOpen(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Sesiune invalida");
+  const currentUser = await requirePermission("REPORTS", "VIEW");
 
   const id = String(formData.get("id") || "");
   if (!id) throw new Error("Notificare invalida.");
 
   const notification = await prisma.notification.findFirst({
-    where: { id, userId: session.user.id },
+    where: { id, userId: currentUser.id },
     select: { actionUrl: true, type: true },
   });
 
   if (!notification) throw new Error("Notificare invalida.");
 
   await prisma.notification.updateMany({
-    where: { id, userId: session.user.id, isRead: false },
+    where: { id, userId: currentUser.id, isRead: false },
     data: { isRead: true },
   });
 
@@ -44,11 +42,10 @@ export async function markNotificationReadAndOpen(formData: FormData) {
 }
 
 export async function markAllNotificationsRead() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Sesiune invalida");
+  const currentUser = await requirePermission("REPORTS", "VIEW");
 
   await prisma.notification.updateMany({
-    where: { userId: session.user.id, isRead: false },
+    where: { userId: currentUser.id, isRead: false },
     data: { isRead: true },
   });
 

@@ -3,6 +3,7 @@ import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Card } from "@/src/components/ui/card";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { canAccessModule } from "@/src/lib/access-control";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
@@ -30,6 +31,7 @@ export default async function AnaliticePage() {
       prisma.project.findMany({
         where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter }) },
         select: { id: true, title: true, estimatedBudget: true },
+        orderBy: [{ title: "asc" }, { id: "asc" }],
       }),
       prisma.workOrder.findMany({
         where: {
@@ -44,7 +46,7 @@ export default async function AnaliticePage() {
           dueDate: true,
           project: { select: { title: true } },
         },
-        orderBy: { dueDate: "asc" },
+        orderBy: [{ dueDate: "asc" }, { id: "asc" }],
         take: 12,
       }),
       prisma.workOrder.findMany({
@@ -54,6 +56,7 @@ export default async function AnaliticePage() {
           status: { not: "CANCELED" },
         },
         select: { id: true, title: true, estimatedHours: true, project: { select: { title: true } } },
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         take: 200,
       }),
       prisma.materialRequest.groupBy({
@@ -149,6 +152,11 @@ export default async function AnaliticePage() {
     .filter((item) => item.variance > 0)
     .sort((a, b) => b.variance - a.variance)
     .slice(0, 3);
+  const canSeeWorkOrders = canAccessModule(userContext, "work_orders");
+  const canSeeTimeTracking = canAccessModule(userContext, "time_tracking");
+  const canSeeProjects = canAccessModule(userContext, "projects");
+  const canSeeFinancial = canAccessModule(userContext, "financial");
+  const canSeeMaterials = canAccessModule(userContext, "materials");
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
@@ -163,25 +171,31 @@ export default async function AnaliticePage() {
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Lucrari intarziate</p>
             <p className="mt-2 text-2xl font-black">{delayedWorkOrders.length}</p>
             <p className="mt-1 text-xs text-[var(--muted)]">Reprioritizeaza si verifica termenele blocate.</p>
-            <Link href="/lucrari" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Vezi lucrarile
-            </Link>
+            {canSeeWorkOrders ? (
+              <Link href="/lucrari" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Vezi lucrarile
+              </Link>
+            ) : null}
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Ore peste estimat</p>
             <p className="mt-2 text-2xl font-black">{overEstimateCount}</p>
             <p className="mt-1 text-xs text-[var(--muted)]">Confirma pontajele si ajusteaza estimarile.</p>
-            <Link href="/pontaj" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Vezi pontajele
-            </Link>
+            {canSeeTimeTracking ? (
+              <Link href="/pontaj" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Vezi pontajele
+              </Link>
+            ) : null}
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Cost peste buget</p>
             <p className="mt-2 text-2xl font-black">{costOverBudgetCount}</p>
             <p className="mt-1 text-xs text-[var(--muted)]">Taie costurile care trag proiectele in sus.</p>
-            <Link href="/proiecte" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Vezi proiectele
-            </Link>
+            {canSeeProjects ? (
+              <Link href="/proiecte" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Vezi proiectele
+              </Link>
+            ) : null}
           </Card>
           <Card>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Facturi restante</p>
@@ -189,9 +203,11 @@ export default async function AnaliticePage() {
             <p className="mt-1 text-xs text-[var(--muted)]">
               Creanta {formatCurrency(receivable)} - incasare {collectionRate}%
             </p>
-            <Link href="/financiar" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Vezi financiar
-            </Link>
+            {canSeeFinancial ? (
+              <Link href="/financiar" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Vezi financiar
+              </Link>
+            ) : null}
           </Card>
         </section>
 
@@ -221,15 +237,19 @@ export default async function AnaliticePage() {
                   <p className="mt-1 text-xs text-[var(--muted)]">
                     {workOrder.project.title} - termen {workOrder.dueDate ? formatDate(workOrder.dueDate) : "-"}
                   </p>
-                  <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/lucrari/${workOrder.id}`}>
-                    Deschide lucrarea
-                  </Link>
+                  {canSeeWorkOrders ? (
+                    <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/lucrari/${workOrder.id}`}>
+                      Deschide lucrarea
+                    </Link>
+                  ) : null}
                 </div>
               ))}
             </div>
-            <Link href="/lucrari" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Deschide toate lucrarile
-            </Link>
+            {canSeeWorkOrders ? (
+              <Link href="/lucrari" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Deschide toate lucrarile
+              </Link>
+            ) : null}
           </Card>
 
           <Card>
@@ -255,15 +275,19 @@ export default async function AnaliticePage() {
                   <p className={`mt-1 text-xs font-semibold ${item.actual > item.planned ? "text-[#ffb9c1]" : "text-[#b6f3ce]"}`}>
                     Variatie: {formatCurrency(item.actual - item.planned)}
                   </p>
-                  <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/proiecte/${item.projectId}`}>
-                    Deschide proiectul
-                  </Link>
+                  {canSeeProjects ? (
+                    <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/proiecte/${item.projectId}`}>
+                      Deschide proiectul
+                    </Link>
+                  ) : null}
                 </div>
               ))}
             </div>
-            <Link href="/proiecte" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Deschide toate proiectele
-            </Link>
+            {canSeeProjects ? (
+              <Link href="/proiecte" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Deschide toate proiectele
+              </Link>
+            ) : null}
           </Card>
 
           <Card>
@@ -292,9 +316,11 @@ export default async function AnaliticePage() {
                 </p>
               </div>
             </div>
-            <Link href="/financiar" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Deschide financiar
-            </Link>
+            {canSeeFinancial ? (
+              <Link href="/financiar" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Deschide financiar
+              </Link>
+            ) : null}
           </Card>
         </section>
 
@@ -325,15 +351,19 @@ export default async function AnaliticePage() {
                     Variatie: {item.variance > 0 ? "+" : ""}
                     {item.variance}h
                   </p>
-                  <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/lucrari/${item.id}`}>
-                    Deschide lucrarea
-                  </Link>
+                  {canSeeWorkOrders ? (
+                    <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/lucrari/${item.id}`}>
+                      Deschide lucrarea
+                    </Link>
+                  ) : null}
                 </div>
               ))}
             </div>
-            <Link href="/pontaj" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Deschide pontajele
-            </Link>
+            {canSeeTimeTracking ? (
+              <Link href="/pontaj" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Deschide pontajele
+              </Link>
+            ) : null}
           </Card>
 
           <Card>
@@ -357,15 +387,19 @@ export default async function AnaliticePage() {
                   <p className="font-semibold text-[var(--foreground)]">{item.title}</p>
                   <p className="text-xs text-[var(--muted)]">Aprobate {item.planned.toFixed(2)} - Consumate {item.actual.toFixed(2)}</p>
                   <p className="mt-1 text-xs font-semibold text-[#ffb9c1]">Diferenta: {(item.actual - item.planned).toFixed(2)}</p>
-                  <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/proiecte/${item.projectId}`}>
-                    Deschide proiectul
-                  </Link>
+                  {canSeeProjects ? (
+                    <Link className="mt-2 inline-block text-xs font-semibold text-[#c6dbff] hover:underline" href={`/proiecte/${item.projectId}`}>
+                      Deschide proiectul
+                    </Link>
+                  ) : null}
                 </div>
               ))}
             </div>
-            <Link href="/materiale" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
-              Deschide materialele
-            </Link>
+            {canSeeMaterials ? (
+              <Link href="/materiale" className="mt-3 inline-flex text-xs font-semibold text-[#c6dbff] hover:underline">
+                Deschide materialele
+              </Link>
+            ) : null}
           </Card>
         </section>
       </div>

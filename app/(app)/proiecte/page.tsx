@@ -9,9 +9,10 @@ import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { TD, TH, Table } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { auth } from "@/src/lib/auth";
 import { projectScopeWhere, resolveAccessScope } from "@/src/lib/access-scope";
-import { parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
@@ -45,6 +46,22 @@ function formatProjectDates(startDate: Date | null, endDate: Date | null) {
   return `Termen: ${formatDate(endDate as Date)}`;
 }
 
+function buildProiecteHref({
+  page,
+  q,
+  status,
+}: {
+  page?: number;
+  q?: string;
+  status?: ProjectStatus | null;
+}) {
+  return buildListHref("/proiecte", {
+    page,
+    q,
+    status: status || undefined,
+  });
+}
+
 export default async function ProjectsPage({
   searchParams,
 }: {
@@ -75,27 +92,7 @@ export default async function ProjectsPage({
     status: statusFilter || undefined,
   };
 
-  const [projects, total, clients] = await Promise.all([
-    prisma.project.findMany({
-      where,
-      select: {
-        id: true,
-        code: true,
-        title: true,
-        siteAddress: true,
-        startDate: true,
-        endDate: true,
-        estimatedBudget: true,
-        contractValue: true,
-        progressPercent: true,
-        status: true,
-        client: { select: { name: true } },
-        manager: { select: { firstName: true, lastName: true } },
-      },
-      orderBy: { updatedAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
+  const [total, clients] = await Promise.all([
     prisma.project.count({ where }),
     prisma.client.findMany({
       where:
@@ -103,10 +100,34 @@ export default async function ProjectsPage({
           ? { deletedAt: null }
           : { deletedAt: null, projects: { some: { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } } } },
       select: { id: true, name: true },
-      orderBy: { name: "asc" },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     }),
   ]);
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const { totalPages, currentPage, skip, take } = resolvePagination({
+    page,
+    totalItems: total,
+    pageSize,
+  });
+  const projects = await prisma.project.findMany({
+    where,
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      siteAddress: true,
+      startDate: true,
+      endDate: true,
+      estimatedBudget: true,
+      contractValue: true,
+      progressPercent: true,
+      status: true,
+      client: { select: { name: true } },
+      manager: { select: { firstName: true, lastName: true } },
+    },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    skip,
+    take,
+  });
 
   return (
     <PermissionGuard resource="PROJECTS" action="VIEW">
@@ -115,9 +136,20 @@ export default async function ProjectsPage({
 
         {canCreate ? (
           <Card>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Create</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Creare</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Proiect nou</h2>
-            <ProjectCreateForm clients={clients} />
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Foloseste dialogul pentru creare ca sa pastrezi lista curenta vizibila in timpul completarii.
+            </p>
+            <div className="mt-3">
+              <FormModal
+                triggerLabel="Adauga proiect"
+                title="Creare proiect nou"
+                description="Completeaza datele contractuale si de executie."
+              >
+                <ProjectCreateForm clients={clients} />
+              </FormModal>
+            </div>
           </Card>
         ) : null}
 
@@ -161,7 +193,7 @@ export default async function ProjectsPage({
         ) : null}
 
         <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Filters</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Filtre</p>
           <form className="mb-4 mt-2 grid gap-3 md:grid-cols-3">
             <Input name="q" placeholder="Filtru dupa nume proiect" defaultValue={query} />
             <input type="hidden" name="page" value="1" />
@@ -182,7 +214,7 @@ export default async function ProjectsPage({
             <EmptyState title="Nu exista proiecte" description="Adauga primul proiect pentru a incepe planificarea." />
           ) : (
             <div>
-            <div className="space-y-3 md:hidden">
+            <div className="space-y-3 lg:hidden">
               {projects.map((project) => {
                 const status = mapStatus(project.status);
                 return (
@@ -236,7 +268,7 @@ export default async function ProjectsPage({
                 );
               })}
             </div>
-            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] md:block">
+            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] lg:block">
               <Table>
                 <thead>
                   <tr>
@@ -317,20 +349,28 @@ export default async function ProjectsPage({
           )}
           <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[var(--border)]/60 pt-4 text-sm text-[var(--muted)] sm:flex-row">
             <span>
-              Pagina {page} din {totalPages}
+              Pagina {currentPage} din {totalPages}
             </span>
             <div className="flex gap-2">
-              {page > 1 ? (
+              {currentPage > 1 ? (
                 <Link
-                  href={`/proiecte?page=${page - 1}&q=${encodeURIComponent(query)}&status=${statusFilter || ""}`}
+                  href={buildProiecteHref({
+                    page: currentPage - 1,
+                    q: query || undefined,
+                    status: statusFilter,
+                  })}
                   className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]"
                 >
                   Anterior
                 </Link>
               ) : null}
-              {page < totalPages ? (
+              {currentPage < totalPages ? (
                 <Link
-                  href={`/proiecte?page=${page + 1}&q=${encodeURIComponent(query)}&status=${statusFilter || ""}`}
+                  href={buildProiecteHref({
+                    page: currentPage + 1,
+                    q: query || undefined,
+                    status: statusFilter,
+                  })}
                   className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]"
                 >
                   Urmator

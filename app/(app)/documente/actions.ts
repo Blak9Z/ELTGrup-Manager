@@ -32,6 +32,42 @@ function normalizeTags(tags: string) {
   );
 }
 
+async function assertActiveProjectAccess(user: Awaited<ReturnType<typeof requirePermission>>, projectId: string) {
+  await assertProjectAccess(user, projectId);
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { deletedAt: true },
+  });
+
+  if (!project || project.deletedAt) {
+    throw new Error("Proiect inexistent sau deja arhivat.");
+  }
+}
+
+async function loadActiveWorkOrder(
+  user: Awaited<ReturnType<typeof requirePermission>>,
+  workOrderId: string,
+  options?: { projectId?: string },
+) {
+  await assertWorkOrderAccess(user, workOrderId, options);
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    select: { deletedAt: true, projectId: true },
+  });
+
+  if (!workOrder || workOrder.deletedAt) {
+    throw new Error("Lucrare inexistenta sau deja arhivata.");
+  }
+
+  if (options?.projectId && workOrder.projectId !== options.projectId) {
+    throw new Error("Lucrarea selectata nu apartine proiectului selectat.");
+  }
+
+  return workOrder;
+}
+
 export async function createDocumentAction(_: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const currentUser = await requirePermission("DOCUMENTS", "CREATE");
@@ -55,24 +91,14 @@ export async function createDocumentAction(_: ActionState, formData: FormData): 
       };
     }
     if (parsed.data.projectId) {
-      await assertProjectAccess(currentUser, parsed.data.projectId);
+      await assertActiveProjectAccess(currentUser, parsed.data.projectId);
     }
     if (parsed.data.clientId) {
       await assertClientAccess(currentUser, parsed.data.clientId);
     }
     let effectiveProjectId = parsed.data.projectId;
     if (parsed.data.workOrderId) {
-      await assertWorkOrderAccess(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
-      const workOrder = await prisma.workOrder.findUnique({
-        where: { id: parsed.data.workOrderId, deletedAt: null },
-        select: { projectId: true, title: true },
-      });
-      if (!workOrder) {
-        return { ok: false, message: "Lucrare inexistenta sau arhivata." };
-      }
-      if (parsed.data.projectId && parsed.data.projectId !== workOrder.projectId) {
-        return { ok: false, message: "Lucrarea selectata nu apartine proiectului selectat." };
-      }
+      const workOrder = await loadActiveWorkOrder(currentUser, parsed.data.workOrderId, { projectId: parsed.data.projectId });
       effectiveProjectId = workOrder.projectId;
     }
 

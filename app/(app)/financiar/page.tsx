@@ -4,10 +4,11 @@ import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
-import { parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatCurrency } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
@@ -31,6 +32,22 @@ const invoiceWorkflowOrder: InvoiceStatus[] = [
   InvoiceStatus.PAID,
   InvoiceStatus.CANCELED,
 ];
+
+function buildFinanciarHref({
+  page,
+  status,
+  projectId,
+}: {
+  page?: number;
+  status?: InvoiceStatus | null;
+  projectId?: string;
+}) {
+  return buildListHref("/financiar", {
+    page,
+    status: status || undefined,
+    projectId,
+  });
+}
 
 export default async function FinanciarPage({
   searchParams,
@@ -66,25 +83,7 @@ export default async function FinanciarPage({
     status: statusFilter,
   };
 
-  const [invoices, totalInvoices, costs, projects, invoiceStatusSummary] = await Promise.all([
-    prisma.invoice.findMany({
-      where: invoiceWhere,
-      select: {
-        id: true,
-        invoiceNumber: true,
-        totalAmount: true,
-        dueDate: true,
-        issueDate: true,
-        sentAt: true,
-        paidAt: true,
-        status: true,
-        project: { select: { id: true, title: true } },
-        client: { select: { name: true } },
-      },
-      orderBy: { dueDate: "asc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
+  const [totalInvoices, costs, projects, invoiceStatusSummary] = await Promise.all([
     prisma.invoice.count({ where: invoiceWhere }),
     prisma.costEntry.groupBy({
       by: ["type"],
@@ -94,7 +93,7 @@ export default async function FinanciarPage({
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
       select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
     }),
     prisma.invoice.groupBy({
       by: ["status"],
@@ -103,6 +102,29 @@ export default async function FinanciarPage({
       _sum: { totalAmount: true, paidAmount: true },
     }),
   ]);
+  const { totalPages, currentPage, skip, take } = resolvePagination({
+    page,
+    totalItems: totalInvoices,
+    pageSize,
+  });
+  const invoices = await prisma.invoice.findMany({
+    where: invoiceWhere,
+    select: {
+      id: true,
+      invoiceNumber: true,
+      totalAmount: true,
+      dueDate: true,
+      issueDate: true,
+      sentAt: true,
+      paidAt: true,
+      status: true,
+      project: { select: { id: true, title: true } },
+      client: { select: { name: true } },
+    },
+    orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+    skip,
+    take,
+  });
   const [projectCostSums, projectInvoiceSums] = await Promise.all([
     prisma.costEntry.groupBy({
       by: ["projectId"],
@@ -117,7 +139,6 @@ export default async function FinanciarPage({
   ]);
   const costByProject = new Map(projectCostSums.map((item) => [item.projectId, Number(item._sum.amount || 0)]));
   const invoicedByProject = new Map(projectInvoiceSums.map((item) => [item.projectId, Number(item._sum.totalAmount || 0)]));
-  const totalPages = Math.max(1, Math.ceil(totalInvoices / pageSize));
   const statusSummaryMap = new Map(invoiceStatusSummary.map((item) => [item.status, item]));
   const outstandingAmount = invoiceStatusSummary
     .filter((item) => item.status !== InvoiceStatus.PAID && item.status !== InvoiceStatus.CANCELED)
@@ -161,7 +182,11 @@ export default async function FinanciarPage({
                 return (
                   <Link
                     key={status}
-                    href={`/financiar?page=1&status=${status}&projectId=${params.projectId || ""}`}
+                    href={buildFinanciarHref({
+                      page: 1,
+                      status,
+                      projectId: params.projectId,
+                    })}
                     className="rounded-md border border-[var(--border)] px-2 py-1 text-[11px] font-semibold text-[var(--muted-strong)] hover:border-[var(--border-strong)]"
                   >
                     {invoiceStatusLabels[status]} ({count})
@@ -188,14 +213,25 @@ export default async function FinanciarPage({
 
         {canCreateCost ? (
           <Card>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Costs</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Costuri</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Adauga cost operational</h2>
-            <CostEntryForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Introdu costurile din dialog pentru a mentine vizibilitatea asupra facturilor si marjelor.
+            </p>
+            <div className="mt-3">
+              <FormModal
+                triggerLabel="Adauga cost"
+                title="Cost operational nou"
+                description="Asociaza costul unui proiect si unei categorii."
+              >
+                <CostEntryForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+              </FormModal>
+            </div>
           </Card>
         ) : null}
 
         <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Invoices</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Facturi</p>
           <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Facturi si incasari</h2>
           <p className="mt-1 text-xs text-[var(--muted)]">
             {"Flux recomandat: Draft -> Trimisa -> Partial achitata / Restanta -> Achitata."}
@@ -251,16 +287,16 @@ export default async function FinanciarPage({
             </div>
           )}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-[var(--muted)]">
-            <span>Pagina {page} din {totalPages}</span>
+            <span>Pagina {currentPage} din {totalPages}</span>
             <div className="flex gap-2">
-              {page > 1 ? <Link href={`/financiar?page=${page - 1}&status=${statusFilter || ""}&projectId=${params.projectId || ""}`} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Anterior</Link> : null}
-              {page < totalPages ? <Link href={`/financiar?page=${page + 1}&status=${statusFilter || ""}&projectId=${params.projectId || ""}`} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Urmator</Link> : null}
+              {currentPage > 1 ? <Link href={buildFinanciarHref({ page: currentPage - 1, status: statusFilter, projectId: params.projectId })} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Anterior</Link> : null}
+              {currentPage < totalPages ? <Link href={buildFinanciarHref({ page: currentPage + 1, status: statusFilter, projectId: params.projectId })} className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]">Urmator</Link> : null}
             </div>
           </div>
         </Card>
 
         <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Margins</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Marje</p>
           <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Cashflow si marja estimata pe proiect</h2>
           <div className="mt-3 space-y-2">
             {projects.length === 0 ? (

@@ -96,7 +96,7 @@ export function ProjectCreateForm({ clients }: { clients: ClientOption[] }) {
         <label className="md:col-span-2">
           <span className="block text-sm font-semibold text-[var(--foreground)]">Nume proiect</span>
           <span className="mt-1 block text-xs text-[var(--muted)]">Cum va aparea in liste, rapoarte si notificari.</span>
-          <Input name="title" placeholder="De exemplu: Renovare sediu central" required className="mt-2" />
+          <Input name="title" placeholder="Renovare sediu central - Corp A" required className="mt-2" />
           <FieldError message={state.errors?.title} />
         </label>
 

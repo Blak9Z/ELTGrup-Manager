@@ -9,6 +9,7 @@ import { ActionState, fromZodError } from "@/src/lib/action-state";
 import { notifyRoles } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
+import { buildInvoiceStatusUpdateData } from "@/src/lib/financiar-invoice-status";
 
 const costSchema = z.object({
   projectId: z.string().cuid(),
@@ -80,25 +81,19 @@ export async function updateInvoiceStatus(formData: FormData) {
 
   const current = await prisma.invoice.findUnique({
     where: { id },
-    select: { projectId: true, totalAmount: true, paidAmount: true },
+    select: { projectId: true, totalAmount: true, status: true },
   });
   if (!current) throw new Error("Factura inexistenta.");
   await assertProjectAccess(currentUser, current.projectId);
 
-  const paidAmountForStatus =
-    status === InvoiceStatus.PAID
-      ? current.totalAmount
-      : status === InvoiceStatus.PARTIAL_PAID
-        ? current.paidAmount
-        : 0;
+  const updateData = buildInvoiceStatusUpdateData(current.status, status, current.totalAmount);
+  if (!updateData) {
+    return;
+  }
 
   const updated = await prisma.invoice.update({
     where: { id },
-    data: {
-      status,
-      paidAt: status === InvoiceStatus.PAID ? new Date() : null,
-      paidAmount: paidAmountForStatus,
-    },
+    data: updateData,
   });
 
   await logActivity({
@@ -120,5 +115,6 @@ export async function updateInvoiceStatus(formData: FormData) {
   }
 
   revalidatePath("/financiar");
+  revalidatePath("/proiecte");
   revalidatePath("/panou");
 }

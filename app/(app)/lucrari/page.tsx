@@ -9,9 +9,10 @@ import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { TD, TH, Table } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope";
-import { parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
@@ -88,6 +89,25 @@ function formatDeadline(dueDate: Date | null, status: WorkOrderStatus) {
   return { label: `Scadenta in ${diffDays} zile`, tone: "neutral" as const };
 }
 
+function buildLucrariHref({
+  page,
+  q,
+  status,
+  projectId,
+}: {
+  page?: number;
+  q?: string;
+  status?: WorkOrderStatus | null;
+  projectId?: string;
+}) {
+  return buildListHref("/lucrari", {
+    page,
+    q,
+    status: status || undefined,
+    projectId,
+  });
+}
+
 export default async function WorkOrdersPage({
   searchParams,
 }: {
@@ -141,7 +161,7 @@ export default async function WorkOrdersPage({
           ...(scope.projectIds === null ? {} : { id: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } }),
         },
         select: { id: true, title: true },
-        orderBy: { title: "asc" },
+        orderBy: [{ title: "asc" }, { id: "asc" }],
       }),
     [],
   );
@@ -151,7 +171,7 @@ export default async function WorkOrdersPage({
       prisma.user.findMany({
         where: { isActive: true, deletedAt: null },
         select: { id: true, firstName: true, lastName: true },
-        orderBy: { firstName: "asc" },
+        orderBy: [{ firstName: "asc" }, { id: "asc" }],
       }),
     [],
   );
@@ -161,7 +181,7 @@ export default async function WorkOrdersPage({
       prisma.team.findMany({
         where: scope.teamId ? { deletedAt: null, id: scope.teamId } : { deletedAt: null },
         select: { id: true, name: true },
-        orderBy: { name: "asc" },
+        orderBy: [{ name: "asc" }, { id: "asc" }],
       }),
     [],
   );
@@ -195,6 +215,16 @@ export default async function WorkOrdersPage({
       .filter((item) => item.teamId)
       .map((item) => [item.teamId as string, item._count._all]),
   );
+  const total = await withPoolFallback(
+    "workOrder.count",
+    () => prisma.workOrder.count({ where }),
+    0,
+  );
+  const { totalPages, currentPage, skip, take } = resolvePagination({
+    page,
+    totalItems: total,
+    pageSize,
+  });
   const workOrders = await withPoolFallback(
     "workOrder.findMany",
     () =>
@@ -212,19 +242,12 @@ export default async function WorkOrdersPage({
           responsible: { select: { firstName: true, lastName: true } },
           team: { select: { name: true } },
         },
-        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }, { id: "asc" }],
+        skip,
+        take,
       }),
     [],
   );
-  const total = await withPoolFallback(
-    "workOrder.count",
-    () => prisma.workOrder.count({ where }),
-    0,
-  );
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
@@ -233,15 +256,26 @@ export default async function WorkOrdersPage({
 
         {canCreate ? (
           <Card>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Create</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Creare</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Creare ordin de lucru</h2>
-            <WorkOrderCreateForm
-              projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-              users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
-              teams={teams.map((team) => ({ id: team.id, label: team.name }))}
-              responsibleWorkloadById={responsibleWorkloadById}
-              teamWorkloadById={teamWorkloadById}
-            />
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Deschide formularul in dialog pentru a pastra contextul listei si al filtrului curent.
+            </p>
+            <div className="mt-3">
+              <FormModal
+                triggerLabel="Adauga ordin de lucru"
+                title="Creare ordin de lucru"
+                description="Completeaza detaliile de executie, responsabilul si echipa."
+              >
+                <WorkOrderCreateForm
+                  projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+                  users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
+                  teams={teams.map((team) => ({ id: team.id, label: team.name }))}
+                  responsibleWorkloadById={responsibleWorkloadById}
+                  teamWorkloadById={teamWorkloadById}
+                />
+              </FormModal>
+            </div>
           </Card>
         ) : null}
 
@@ -283,7 +317,7 @@ export default async function WorkOrdersPage({
         ) : null}
 
         <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Filters</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Filtre</p>
           <form className="mb-4 mt-2 grid gap-3 md:grid-cols-4">
             <input type="hidden" name="page" value="1" />
             <Input name="q" placeholder="Cauta lucrare" defaultValue={q} />
@@ -312,7 +346,7 @@ export default async function WorkOrdersPage({
             <EmptyState title="Nu exista lucrari" description="Adauga primul ordin de lucru pentru santier." />
           ) : (
             <div>
-                <div className="space-y-3 md:hidden">
+                <div className="space-y-3 lg:hidden">
               {workOrders.map((item) => (
                 <div key={item.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3.5">
                   <div className="flex items-start justify-between gap-3">
@@ -369,7 +403,7 @@ export default async function WorkOrdersPage({
                 </div>
               ))}
             </div>
-            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] md:block">
+            <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] lg:block">
               <Table>
                 <thead>
                   <tr>
@@ -452,16 +486,26 @@ export default async function WorkOrdersPage({
 
           <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[var(--border)]/60 pt-4 text-sm text-[var(--muted)] sm:flex-row">
             <span>
-              Pagina {page} din {totalPages}
+              Pagina {currentPage} din {totalPages}
             </span>
             <div className="flex gap-2">
-              {page > 1 ? (
-                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={`/lucrari?page=${page - 1}&q=${encodeURIComponent(q)}&status=${statusFilter || ""}&projectId=${params.projectId || ""}`}>
+              {currentPage > 1 ? (
+                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildLucrariHref({
+                  page: currentPage - 1,
+                  q: q || undefined,
+                  status: statusFilter,
+                  projectId: params.projectId,
+                })}>
                   Anterior
                 </Link>
               ) : null}
-              {page < totalPages ? (
-                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={`/lucrari?page=${page + 1}&q=${encodeURIComponent(q)}&status=${statusFilter || ""}&projectId=${params.projectId || ""}`}>
+              {currentPage < totalPages ? (
+                <Link className="rounded-lg border border-[var(--border)] px-3 py-1.5 hover:border-[var(--border-strong)]" href={buildLucrariHref({
+                  page: currentPage + 1,
+                  q: q || undefined,
+                  status: statusFilter,
+                  projectId: params.projectId,
+                })}>
                   Urmator
                 </Link>
               ) : null}

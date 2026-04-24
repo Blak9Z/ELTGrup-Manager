@@ -24,7 +24,7 @@ export async function GET() {
         ? {}
         : { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
     include: { project: true, client: true },
-    orderBy: { dueDate: "asc" },
+    orderBy: [{ dueDate: "asc" }, { id: "asc" }],
   });
   const data = invoices.map((invoice) => ({
     Factura: invoice.invoiceNumber,

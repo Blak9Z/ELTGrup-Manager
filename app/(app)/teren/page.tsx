@@ -55,7 +55,7 @@ export default async function TerenPage() {
         priority: true,
         project: { select: { title: true } },
       },
-      orderBy: { dueDate: "asc" },
+      orderBy: [{ dueDate: "asc" }, { id: "asc" }],
       take: 20,
     }),
     prisma.timeEntry.findFirst({
@@ -71,7 +71,7 @@ export default async function TerenPage() {
         project: { select: { title: true } },
         workOrder: { select: { title: true } },
       },
-      orderBy: { startAt: "desc" },
+      orderBy: [{ startAt: "desc" }, { id: "asc" }],
     }),
     prisma.attendance.findUnique({
       where: {
@@ -84,7 +84,7 @@ export default async function TerenPage() {
     prisma.project.findMany({
       where: { deletedAt: null, ...projectScopeWhere(scope.projectIds) },
       select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
     }),
     prisma.dailySiteReport.findMany({
       where:
@@ -99,7 +99,7 @@ export default async function TerenPage() {
         project: { select: { title: true } },
         workOrder: { select: { title: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: 25,
     }),
   ]);
@@ -112,7 +112,7 @@ export default async function TerenPage() {
     <PermissionGuard resource="TASKS" action="VIEW">
       <div className="space-y-6">
         <PageHeader
-          title="Field Operations"
+          title="Operatiuni teren"
           subtitle="Prezenta, pontaj live, raportare zilnica, fotografii si semnaturi - tot ce trebuie pentru o zi clara pe santier."
           actions={
             <div className="flex flex-wrap gap-2">
@@ -143,12 +143,12 @@ export default async function TerenPage() {
           <Card>
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Taskuri critice</p>
             <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{highPriorityTasks}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">prioritate HIGH / CRITICAL</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">prioritate ridicata sau critica</p>
           </Card>
           <Card>
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Taskuri blocate</p>
             <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{blockedTasks}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">status BLOCKED</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">status blocat</p>
           </Card>
         </section>
 

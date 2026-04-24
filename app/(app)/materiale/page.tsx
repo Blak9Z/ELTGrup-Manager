@@ -9,9 +9,10 @@ import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { TD, TH, Table } from "@/src/components/ui/table";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
-import { parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { prisma } from "@/src/lib/prisma";
 import { approveAndIssueMaterialRequest, approveMaterialRequest, bulkMaterialRequestsAction } from "./actions";
@@ -80,6 +81,22 @@ function requestTone(status: MaterialRequestStatus): "success" | "warning" | "da
   }
 }
 
+function buildMaterialeHref({
+  page,
+  q,
+  status,
+}: {
+  page?: number;
+  q?: string;
+  status?: MaterialRequestStatus | null;
+}) {
+  return buildListHref("/materiale", {
+    page,
+    q,
+    status: status || undefined,
+  });
+}
+
 export default async function MaterialePage({
   searchParams,
 }: {
@@ -121,24 +138,11 @@ export default async function MaterialePage({
   const requestWhere = scope.projectIds === null ? {} : { projectId: scopedProjectFilter! };
   const requestHistoryStatuses = Object.values(MaterialRequestStatus).filter((status) => status !== MaterialRequestStatus.PENDING);
 
-  const [materials, materialOptions, totalMaterials, requests, projects, warehouses, materialInvoices, recentMovements] = await Promise.all([
-    prisma.material.findMany({
-      where: materialWhere,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      orderBy: { name: "asc" },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        unitOfMeasure: true,
-        minStockLevel: true,
-      },
-    }),
+  const [materialOptions, totalMaterials, requests, projects, warehouses, materialInvoices, recentMovements] = await Promise.all([
     prisma.material.findMany({
       where: materialWhere,
       select: { id: true, name: true },
-      orderBy: { name: "asc" },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
       take: 400,
     }),
     prisma.material.count({ where: materialWhere }),
@@ -156,15 +160,15 @@ export default async function MaterialePage({
         approvedBy: { select: { firstName: true, lastName: true } },
       },
       where: requestWhere,
-      orderBy: { requestedAt: "desc" },
+      orderBy: [{ requestedAt: "desc" }, { id: "asc" }],
       take: 50,
     }),
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
       select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
     }),
-    prisma.warehouse.findMany({ where: { deletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.warehouse.findMany({ where: { deletedAt: null }, select: { id: true, name: true }, orderBy: [{ name: "asc" }, { id: "asc" }] }),
     prisma.document.findMany({
       where: {
         category: "INVOICE",
@@ -179,7 +183,7 @@ export default async function MaterialePage({
         createdAt: true,
         project: { select: { title: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: 6,
     }),
     prisma.stockMovement.findMany({
@@ -195,10 +199,28 @@ export default async function MaterialePage({
         warehouse: { select: { name: true } },
         project: { select: { title: true } },
       },
-      orderBy: { movedAt: "desc" },
+      orderBy: [{ movedAt: "desc" }, { id: "asc" }],
       take: 10,
     }),
   ]);
+  const { totalPages, currentPage, skip, take } = resolvePagination({
+    page,
+    totalItems: totalMaterials,
+    pageSize,
+  });
+  const materials = await prisma.material.findMany({
+    where: materialWhere,
+    skip,
+    take,
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      unitOfMeasure: true,
+      minStockLevel: true,
+    },
+  });
 
   const movementSums = materials.length
     ? await prisma.stockMovement.groupBy({
@@ -229,7 +251,6 @@ export default async function MaterialePage({
   const recentIssueReturnMovements = recentMovements.filter(
     (movement) => movement.type === StockMovementType.OUT || movement.type === StockMovementType.RETURN,
   );
-  const totalPages = Math.max(1, Math.ceil(totalMaterials / pageSize));
 
   return (
     <PermissionGuard resource="MATERIALS" action="VIEW">
@@ -310,7 +331,19 @@ export default async function MaterialePage({
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Catalog</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Adauga material</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">Pastreaza codul unic, unitatea de masura si pragul minim pentru alerte rapide in depozit.</p>
-            {canCreateMaterials ? <MaterialCreateForm /> : <p className="mt-3 text-sm text-[var(--muted)]">Nu ai drept de creare materiale.</p>}
+            {canCreateMaterials ? (
+              <div className="mt-3">
+                <FormModal
+                  triggerLabel="Adauga material"
+                  title="Material nou in catalog"
+                  description="Completeaza codul, unitatea de masura si pragul minim."
+                >
+                  <MaterialCreateForm />
+                </FormModal>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-[var(--muted)]">Nu ai drept de creare materiale.</p>
+            )}
           </Card>
 
           <Card>
@@ -320,10 +353,18 @@ export default async function MaterialePage({
               Cererea merge la aprobare. Nu modifica stocul direct; magazionerul va decide separat daca elibereaza materialul din depozit.
             </p>
             {canCreateMaterials ? (
-              <MaterialRequestForm
-                projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-                materials={materialOptions.map((material) => ({ id: material.id, label: material.name }))}
-              />
+              <div className="mt-3">
+                <FormModal
+                  triggerLabel="Trimite cerere"
+                  title="Cerere materiale"
+                  description="Selecteaza proiectul, materialul si cantitatea necesara."
+                >
+                  <MaterialRequestForm
+                    projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+                    materials={materialOptions.map((material) => ({ id: material.id, label: material.name }))}
+                  />
+                </FormModal>
+              </div>
             ) : (
               <p className="mt-3 text-sm text-[var(--muted)]">Nu ai drept de creare cereri materiale.</p>
             )}
@@ -336,11 +377,19 @@ export default async function MaterialePage({
               Foloseste pentru intrari, iesiri, retururi, transferuri si corectii. Aici se vede clar de unde pleaca sau unde ajunge materialul.
             </p>
             {canManageStockAndInvoices ? (
-              <StockMovementForm
-                projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-                materials={materialOptions.map((material) => ({ id: material.id, label: material.name }))}
-                warehouses={warehouses.map((warehouse) => ({ id: warehouse.id, label: warehouse.name }))}
-              />
+              <div className="mt-3">
+                <FormModal
+                  triggerLabel="Inregistreaza miscare"
+                  title="Miscare stoc"
+                  description="Inregistreaza intrari, iesiri, retururi, transferuri sau ajustari."
+                >
+                  <StockMovementForm
+                    projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+                    materials={materialOptions.map((material) => ({ id: material.id, label: material.name }))}
+                    warehouses={warehouses.map((warehouse) => ({ id: warehouse.id, label: warehouse.name }))}
+                  />
+                </FormModal>
+              </div>
             ) : (
               <p className="mt-3 text-sm text-[var(--muted)]">Disponibil doar pentru rolurile Admin, Sef Santier si Financiar.</p>
             )}
@@ -351,7 +400,15 @@ export default async function MaterialePage({
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Incarca documentul</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">Leaga factura de proiectul corect ca sa poti urmari repede costul si actele primite de la furnizor.</p>
             {canManageStockAndInvoices ? (
-              <MaterialInvoiceUploadForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+              <div className="mt-3">
+                <FormModal
+                  triggerLabel="Incarca factura"
+                  title="Factura materiale"
+                  description="Ataseaza factura si asociaza proiectul corect."
+                >
+                  <MaterialInvoiceUploadForm projects={projects.map((project) => ({ id: project.id, label: project.title }))} />
+                </FormModal>
+              </div>
             ) : (
               <p className="mt-3 text-sm text-[var(--muted)]">Incarcarea facturilor este disponibila doar pentru Admin, Sef Santier si Financiar.</p>
             )}
@@ -413,7 +470,7 @@ export default async function MaterialePage({
                   {lowStockRows.length} materiale sunt sub pragul minim pe pagina curenta. Verifica iesirile inainte sa aprobi noi consumuri.
                 </div>
               ) : null}
-              <div className="space-y-3 md:hidden">
+              <div className="space-y-3 lg:hidden">
                 {materialRows.map((material) => {
                   const statusTone = material.stock <= 0 ? "danger" : material.stock <= material.min ? "warning" : "success";
                   const statusLabel = material.stock <= 0 ? "Stoc zero" : material.stock <= material.min ? "Stoc scazut" : "Stoc ok";
@@ -436,7 +493,7 @@ export default async function MaterialePage({
                   );
                 })}
               </div>
-              <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] md:block">
+              <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] lg:block">
                 <Table>
                   <thead>
                     <tr>
@@ -472,21 +529,29 @@ export default async function MaterialePage({
           )}
           <div className="mt-3 flex items-center justify-between text-sm text-[var(--muted)]">
             <span>
-              Pagina {page} din {totalPages}
+              Pagina {currentPage} din {totalPages}
             </span>
             <div className="flex gap-2">
-              {page > 1 ? (
+              {currentPage > 1 ? (
                 <Link
                   className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]"
-                  href={`/materiale?page=${page - 1}&q=${encodeURIComponent(params.q || "")}&status=${statusFilter || ""}`}
+                  href={buildMaterialeHref({
+                    page: currentPage - 1,
+                    q: params.q || undefined,
+                    status: statusFilter,
+                  })}
                 >
                   Anterior
                 </Link>
               ) : null}
-              {page < totalPages ? (
+              {currentPage < totalPages ? (
                 <Link
                   className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]"
-                  href={`/materiale?page=${page + 1}&q=${encodeURIComponent(params.q || "")}&status=${statusFilter || ""}`}
+                  href={buildMaterialeHref({
+                    page: currentPage + 1,
+                    q: params.q || undefined,
+                    status: statusFilter,
+                  })}
                 >
                   Urmator
                 </Link>

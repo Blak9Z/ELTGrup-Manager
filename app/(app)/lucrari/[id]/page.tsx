@@ -31,11 +31,11 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
       project: true,
       responsible: true,
       team: true,
-      comments: { include: { user: true }, orderBy: { createdAt: "desc" }, take: 20 },
-      documents: { orderBy: { createdAt: "desc" }, take: 24 },
-      timeEntries: { include: { user: true }, orderBy: { startAt: "desc" }, take: 20 },
-      dailyReports: { orderBy: { reportDate: "desc" }, take: 20 },
-      checklistItems: { orderBy: { createdAt: "asc" } },
+      comments: { include: { user: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 20 },
+      documents: { orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 24 },
+      timeEntries: { include: { user: true }, orderBy: [{ startAt: "desc" }, { id: "asc" }], take: 20 },
+      dailyReports: { orderBy: [{ reportDate: "desc" }, { id: "asc" }], take: 20 },
+      checklistItems: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
     },
   });
 

@@ -8,9 +8,10 @@ import { EmptyState } from "@/src/components/ui/empty-state";
 import { Input } from "@/src/components/ui/input";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
+import { FormModal } from "@/src/components/forms/form-modal";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
-import { parseEnumParam, parsePositiveIntParam } from "@/src/lib/query-params";
+import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
 import { hasPermission } from "@/src/lib/rbac";
 import { formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
@@ -63,13 +64,12 @@ function buildDocumentsHref({
   category?: string | null;
   projectId?: string | null;
 }) {
-  const searchParams = new URLSearchParams();
-  if (page && page > 1) searchParams.set("page", String(page));
-  if (q) searchParams.set("q", q);
-  if (category) searchParams.set("category", category);
-  if (projectId) searchParams.set("projectId", projectId);
-  const search = searchParams.toString();
-  return search ? `/documente?${search}` : "/documente";
+  return buildListHref("/documente", {
+    page,
+    q,
+    category: category || undefined,
+    projectId: projectId || undefined,
+  });
 }
 
 function getDocumentContext(doc: {
@@ -186,11 +186,11 @@ export default async function DocumentePage({
     where.AND = andFilters;
   }
 
-  const [projects, clients, workOrders, docs, total] = await Promise.all([
+  const [projects, clients, workOrders, total] = await Promise.all([
     prisma.project.findMany({
       where: { deletedAt: null, ...(scope.projectIds === null ? {} : { id: scopedProjectFilter! }) },
       select: { id: true, title: true },
-      orderBy: { title: "asc" },
+      orderBy: [{ title: "asc" }, { id: "asc" }],
     }),
     prisma.client.findMany({
       where:
@@ -198,7 +198,7 @@ export default async function DocumentePage({
           ? { deletedAt: null }
           : { deletedAt: null, projects: { some: { id: scopedProjectFilter! } } },
       select: { id: true, name: true },
-      orderBy: { name: "asc" },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     }),
     prisma.workOrder.findMany({
       where: {
@@ -206,32 +206,36 @@ export default async function DocumentePage({
         ...(scope.projectIds === null ? {} : { projectId: scopedProjectFilter! }),
       },
       select: { id: true, title: true, project: { select: { title: true } } },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
       take: 100,
-    }),
-    prisma.document.findMany({
-      where,
-      select: {
-        id: true,
-        title: true,
-        category: true,
-        fileName: true,
-        version: true,
-        isPrivate: true,
-        createdAt: true,
-        tags: true,
-        expiresAt: true,
-        project: { select: { id: true, title: true } },
-        client: { select: { id: true, name: true } },
-        workOrder: { select: { id: true, title: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
     }),
     prisma.document.count({ where }),
   ]);
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const { totalPages, currentPage, skip, take } = resolvePagination({
+    page,
+    totalItems: total,
+    pageSize,
+  });
+  const docs = await prisma.document.findMany({
+    where,
+    select: {
+      id: true,
+      title: true,
+      category: true,
+      fileName: true,
+      version: true,
+      isPrivate: true,
+      createdAt: true,
+      tags: true,
+      expiresAt: true,
+      project: { select: { id: true, title: true } },
+      client: { select: { id: true, name: true } },
+      workOrder: { select: { id: true, title: true } },
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    skip,
+    take,
+  });
   const selectedProject = selectedProjectId ? projects.find((project) => project.id === selectedProjectId) || null : null;
   const expiringSoonCount = docs.filter((doc) => doc.expiresAt && doc.expiresAt < reminderThreshold).length;
   const privateCount = docs.filter((doc) => doc.isPrivate).length;
@@ -283,15 +287,26 @@ export default async function DocumentePage({
                 {expiringSoonCount > 0 ? <Badge tone="warning">{expiringSoonCount} expira curand</Badge> : null}
               </div>
             </div>
-            <DocumentUploadForm
-              projects={projects.map((project) => ({ id: project.id, label: project.title }))}
-              clients={clients.map((client) => ({ id: client.id, label: client.name }))}
-              workOrders={workOrders.map((workOrder) => ({
-                id: workOrder.id,
-                label: `${workOrder.title} • ${workOrder.project.title}`,
-              }))}
-              defaultProjectId={selectedProjectId || undefined}
-            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[var(--muted)]">
+                Foloseste dialogul de incarcare pentru a adauga documente fara sa parasesti lista curenta.
+              </p>
+              <FormModal
+                triggerLabel="Incarca document"
+                title="Inregistrare document"
+                description="Ataseaza fisierul si completeaza contextul proiect/client/lucrare."
+              >
+                <DocumentUploadForm
+                  projects={projects.map((project) => ({ id: project.id, label: project.title }))}
+                  clients={clients.map((client) => ({ id: client.id, label: client.name }))}
+                  workOrders={workOrders.map((workOrder) => ({
+                    id: workOrder.id,
+                    label: `${workOrder.title} • ${workOrder.project.title}`,
+                  }))}
+                  defaultProjectId={selectedProjectId || undefined}
+                />
+              </FormModal>
+            </div>
           </Card>
         ) : null}
 
@@ -491,14 +506,14 @@ export default async function DocumentePage({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-4 text-sm text-[var(--muted)]">
             <span>
-              Pagina {page} din {totalPages}
+              Pagina {currentPage} din {totalPages}
             </span>
             <div className="flex gap-2">
-              {page > 1 ? (
+              {currentPage > 1 ? (
                 <Link
                   className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]"
                   href={buildDocumentsHref({
-                    page: page - 1,
+                    page: currentPage - 1,
                     q: query || undefined,
                     category: categoryFilter || undefined,
                     projectId: selectedProjectId || undefined,
@@ -507,11 +522,11 @@ export default async function DocumentePage({
                   Anterior
                 </Link>
               ) : null}
-              {page < totalPages ? (
+              {currentPage < totalPages ? (
                 <Link
                   className="rounded-md border border-[var(--border)] px-3 py-1 hover:border-[var(--border-strong)]"
                   href={buildDocumentsHref({
-                    page: page + 1,
+                    page: currentPage + 1,
                     q: query || undefined,
                     category: categoryFilter || undefined,
                     projectId: selectedProjectId || undefined,

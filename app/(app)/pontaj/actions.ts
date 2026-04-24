@@ -9,16 +9,12 @@ import { ActionState, fromZodError } from "@/src/lib/action-state";
 import { notifyRoles, notifyUser } from "@/src/lib/notifications";
 import { requirePermission } from "@/src/lib/permissions";
 import { prisma } from "@/src/lib/prisma";
+import { buildListHref } from "@/src/lib/query-params";
 
 const STANDARD_SHIFT_END_HOUR = 17;
 
 function buildPontajUrl(params: Record<string, string | undefined>) {
-  const searchParams = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value) searchParams.set(key, value);
-  }
-  const query = searchParams.toString();
-  return query ? `/pontaj?${query}` : "/pontaj";
+  return buildListHref("/pontaj", params);
 }
 
 const timeEntrySchema = z
@@ -43,14 +39,14 @@ const timeEntrySchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["endDate"],
-          message: "Pentru tura custom completeaza data de final.",
+          message: "Pentru tura personalizata completeaza data de final.",
         });
       }
       if (!hasEndTime) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["endTime"],
-          message: "Pentru tura custom completeaza ora de final.",
+          message: "Pentru tura personalizata completeaza ora de final.",
         });
       }
     }
@@ -136,7 +132,7 @@ async function createTimeEntryInternal(formData: FormData) {
 
   const computedEndAt = endAt || (parsed.data.shiftMode === "STANDARD" ? getStandardShiftEndAt(startAt) : null);
   if (!computedEndAt) {
-    throw new Error("Pentru tura custom completeaza data si ora de final.");
+    throw new Error("Pentru tura personalizata completeaza data si ora de final.");
   }
   if (computedEndAt < startAt) {
     if (parsed.data.shiftMode === "STANDARD") {
@@ -286,6 +282,9 @@ export async function approveTimeEntry(formData: FormData) {
   }
 
   revalidatePath("/pontaj");
+  revalidatePath("/financiar");
+  revalidatePath("/proiecte");
+  revalidatePath("/panou");
 }
 
 export async function bulkTimeEntriesAction(formData: FormData) {
@@ -308,18 +307,60 @@ export async function bulkTimeEntriesAction(formData: FormData) {
     scopedIds = parsed.data.ids.filter((id) => allowedSet.has(id));
   }
   if (scopedIds.length === 0) throw new Error("Nu ai acces la pontajele selectate.");
-  const submittedEntries = await prisma.timeEntry.findMany({
-    where: { id: { in: scopedIds }, status: TimeEntryStatus.SUBMITTED },
-    select: { id: true, userId: true },
-  });
 
-  const result = await prisma.timeEntry.updateMany({
-    where: { id: { in: scopedIds }, status: TimeEntryStatus.SUBMITTED },
-    data: {
-      status,
-      approvedAt: new Date(),
-      approvedById: currentUser.id,
-    },
+  const now = new Date();
+  const { submittedEntries, result } = await prisma.$transaction(async (tx) => {
+    const submittedEntries = await tx.timeEntry.findMany({
+      where: { id: { in: scopedIds }, status: TimeEntryStatus.SUBMITTED },
+      select: { id: true, userId: true, projectId: true, durationMinutes: true },
+    });
+
+    const result = await tx.timeEntry.updateMany({
+      where: { id: { in: scopedIds }, status: TimeEntryStatus.SUBMITTED },
+      data: {
+        status,
+        approvedAt: now,
+        approvedById: currentUser.id,
+      },
+    });
+
+    if (parsed.data.operation === "APPROVE" && submittedEntries.length > 0) {
+      const workerProfiles = await tx.workerProfile.findMany({
+        where: { userId: { in: submittedEntries.map((entry) => entry.userId) } },
+        select: { userId: true, hourlyRate: true },
+      });
+      const workerRateByUserId = new Map(workerProfiles.map((profile) => [profile.userId, Number(profile.hourlyRate || 0)]));
+
+      for (const entry of submittedEntries) {
+        const hourlyRate = workerRateByUserId.get(entry.userId) || 0;
+        if (hourlyRate <= 0) continue;
+
+        const description = `Pontaj #${entry.id}`;
+        const existingLabor = await tx.costEntry.findFirst({
+          where: {
+            projectId: entry.projectId,
+            type: "LABOR",
+            description,
+          },
+          select: { id: true },
+        });
+
+        if (!existingLabor) {
+          await tx.costEntry.create({
+            data: {
+              projectId: entry.projectId,
+              type: "LABOR",
+              description,
+              amount: (entry.durationMinutes / 60) * hourlyRate,
+              occurredAt: now,
+              approvedById: currentUser.id,
+            },
+          });
+        }
+      }
+    }
+
+    return { submittedEntries, result };
   });
 
   await logActivity({
@@ -352,5 +393,9 @@ export async function bulkTimeEntriesAction(formData: FormData) {
   );
 
   revalidatePath("/pontaj");
+  if (status === TimeEntryStatus.APPROVED) {
+    revalidatePath("/financiar");
+    revalidatePath("/proiecte");
+  }
   revalidatePath("/panou");
 }

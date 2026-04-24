@@ -35,7 +35,7 @@ export async function GET() {
               where: { projectId: { in: scope.projectIds.length ? scope.projectIds : ["__none__"] } },
             },
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
   });
   const data = materials.map((material) => {
     const stock = material.stockMovements.reduce((sum, move) => {

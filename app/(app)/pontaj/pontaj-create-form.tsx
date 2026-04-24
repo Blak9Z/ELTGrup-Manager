@@ -1,13 +1,13 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { createTimeEntryAction } from "./actions";
 import { initialActionState } from "@/src/lib/action-state";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 
-type Option = { id: string; label: string };
+type Option = { id: string; label: string; projectId?: string };
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -26,11 +26,19 @@ export function PontajCreateForm({
   canSelectUser: boolean;
 }) {
   const [state, formAction, pending] = useActionState(createTimeEntryAction, initialActionState);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState("");
+  const scopedWorkOrders = useMemo(
+    () => (selectedProjectId ? workOrders.filter((item) => item.projectId === selectedProjectId) : workOrders),
+    [selectedProjectId, workOrders],
+  );
 
   useEffect(() => {
     if (state.ok && state.message) toast.success(state.message);
     if (!state.ok && state.message) toast.error(state.message);
   }, [state]);
+
+  const effectiveWorkOrderId = scopedWorkOrders.some((item) => item.id === selectedWorkOrderId) ? selectedWorkOrderId : "";
 
   return (
     <form action={formAction} className="mt-4 space-y-4">
@@ -56,7 +64,13 @@ export function PontajCreateForm({
 
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">Proiect</label>
-          <select name="projectId" className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm" required>
+          <select
+            name="projectId"
+            className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm"
+            required
+            value={selectedProjectId}
+            onChange={(event) => setSelectedProjectId(event.target.value)}
+          >
             <option value="">Alege proiectul</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
@@ -69,14 +83,22 @@ export function PontajCreateForm({
 
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">Lucrare</label>
-          <select name="workOrderId" className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm">
+          <select
+            name="workOrderId"
+            className="h-10 w-full rounded-lg border border-[var(--border)] px-3 text-sm"
+            value={effectiveWorkOrderId}
+            onChange={(event) => setSelectedWorkOrderId(event.target.value)}
+          >
             <option value="">Fara lucrare specifica</option>
-            {workOrders.map((item) => (
+            {scopedWorkOrders.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.label}
               </option>
             ))}
           </select>
+          {selectedProjectId && scopedWorkOrders.length === 0 ? (
+            <p className="mt-1 text-xs text-[var(--muted)]">Nu exista lucrari active pentru proiectul selectat.</p>
+          ) : null}
           <FieldError message={state.errors?.workOrderId?.[0]} />
         </div>
 
@@ -126,7 +148,7 @@ export function PontajCreateForm({
         <div className="flex items-end">
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2 text-xs text-[var(--muted)]">
             <p className="font-semibold text-[var(--muted-strong)]">Regula de tura</p>
-            <p className="mt-1">Daca lasi finalul gol, sistemul inchide automat la 17:00 in aceeasi zi. Pentru tura custom, completeaza finalul explicit.</p>
+            <p className="mt-1">Daca lasi finalul gol, sistemul inchide automat la 17:00 in aceeasi zi. Pentru tura personalizata, completeaza finalul explicit.</p>
           </div>
         </div>
       </div>
@@ -144,7 +166,7 @@ export function PontajCreateForm({
       ) : null}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-[var(--muted)]">Statusurile finale sunt clare: SUBMITTED intra in aprobare, APPROVED merge in payroll, REJECTED ramane cu motivatia de respingere.</p>
+        <p className="text-xs text-[var(--muted)]">Statusurile finale sunt clare: in asteptare aprobare intra in verificare, aprobat merge in salarizare, respins ramane cu motivatia de respingere.</p>
         <Button type="submit" disabled={pending}>
           {pending ? "Se trimite..." : "Trimite pontaj"}
         </Button>
