@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Bell, CalendarClock } from "lucide-react";
+import type { RoleKey } from "@prisma/client";
 import type { AppModule } from "@/src/lib/access-control";
 import { getUnreadNotificationCount } from "@/src/lib/notifications";
 import { SignOutButton } from "@/src/components/auth/sign-out-button";
 import { MobileNavDrawer } from "@/src/components/layout/mobile-nav-drawer";
 import { TopbarGlobalSearch } from "@/src/components/ui/topbar-global-search";
+import { formatRoleLabels } from "@/src/lib/rbac";
 
 const mobileQuickLinks = [
   { module: "dashboard" as AppModule, href: "/panou", label: "Panou" },
@@ -31,11 +33,12 @@ export async function Topbar({
   user,
 }: {
   visibleModules: AppModule[];
-  user: { id: string; name?: string | null };
+  user: { id: string; name?: string | null; roleKeys: Array<RoleKey | string> };
 }) {
   const visibleSet = new Set(visibleModules);
   const unreadNotifications = visibleSet.has("notifications") && user.id ? await getUnreadNotificationCount(user.id) : 0;
   const todayLabel = formatTodayLabel();
+  const roleLabel = formatRoleLabels(user.roleKeys);
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[linear-gradient(180deg,rgba(11,17,24,0.96),rgba(9,15,22,0.92))] px-3 py-2.5 backdrop-blur-xl sm:px-5 lg:px-8">
@@ -79,7 +82,7 @@ export async function Topbar({
 
           <div className="hidden text-right sm:block">
             <p className="max-w-[190px] truncate text-sm font-semibold text-[var(--foreground)]">{user.name || "Utilizator ELTGRUP"}</p>
-            <p className="text-xs text-[var(--muted)]">cont activ</p>
+            <p className="max-w-[190px] truncate text-xs text-[var(--muted)]">{roleLabel}</p>
           </div>
 
           <SignOutButton />

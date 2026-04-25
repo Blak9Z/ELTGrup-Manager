@@ -66,6 +66,8 @@ const movementTone: Record<InventoryMovementType, "success" | "warning" | "dange
 };
 
 const availabilityFilterValues = ["all", "available", "assigned", "unassigned", "low", "inspection", "expired"] as const;
+const pageSizeOptions = [25, 50, 100] as const;
+const defaultPageSize = 50;
 
 function formatQty(value: number) {
   return value.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -83,10 +85,38 @@ function isExpiring(date?: Date | null, days = 7) {
   return date <= threshold;
 }
 
+function parsePositiveInt(value: string | undefined, fallback: number) {
+  const parsed = Number.parseInt(value || "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function buildInventoryHref({
+  page,
+  q,
+  categoryId,
+  availability,
+  pageSize,
+}: {
+  page: number;
+  q?: string;
+  categoryId?: string;
+  availability?: string;
+  pageSize: number;
+}) {
+  const query = new URLSearchParams();
+  if (q) query.set("q", q);
+  if (categoryId) query.set("categoryId", categoryId);
+  if (availability && availability !== "all") query.set("availability", availability);
+  if (page > 1) query.set("page", String(page));
+  if (pageSize !== defaultPageSize) query.set("pageSize", String(pageSize));
+  const serialized = query.toString();
+  return `/gestiune-scule${serialized ? `?${serialized}` : ""}`;
+}
+
 export default async function GestiuneSculePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; categoryId?: string; availability?: string }>;
+  searchParams: Promise<{ q?: string; categoryId?: string; availability?: string; page?: string; pageSize?: string }>;
 }) {
   const params = await searchParams;
   const session = await auth();
@@ -104,6 +134,12 @@ export default async function GestiuneSculePage({
   const scopedProjectFilter = scope.projectIds === null ? null : { in: scope.projectIds.length ? scope.projectIds : ["__none__"] };
 
   const availability = parseEnumParam(params.availability, availabilityFilterValues) || "all";
+  const pageSizeParam = parsePositiveInt(params.pageSize, defaultPageSize);
+  const pageSize = pageSizeOptions.includes(pageSizeParam as (typeof pageSizeOptions)[number])
+    ? pageSizeParam
+    : defaultPageSize;
+  const currentPage = parsePositiveInt(params.page, 1);
+  const skip = (currentPage - 1) * pageSize;
   const where: Record<string, unknown> = {
     deletedAt: null,
     ...inventoryItemScopeWhere(userContext, scope),
@@ -154,6 +190,7 @@ export default async function GestiuneSculePage({
     activeAssignments,
     recentMovements,
     totalItems,
+    filteredItems,
     lowStockCount,
   ] = await Promise.all([
     prisma.inventoryItem.findMany({
@@ -164,7 +201,8 @@ export default async function GestiuneSculePage({
         location: { select: { id: true, name: true, code: true } },
       },
       orderBy: [{ status: "asc" }, { name: "asc" }],
-      take: 250,
+      skip,
+      take: pageSize,
     }),
     prisma.inventoryCategory.findMany({
       where: { isActive: true },
@@ -257,6 +295,7 @@ export default async function GestiuneSculePage({
       take: 12,
     }),
     prisma.inventoryItem.count({ where: { deletedAt: null, ...inventoryItemScopeWhere(userContext, scope) } }),
+    prisma.inventoryItem.count({ where }),
     prisma.inventoryItem.count({
       where: {
         deletedAt: null,
@@ -273,6 +312,9 @@ export default async function GestiuneSculePage({
       },
     }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems / pageSize));
+  const boundedCurrentPage = Math.min(currentPage, totalPages);
 
   const activeAssignmentIds = activeAssignments.map((assignment) => assignment.id);
   const processedByAssignment =
@@ -342,6 +384,8 @@ export default async function GestiuneSculePage({
   const lowStockRows = rows.filter((row) => row.lowStock).length;
   const inspectionAlerts = rows.filter((row) => row.inspectionSoon || row.expired).length;
   const assignedCount = rows.filter((row) => row.activeCount > 0).length;
+  const firstVisibleItem = filteredItems === 0 || rows.length === 0 ? 0 : skip + 1;
+  const lastVisibleItem = Math.min(skip + rows.length, filteredItems);
 
   return (
     <PermissionGuard resource="MATERIALS" action="VIEW">
@@ -355,7 +399,9 @@ export default async function GestiuneSculePage({
           <Card>
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Articole in gestiune</p>
             <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{totalItems}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">{rows.length} afisate cu filtrele curente</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {filteredItems} potrivite filtrelor, {rows.length} afisate
+            </p>
           </Card>
           <Card>
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Predate in teren</p>
@@ -364,8 +410,8 @@ export default async function GestiuneSculePage({
           </Card>
           <Card>
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Stoc sub prag</p>
-            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{lowStockRows}</p>
-            <p className="mt-1 text-xs text-[var(--muted)]">total monitorizat: {lowStockCount}</p>
+            <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{lowStockCount}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">pe pagina curenta: {lowStockRows}</p>
           </Card>
           <Card>
             <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Alerte valabilitate</p>
@@ -375,7 +421,7 @@ export default async function GestiuneSculePage({
         </section>
 
         <Card>
-          <form className="grid gap-3 md:grid-cols-4">
+          <form className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_minmax(180px,0.8fr)_minmax(170px,0.75fr)_minmax(120px,0.45fr)_auto]">
             <Input name="q" defaultValue={params.q || ""} placeholder="Cauta dupa nume, cod intern, serie, brand" />
             <select name="categoryId" defaultValue={params.categoryId || ""} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm">
               <option value="">Toate categoriile</option>
@@ -394,6 +440,13 @@ export default async function GestiuneSculePage({
               <option value="inspection">Inspectie curand</option>
               <option value="expired">Expirate</option>
             </select>
+            <select name="pageSize" defaultValue={String(pageSize)} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 text-sm">
+              {pageSizeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option} / pagina
+                </option>
+              ))}
+            </select>
             <div className="flex gap-2">
               <Button type="submit" className="flex-1">Filtreaza</Button>
               <Link href="/gestiune-scule" className="flex-1">
@@ -404,6 +457,43 @@ export default async function GestiuneSculePage({
         </Card>
 
         <Card className="p-0">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)]/70 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--foreground)]">Catalog scule</p>
+              <p className="text-xs text-[var(--muted)]">
+                {firstVisibleItem}-{lastVisibleItem} din {filteredItems} rezultate filtrate
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[var(--muted-strong)]">
+              <Link
+                aria-disabled={boundedCurrentPage <= 1}
+                className={`rounded-lg border border-[var(--border)] px-3 py-1.5 ${boundedCurrentPage <= 1 ? "pointer-events-none opacity-45" : "hover:border-[var(--border-strong)]"}`}
+                href={buildInventoryHref({
+                  page: Math.max(1, boundedCurrentPage - 1),
+                  q: params.q,
+                  categoryId: params.categoryId,
+                  availability,
+                  pageSize,
+                })}
+              >
+                Inapoi
+              </Link>
+              <span>Pagina {boundedCurrentPage} din {totalPages}</span>
+              <Link
+                aria-disabled={boundedCurrentPage >= totalPages}
+                className={`rounded-lg border border-[var(--border)] px-3 py-1.5 ${boundedCurrentPage >= totalPages ? "pointer-events-none opacity-45" : "hover:border-[var(--border-strong)]"}`}
+                href={buildInventoryHref({
+                  page: Math.min(totalPages, boundedCurrentPage + 1),
+                  q: params.q,
+                  categoryId: params.categoryId,
+                  availability,
+                  pageSize,
+                })}
+              >
+                Inainte
+              </Link>
+            </div>
+          </div>
           <div className="max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--border-strong)] scrollbar-track-transparent">
             <div className="hidden md:block">
               <Table>
@@ -415,7 +505,7 @@ export default async function GestiuneSculePage({
                     <TH>Predat catre</TH>
                     <TH>Valabilitate / inspectie</TH>
                     <TH>Status</TH>
-                    <TH>Actiuni</TH>
+                    <TH className="min-w-[210px]">Actiuni</TH>
                   </tr>
                 </thead>
                 <tbody>
@@ -462,22 +552,23 @@ export default async function GestiuneSculePage({
                       <TD>
                         <Badge tone={statusTone[row.item.status]}>{inventoryItemStatusLabels[row.item.status]}</Badge>
                       </TD>
-                      <TD>
-                        <div className="flex flex-col gap-2">
+                      <TD className="min-w-[210px] align-top">
+                        <div className="grid min-w-[200px] gap-2">
                           <Link href={`/gestiune-scule/${row.item.id}`}>
                             <Button type="button" size="sm" variant="secondary" className="w-full">Detalii</Button>
                           </Link>
                           {canManage ? (
-                            <form action={updateInventoryItemStatusAction}>
+                            <form action={updateInventoryItemStatusAction} className="rounded-lg border border-[var(--border)]/70 bg-[var(--surface-2)] p-2">
                               <input type="hidden" name="itemId" value={row.item.id} />
-                              <div className="flex gap-2">
-                                <select name="status" defaultValue={row.item.status} className="h-8 rounded-md border border-[var(--border)] px-2 text-xs">
+                              <label className="grid gap-1">
+                                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Status articol</span>
+                                <select name="status" defaultValue={row.item.status} className="h-9 min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface-card)] px-2 text-xs">
                                   {Object.values(InventoryItemStatus).map((status) => (
                                     <option key={status} value={status}>{inventoryItemStatusLabels[status]}</option>
                                   ))}
                                 </select>
-                                <Button type="submit" size="sm">Salveaza</Button>
-                              </div>
+                              </label>
+                              <Button type="submit" size="sm" className="mt-2 w-full">Salveaza status</Button>
                             </form>
                           ) : null}
                         </div>
@@ -523,8 +614,12 @@ export default async function GestiuneSculePage({
         </Card>
 
         {canCreate ? (
-          <section className="grid gap-4 xl:grid-cols-2">
-            <Card>
+          <section className="grid items-start gap-4 xl:grid-cols-2">
+            <details className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4" open>
+              <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">
+                Catalog si configurare
+              </summary>
+              <div className="mt-4">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Catalog</p>
               <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Adauga articol in gestiune</h2>
               <InventoryItemForm
@@ -535,27 +630,36 @@ export default async function GestiuneSculePage({
                   label: `${location.warehouse.name} • ${location.name} (${location.code})`,
                 }))}
               />
-            </Card>
+              </div>
+            </details>
             <div className="grid gap-4">
-              <Card>
+              <details className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">Categorie noua</summary>
+                <div className="mt-4">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Configurare</p>
                 <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Categorie noua</h2>
                 <InventoryCategoryForm />
-              </Card>
-              <Card>
+                </div>
+              </details>
+              <details className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">Locatie noua in depozit</summary>
+                <div className="mt-4">
                 <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Configurare</p>
                 <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Locatie noua in depozit</h2>
                 <InventoryLocationForm
                   warehouses={warehouses.map((warehouse) => ({ id: warehouse.id, label: warehouse.name }))}
                 />
-              </Card>
+                </div>
+              </details>
             </div>
           </section>
         ) : null}
 
         {canManage ? (
-          <section className="grid gap-4 xl:grid-cols-2">
-            <Card>
+          <section className="grid items-start gap-4 xl:grid-cols-2">
+            <details className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">Predare articol</summary>
+              <div className="mt-4">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Predare</p>
               <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Preda articol catre personal</h2>
               <InventoryIssueForm
@@ -565,26 +669,37 @@ export default async function GestiuneSculePage({
                 users={users.map((user) => ({ id: user.id, label: `${user.firstName} ${user.lastName}` }))}
                 projects={projects.map((project) => ({ id: project.id, label: project.title }))}
               />
-            </Card>
-            <Card>
+              </div>
+            </details>
+            <details className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">Retur articol</summary>
+              <div className="mt-4">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Retur</p>
               <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Inregistreaza retur</h2>
               <InventoryReturnForm assignments={returnAssignmentOptions} />
-            </Card>
-            <Card>
+              </div>
+            </details>
+            <details className="rounded-2xl border border-[#f4b87a]/55 bg-[rgba(88,45,12,0.16)] p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-[#ffe7ca]">Corectie inventar</summary>
+              <div className="mt-4">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Corectie inventar</p>
               <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Ajusteaza stoc cu motiv</h2>
+              <p className="mt-2 text-xs text-[#ffd8ad]">Foloseste corectia doar pentru inventar verificat; modifica stocul oficial.</p>
               <InventoryAdjustmentForm
                 items={rows.map((row) => ({ id: row.item.id, label: `${row.item.internalCode} • ${row.item.name}` }))}
               />
-            </Card>
-            <Card>
+              </div>
+            </details>
+            <details className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface-2)] p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--foreground)]">Verificare / calibrare</summary>
+              <div className="mt-4">
               <p className="text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Verificari</p>
               <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Inspectie / calibrare / expirare</h2>
               <InventoryInspectionForm
                 items={rows.map((row) => ({ id: row.item.id, label: `${row.item.internalCode} • ${row.item.name}` }))}
               />
-            </Card>
+              </div>
+            </details>
           </section>
         ) : null}
 

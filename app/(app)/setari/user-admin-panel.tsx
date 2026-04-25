@@ -212,9 +212,16 @@ export function UserAdminPanel({
               {canUpdateUsers ? (
                 <form action={toggleUserActiveAction} className="mt-2 flex justify-end">
                   <input type="hidden" name="userId" value={user.id} />
-                  <Button size="sm" variant={user.isActive ? "destructive" : "default"} type="submit">
-                    {user.isActive ? "Dezactiveaza" : "Activeaza"}
-                  </Button>
+                  <ConfirmSubmitButton
+                    size="sm"
+                    variant={user.isActive ? "destructive" : "default"}
+                    text={user.isActive ? "Dezactiveaza" : "Activeaza"}
+                    confirmMessage={
+                      user.isActive
+                        ? `Confirmi dezactivarea contului ${user.email}? Utilizatorul nu va mai putea intra in aplicatie.`
+                        : `Confirmi reactivarea contului ${user.email}?`
+                    }
+                  />
                 </form>
               ) : null}
 
@@ -225,7 +232,7 @@ export function UserAdminPanel({
                     variant="destructive"
                     size="sm"
                     text="Sterge cont"
-                    confirmMessage="Confirmi stergerea contului? Actiunea invalideaza accesul imediat."
+                    confirmMessage={`Confirmi stergerea contului ${user.email}? Actiunea invalideaza accesul imediat si anonimizeaza emailul.`}
                   />
                 </form>
               ) : null}

@@ -34,6 +34,25 @@ export const permissionActionLabels = {
   MANAGE: "Administrare",
 } satisfies Record<PermissionAction, string>;
 
+export const roleLabels: Record<RoleKey, string> = {
+  SUPER_ADMIN: "Super Admin",
+  ADMINISTRATOR: "Administrator",
+  MAGAZIONER: "Magazioner",
+  PROJECT_MANAGER: "Manager de proiect",
+  SITE_MANAGER: "Sef de santier",
+  BACKOFFICE: "Backoffice / Dispecer",
+  WORKER: "Muncitor / Tehnician",
+  ACCOUNTANT: "Contabil",
+  CLIENT_VIEWER: "Client Viewer",
+  SUBCONTRACTOR: "Subcontractor",
+};
+
+export function formatRoleLabels(roleKeys: Array<RoleKey | string>) {
+  const normalizedRoles = normalizeRoleKeys(roleKeys);
+  if (normalizedRoles.length === 0) return "Fara rol activ";
+  return normalizedRoles.map((role) => roleLabels[role] || role).join(", ");
+}
+
 type RolePermissionOverview = {
   summary: string;
   restrictions: string;
