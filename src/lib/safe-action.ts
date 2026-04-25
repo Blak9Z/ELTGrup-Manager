@@ -15,8 +15,20 @@ type SafeActionOptions<T extends z.ZodType> = {
     action: string;
     getEntityId: (result: any) => string;
     getDiff?: (data: z.infer<T>, result: any) => any;
+    redactFields?: string[];
   };
 };
+
+function redactSensitiveData(data: any, fieldsToRedact: string[]) {
+  if (!data || typeof data !== "object") return data;
+  const redacted = { ...data };
+  for (const field of fieldsToRedact) {
+    if (field in redacted) {
+      redacted[field] = "[REDACTED]";
+    }
+  }
+  return redacted;
+}
 
 export function createSafeAction<T extends z.ZodType, R>(
   options: SafeActionOptions<T>,
@@ -37,8 +49,6 @@ export function createSafeAction<T extends z.ZodType, R>(
       // 2. Data Validation
       let parsedData: z.infer<T> = {} as any;
       if (options.schema) {
-        // Handle FormData correctly for Zod
-        // Extract plain object from FormData
         const rawData: Record<string, any> = {};
         for (const key of Array.from(formData.keys())) {
           const values = formData.getAll(key);
@@ -61,12 +71,18 @@ export function createSafeAction<T extends z.ZodType, R>(
 
       // 4. Activity Logging
       if (options.activityLog && user) {
+        let diff = options.activityLog.getDiff ? options.activityLog.getDiff(parsedData, result) : undefined;
+        
+        if (diff && options.activityLog.redactFields) {
+          diff = redactSensitiveData(diff, options.activityLog.redactFields);
+        }
+
         await logActivity({
           userId: user.id,
           entityType: options.activityLog.entityType,
           entityId: options.activityLog.getEntityId(result),
           action: options.activityLog.action,
-          diff: options.activityLog.getDiff ? options.activityLog.getDiff(parsedData, result) : undefined,
+          diff,
         });
       }
 

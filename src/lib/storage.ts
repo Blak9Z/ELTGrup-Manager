@@ -4,7 +4,20 @@ import path from "path";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
-const LOCAL_STORAGE_ROOT = path.join(process.cwd(), "storage", "uploads");
+const LOCAL_STORAGE_ROOT = path.resolve(process.cwd(), "storage", "uploads");
+
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+  "text/csv",
+];
 
 function sanitizeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -30,12 +43,23 @@ function resolveLocalObjectPath(storagePath: string) {
     if (localKey.includes("..")) {
       throw new Error("Cale locala invalida pentru document.");
     }
-    return path.join(LOCAL_STORAGE_ROOT, localKey);
+    const finalPath = path.resolve(LOCAL_STORAGE_ROOT, localKey);
+    if (!finalPath.startsWith(LOCAL_STORAGE_ROOT)) {
+      throw new Error("Acces neautorizat la fisier (path traversal detected).");
+    }
+    return finalPath;
   }
 
   // Backward compatibility with old public upload paths.
   if (storagePath.startsWith("/uploads/")) {
-    return path.join(process.cwd(), "public", storagePath);
+    const publicRoot = path.resolve(process.cwd(), "public");
+    const finalPath = path.resolve(publicRoot, storagePath.replace(/^\/+/, ""));
+    const uploadsPath = path.resolve(publicRoot, "uploads");
+    
+    if (!finalPath.startsWith(uploadsPath)) {
+      throw new Error("Acces neautorizat la fisier (path traversal detected).");
+    }
+    return finalPath;
   }
 
   return null;
@@ -80,6 +104,11 @@ export async function readDocumentFile(storagePath: string) {
 export async function uploadDocumentFile(file: File) {
   if (!file || file.size === 0) throw new Error("Fisierul este obligatoriu.");
   if (file.size > MAX_FILE_SIZE) throw new Error("Fisierul depaseste 20MB.");
+
+  const mimeType = file.type || "application/octet-stream";
+  if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+    throw new Error(`Tip de fisier nepermis: ${mimeType}.`);
+  }
 
   const bytes = Buffer.from(await file.arrayBuffer());
   const safeName = sanitizeName(file.name || "document.bin");
