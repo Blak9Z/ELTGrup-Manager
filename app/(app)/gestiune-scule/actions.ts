@@ -127,6 +127,7 @@ const activeAssignmentStatuses: InventoryAssignmentStatus[] = [
 const warehouseManagerRoles = new Set<RoleKey>([
   RoleKey.SUPER_ADMIN,
   RoleKey.ADMINISTRATOR,
+  RoleKey.MAGAZIONER,
   RoleKey.BACKOFFICE,
   RoleKey.SITE_MANAGER,
   RoleKey.PROJECT_MANAGER,

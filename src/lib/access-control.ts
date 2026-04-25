@@ -63,7 +63,12 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
     routePrefixes: ["/teren"],
     roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.WORKER],
   },
-  materials: { resource: "MATERIALS", action: "VIEW", routePrefixes: ["/materiale", "/echipamente", "/gestiune-scule"] },
+  materials: { 
+    resource: "MATERIALS", 
+    action: "VIEW", 
+    routePrefixes: ["/materiale", "/echipamente", "/gestiune-scule"],
+    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.MAGAZIONER, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE, RoleKey.WORKER],
+  },
   documents: { resource: "DOCUMENTS", action: "VIEW", routePrefixes: ["/documente"] },
   clients: {
     resource: "PROJECTS",

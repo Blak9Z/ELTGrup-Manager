@@ -14,6 +14,7 @@ function getPrimaryRole(roleKeys: string[]) {
   const priority: RoleKey[] = [
     RoleKey.SUPER_ADMIN,
     RoleKey.ADMINISTRATOR,
+    RoleKey.MAGAZIONER,
     RoleKey.PROJECT_MANAGER,
     RoleKey.SITE_MANAGER,
     RoleKey.BACKOFFICE,
@@ -33,6 +34,10 @@ const roleExperience: Record<RoleKey, { subtitle: string; focus: string[] }> = {
   ADMINISTRATOR: {
     subtitle: "Coordonare executie: proiecte active, alocare echipe, aprobari materiale",
     focus: ["Confirma cererile de materiale ramase in asteptare.", "Verifica lucrarile care depasesc termenul."],
+  },
+  MAGAZIONER: {
+    subtitle: "Gestiune inventar: scule, materiale, intrari/iesiri depozit",
+    focus: ["Verifica cererile de materiale noi.", "Inregistreaza retururile de scule de pe teren."],
   },
   PROJECT_MANAGER: {
     subtitle: "Management proiect: termene, progres, consum materiale, buget",

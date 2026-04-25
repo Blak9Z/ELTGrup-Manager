@@ -50,6 +50,7 @@ const createMaterialSchema = z.object({
 const stockAndInvoiceAllowedRoles = new Set<RoleKey>([
   RoleKey.SUPER_ADMIN,
   RoleKey.ADMINISTRATOR,
+  RoleKey.MAGAZIONER,
   RoleKey.SITE_MANAGER,
   RoleKey.ACCOUNTANT,
 ]);

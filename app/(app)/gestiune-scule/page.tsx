@@ -404,119 +404,121 @@ export default async function GestiuneSculePage({
         </Card>
 
         <Card className="p-0">
-          <div className="hidden overflow-x-auto md:block">
-            <Table>
-              <thead>
-                <tr>
-                  <TH>Articol</TH>
-                  <TH>Categorie</TH>
-                  <TH>Stoc</TH>
-                  <TH>Predat catre</TH>
-                  <TH>Valabilitate / inspectie</TH>
-                  <TH>Status</TH>
-                  <TH>Actiuni</TH>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.item.id}>
-                    <TD>
-                      <div className="space-y-1">
-                        <Link href={`/gestiune-scule/${row.item.id}`} className="font-semibold text-[var(--foreground)] hover:underline">
-                          {row.item.name}
-                        </Link>
-                        <p className="text-xs text-[var(--muted)]">
-                          {row.item.internalCode}
-                          {row.item.serialNumber ? ` • SN ${row.item.serialNumber}` : ""}
-                        </p>
-                        <p className="text-xs text-[var(--muted)]">{row.item.warehouse.name}{row.item.location ? ` • ${row.item.location.name}` : ""}</p>
-                      </div>
-                    </TD>
-                    <TD>{row.item.category?.name || "Fara categorie"}</TD>
-                    <TD>
-                      <p className="font-semibold text-[var(--foreground)]">{formatQty(row.quantityAvailable)} / {formatQty(row.quantityTotal)} {row.item.unitOfMeasure}</p>
-                      <p className="text-xs text-[var(--muted)]">Minim: {row.item.minimumStock !== null ? formatQty(row.minimumStock) : "-"}</p>
-                    </TD>
-                    <TD>
-                      {row.activeCount > 0 ? (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-[var(--foreground)]">{row.firstHolder}</p>
-                          <p className="text-xs text-[var(--muted)]">{row.activeCount} alocari active</p>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-[var(--muted)]">Disponibil in depozit</span>
-                      )}
-                    </TD>
-                    <TD>
-                      <div className="space-y-1 text-xs">
-                        <p className="text-[var(--muted)]">Expira: {row.item.expiryDate ? formatDate(row.item.expiryDate) : "-"}</p>
-                        <p className="text-[var(--muted)]">Inspectie: {row.item.nextInspectionDate ? formatDate(row.item.nextInspectionDate) : "-"}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {row.lowStock ? <Badge tone="warning">Stoc mic</Badge> : null}
-                          {row.expired ? <Badge tone="danger">Expirat</Badge> : null}
-                          {!row.expired && row.inspectionSoon ? <Badge tone="warning">Inspectie curand</Badge> : null}
-                        </div>
-                      </div>
-                    </TD>
-                    <TD>
-                      <Badge tone={statusTone[row.item.status]}>{inventoryItemStatusLabels[row.item.status]}</Badge>
-                    </TD>
-                    <TD>
-                      <div className="flex flex-col gap-2">
-                        <Link href={`/gestiune-scule/${row.item.id}`}>
-                          <Button type="button" size="sm" variant="secondary" className="w-full">Detalii</Button>
-                        </Link>
-                        {canManage ? (
-                          <form action={updateInventoryItemStatusAction}>
-                            <input type="hidden" name="itemId" value={row.item.id} />
-                            <div className="flex gap-2">
-                              <select name="status" defaultValue={row.item.status} className="h-8 rounded-md border border-[var(--border)] px-2 text-xs">
-                                {Object.values(InventoryItemStatus).map((status) => (
-                                  <option key={status} value={status}>{inventoryItemStatusLabels[status]}</option>
-                                ))}
-                              </select>
-                              <Button type="submit" size="sm">Salveaza</Button>
-                            </div>
-                          </form>
-                        ) : null}
-                      </div>
-                    </TD>
+          <div className="max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--border-strong)] scrollbar-track-transparent">
+            <div className="hidden md:block">
+              <Table>
+                <thead className="sticky top-0 z-10 bg-[var(--surface-card)] shadow-sm">
+                  <tr>
+                    <TH>Articol</TH>
+                    <TH>Categorie</TH>
+                    <TH>Stoc</TH>
+                    <TH>Predat catre</TH>
+                    <TH>Valabilitate / inspectie</TH>
+                    <TH>Status</TH>
+                    <TH>Actiuni</TH>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.item.id}>
+                      <TD>
+                        <div className="space-y-1">
+                          <Link href={`/gestiune-scule/${row.item.id}`} className="font-semibold text-[var(--foreground)] hover:underline">
+                            {row.item.name}
+                          </Link>
+                          <p className="text-xs text-[var(--muted)]">
+                            {row.item.internalCode}
+                            {row.item.serialNumber ? ` • SN ${row.item.serialNumber}` : ""}
+                          </p>
+                          <p className="text-xs text-[var(--muted)]">{row.item.warehouse.name}{row.item.location ? ` • ${row.item.location.name}` : ""}</p>
+                        </div>
+                      </TD>
+                      <TD>{row.item.category?.name || "Fara categorie"}</TD>
+                      <TD>
+                        <p className="font-semibold text-[var(--foreground)]">{formatQty(row.quantityAvailable)} / {formatQty(row.quantityTotal)} {row.item.unitOfMeasure}</p>
+                        <p className="text-xs text-[var(--muted)]">Minim: {row.item.minimumStock !== null ? formatQty(row.minimumStock) : "-"}</p>
+                      </TD>
+                      <TD>
+                        {row.activeCount > 0 ? (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-[var(--foreground)]">{row.firstHolder}</p>
+                            <p className="text-xs text-[var(--muted)]">{row.activeCount} alocari active</p>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[var(--muted)]">Disponibil in depozit</span>
+                        )}
+                      </TD>
+                      <TD>
+                        <div className="space-y-1 text-xs">
+                          <p className="text-[var(--muted)]">Expira: {row.item.expiryDate ? formatDate(row.item.expiryDate) : "-"}</p>
+                          <p className="text-[var(--muted)]">Inspectie: {row.item.nextInspectionDate ? formatDate(row.item.nextInspectionDate) : "-"}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {row.lowStock ? <Badge tone="warning">Stoc mic</Badge> : null}
+                            {row.expired ? <Badge tone="danger">Expirat</Badge> : null}
+                            {!row.expired && row.inspectionSoon ? <Badge tone="warning">Inspectie curand</Badge> : null}
+                          </div>
+                        </div>
+                      </TD>
+                      <TD>
+                        <Badge tone={statusTone[row.item.status]}>{inventoryItemStatusLabels[row.item.status]}</Badge>
+                      </TD>
+                      <TD>
+                        <div className="flex flex-col gap-2">
+                          <Link href={`/gestiune-scule/${row.item.id}`}>
+                            <Button type="button" size="sm" variant="secondary" className="w-full">Detalii</Button>
+                          </Link>
+                          {canManage ? (
+                            <form action={updateInventoryItemStatusAction}>
+                              <input type="hidden" name="itemId" value={row.item.id} />
+                              <div className="flex gap-2">
+                                <select name="status" defaultValue={row.item.status} className="h-8 rounded-md border border-[var(--border)] px-2 text-xs">
+                                  {Object.values(InventoryItemStatus).map((status) => (
+                                    <option key={status} value={status}>{inventoryItemStatusLabels[status]}</option>
+                                  ))}
+                                </select>
+                                <Button type="submit" size="sm">Salveaza</Button>
+                              </div>
+                            </form>
+                          ) : null}
+                        </div>
+                      </TD>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
 
-          <div className="space-y-3 p-3 md:hidden">
-            {rows.map((row) => (
-              <div key={row.item.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold text-[var(--foreground)]">{row.item.name}</p>
-                    <p className="text-xs text-[var(--muted)]">{row.item.internalCode}</p>
+            <div className="space-y-3 p-3 md:hidden">
+              {rows.map((row) => (
+                <div key={row.item.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-card)] p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-[var(--foreground)]">{row.item.name}</p>
+                      <p className="text-xs text-[var(--muted)]">{row.item.internalCode}</p>
+                    </div>
+                    <Badge tone={statusTone[row.item.status]}>{inventoryItemStatusLabels[row.item.status]}</Badge>
                   </div>
-                  <Badge tone={statusTone[row.item.status]}>{inventoryItemStatusLabels[row.item.status]}</Badge>
+                  <div className="mt-2 space-y-1 text-xs text-[var(--muted)]">
+                    <p>Stoc: {formatQty(row.quantityAvailable)} / {formatQty(row.quantityTotal)} {row.item.unitOfMeasure}</p>
+                    <p>Categorie: {row.item.category?.name || "Fara categorie"}</p>
+                    <p>Depozit: {row.item.warehouse.name}{row.item.location ? ` • ${row.item.location.name}` : ""}</p>
+                    <p>Predat catre: {row.firstHolder || "-"}</p>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Link href={`/gestiune-scule/${row.item.id}`} className="flex-1">
+                      <Button type="button" variant="secondary" className="w-full">Detalii</Button>
+                    </Link>
+                    {canManage ? (
+                      <form action={updateInventoryItemStatusAction} className="flex-1">
+                        <input type="hidden" name="itemId" value={row.item.id} />
+                        <input type="hidden" name="status" value={InventoryItemStatus.AVAILABLE} />
+                        <Button type="submit" className="w-full">Marcheaza disponibil</Button>
+                      </form>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="mt-2 space-y-1 text-xs text-[var(--muted)]">
-                  <p>Stoc: {formatQty(row.quantityAvailable)} / {formatQty(row.quantityTotal)} {row.item.unitOfMeasure}</p>
-                  <p>Categorie: {row.item.category?.name || "Fara categorie"}</p>
-                  <p>Depozit: {row.item.warehouse.name}{row.item.location ? ` • ${row.item.location.name}` : ""}</p>
-                  <p>Predat catre: {row.firstHolder || "-"}</p>
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <Link href={`/gestiune-scule/${row.item.id}`} className="flex-1">
-                    <Button type="button" variant="secondary" className="w-full">Detalii</Button>
-                  </Link>
-                  {canManage ? (
-                    <form action={updateInventoryItemStatusAction} className="flex-1">
-                      <input type="hidden" name="itemId" value={row.item.id} />
-                      <input type="hidden" name="status" value={InventoryItemStatus.AVAILABLE} />
-                      <Button type="submit" className="w-full">Marcheaza disponibil</Button>
-                    </form>
-                  ) : null}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Card>
 
