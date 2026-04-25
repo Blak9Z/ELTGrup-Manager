@@ -5,7 +5,7 @@ import NextAuth, { type NextAuthOptions, getServerSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { cache } from "react";
 import { z } from "zod";
-import { prisma } from "@/src/lib/prisma";
+import { prisma, basePrisma } from "@/src/lib/prisma";
 
 const JWT_ROLE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -15,7 +15,7 @@ const loginSchema = z.object({
 });
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(basePrisma as any),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/autentificare",

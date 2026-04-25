@@ -10,6 +10,7 @@ const mobileQuickLinks = [
   { module: "dashboard" as AppModule, href: "/panou", label: "Panou" },
   { module: "projects" as AppModule, href: "/proiecte", label: "Proiecte" },
   { module: "work_orders" as AppModule, href: "/lucrari", label: "Lucrari" },
+  { module: "teams" as AppModule, href: "/echipe", label: "Echipe" },
   { module: "time_tracking" as AppModule, href: "/pontaj", label: "Pontaj" },
   { module: "materials" as AppModule, href: "/gestiune-scule", label: "Depozit" },
 ];

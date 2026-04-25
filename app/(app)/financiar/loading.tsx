@@ -1,18 +1,31 @@
-export default function FinanciarLoading() {
+import { Skeleton } from "@/src/components/ui/skeleton";
+import { Card } from "@/src/components/ui/card";
+import { PageHeader } from "@/src/components/ui/page-header";
+
+export default function Loading() {
   return (
-    <div className="space-y-4">
-      <div className="h-10 w-64 animate-pulse rounded-xl bg-[rgba(60,95,150,0.35)]" />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-2xl border border-[var(--border)] bg-[rgba(17,29,51,0.9)]" />
+    <div className="space-y-6">
+      <PageHeader title="Financiar operational" subtitle="..." />
+      
+      <div className="h-[400px]">
+        <Skeleton className="h-full w-full rounded-xl" />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="h-28">
+            <Skeleton className="h-full w-full" />
+          </Card>
         ))}
       </div>
-      <div className="h-48 animate-pulse rounded-2xl border border-[var(--border)] bg-[rgba(17,29,51,0.9)]" />
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))]" />
-        ))}
-      </div>
+
+      <Card>
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

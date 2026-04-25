@@ -1,13 +1,40 @@
-export default function ProjectsLoading() {
+import { Skeleton } from "@/src/components/ui/skeleton";
+import { Card } from "@/src/components/ui/card";
+import { PageHeader } from "@/src/components/ui/page-header";
+
+export default function Loading() {
   return (
-    <div className="space-y-4">
-      <div className="h-10 w-56 animate-pulse rounded-xl bg-[rgba(60,95,150,0.35)]" />
-      <div className="h-48 animate-pulse rounded-2xl border border-[var(--border)] bg-[rgba(17,29,51,0.9)]" />
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(10,24,40,0.82),rgba(8,20,34,0.82))]" />
+    <div className="space-y-6">
+      <PageHeader title="Proiecte" subtitle="..." />
+      
+      <Card>
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-[200px]" />
+          <Skeleton className="h-4 w-full" />
+          <div className="mt-4 flex gap-4">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid gap-4 lg:hidden">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="h-48">
+            <Skeleton className="h-full w-full" />
+          </Card>
         ))}
       </div>
+
+      <Card className="hidden lg:block">
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-full" />
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

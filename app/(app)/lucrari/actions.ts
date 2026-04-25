@@ -67,88 +67,66 @@ const updateStatusSchema = z.object({
   status: z.nativeEnum(WorkOrderStatus),
 });
 
-async function createWorkOrderInternal(formData: FormData) {
-  const currentUser = await requirePermission("TASKS", "CREATE");
+import { createSafeAction } from "@/src/lib/safe-action";
 
-  const parsed = createWorkOrderSchema.safeParse({
-    title: formData.get("title"),
-    projectId: formData.get("projectId"),
-    responsibleId: formData.get("responsibleId") || undefined,
-    teamId: formData.get("teamId") || undefined,
-    startDate: formData.get("startDate") || undefined,
-    dueDate: formData.get("dueDate") || undefined,
-    estimatedHours: formData.get("estimatedHours"),
-    priority: formData.get("priority"),
-    status: formData.get("status"),
-    description: formData.get("description") || undefined,
-  });
+export const createWorkOrderAction = createSafeAction(
+  {
+    schema: createWorkOrderSchema,
+    permission: { resource: "TASKS", action: "CREATE" },
+  },
+  async (data, currentUser) => {
+    await assertProjectAccess(currentUser, data.projectId);
 
-  if (!parsed.success) throw parsed.error;
-  await assertProjectAccess(currentUser, parsed.data.projectId);
-
-  const created = await prisma.workOrder.create({
-    data: {
-      title: parsed.data.title,
-      projectId: parsed.data.projectId,
-      responsibleId: parsed.data.responsibleId,
-      teamId: parsed.data.teamId,
-      startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : null,
-      dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : null,
-      estimatedHours: parsed.data.estimatedHours,
-      priority: parsed.data.priority,
-      status: parsed.data.status,
-      description: parsed.data.description,
-    },
-    select: {
-      id: true,
-      title: true,
-      projectId: true,
-      responsibleId: true,
-      dueDate: true,
-      project: { select: { title: true } },
-    },
-  });
-
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "WORK_ORDER",
-    entityId: created.id,
-    action: "WORK_ORDER_CREATED",
-    diff: {
-      title: created.title,
-      projectId: created.projectId,
-      responsibleId: created.responsibleId,
-      dueDate: created.dueDate?.toISOString() ?? null,
-    },
-  });
-
-  if (created.responsibleId) {
-    await notifyUser({
-      userId: created.responsibleId,
-      type: NotificationType.NEW_ASSIGNMENT,
-      title: "Ai primit o lucrare noua",
-      message: `${created.title} (${created.project.title})`,
-      actionUrl: "/lucrari",
+    const created = await prisma.workOrder.create({
+      data: {
+        title: data.title,
+        projectId: data.projectId,
+        responsibleId: data.responsibleId,
+        teamId: data.teamId,
+        startDate: data.startDate ? new Date(data.startDate) : null,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        estimatedHours: data.estimatedHours,
+        priority: data.priority,
+        status: data.status,
+        description: data.description,
+      },
+      select: {
+        id: true,
+        title: true,
+        projectId: true,
+        responsibleId: true,
+        dueDate: true,
+        project: { select: { title: true } },
+      },
     });
-  }
 
-  revalidateWorkOrderRelatedPaths({ workOrderId: created.id, projectId: created.projectId });
-}
+    await logActivity({
+      userId: currentUser.id,
+      entityType: "WORK_ORDER",
+      entityId: created.id,
+      action: "WORK_ORDER_CREATED",
+      diff: {
+        title: created.title,
+        projectId: created.projectId,
+        responsibleId: created.responsibleId,
+        dueDate: created.dueDate?.toISOString() ?? null,
+      },
+    });
 
-export async function createWorkOrderAction(
-  _: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    await createWorkOrderInternal(formData);
-    return { ok: true, message: "Lucrare creata cu succes." };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { ok: false, errors: error.flatten().fieldErrors, message: "Verifica datele lucrarii." };
+    if (created.responsibleId) {
+      await notifyUser({
+        userId: created.responsibleId,
+        type: NotificationType.NEW_ASSIGNMENT,
+        title: "Ai primit o lucrare noua",
+        message: `${created.title} (${created.project.title})`,
+        actionUrl: "/lucrari",
+      });
     }
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare lucrare" };
+
+    revalidateWorkOrderRelatedPaths({ workOrderId: created.id, projectId: created.projectId });
+    return created;
   }
-}
+);
 
 export async function updateWorkOrderStatus(formData: FormData) {
   const currentUser = await requirePermission("TASKS", "UPDATE");

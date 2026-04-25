@@ -7,14 +7,22 @@ import { SUBCONTRACTOR_APPROVAL_STATUSES } from "./constants";
 import { initialActionState } from "@/src/lib/action-state";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { useRouter } from "next/navigation";
 
 export function SubcontractorCreateForm() {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(createSubcontractorAction, initialActionState);
 
   useEffect(() => {
-    if (state.ok && state.message) toast.success(state.message);
+    if (state.ok && state.message) {
+      toast.success(state.message);
+      // Remove the dialog=create param from URL to close the dialog
+      const url = new URL(window.location.href);
+      url.searchParams.delete("dialog");
+      router.push(url.pathname + url.search);
+    }
     if (!state.ok && state.message) toast.error(state.message);
-  }, [state]);
+  }, [state, router]);
 
   return (
     <form action={formAction} className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">

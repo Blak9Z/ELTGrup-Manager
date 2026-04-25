@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileText,
   HardHat,
+  History,
   LayoutDashboard,
   Package,
   Receipt,
@@ -31,6 +32,7 @@ export const navItems: NavItem[] = [
   { module: "dashboard", href: "/panou", label: "Panou", icon: LayoutDashboard, section: "Baza" },
   { module: "projects", href: "/proiecte", label: "Proiecte", icon: BriefcaseBusiness, section: "Baza" },
   { module: "work_orders", href: "/lucrari", label: "Lucrari", icon: ClipboardList, section: "Executie" },
+  { module: "teams", href: "/echipe", label: "Echipe", icon: Users, section: "Executie" },
   { module: "calendar", href: "/calendar", label: "Calendar", icon: CalendarDays, section: "Executie" },
   { module: "time_tracking", href: "/pontaj", label: "Pontaj", icon: Timer, section: "Executie" },
   { module: "field", href: "/teren", label: "Teren", icon: Smartphone, section: "Executie" },
@@ -43,6 +45,7 @@ export const navItems: NavItem[] = [
   { module: "financial", href: "/financiar", label: "Financiar", icon: Receipt, section: "Comercial" },
   { module: "analytics", href: "/analitice", label: "Analitice", icon: ChartColumn, section: "Sistem" },
   { module: "notifications", href: "/notificari", label: "Notificari", icon: Bell, section: "Sistem" },
+  { module: "settings", href: "/setari/activitate", label: "Activitate", icon: History, section: "Sistem" },
   { module: "settings", href: "/setari", label: "Setari", icon: Settings, section: "Sistem" },
 ];
 

@@ -96,143 +96,44 @@ async function archiveProjectsWithWorkOrders(projectIds: string[]) {
   return { archivedProjects: projectsResult.count, archivedWorkOrders: workOrdersResult.count };
 }
 
-async function createProjectInternal(formData: FormData) {
-  const currentUser = await requirePermission("PROJECTS", "CREATE");
+import { ProjectService } from "@/src/services/project.service";
 
-  const parsed = createProjectSchema.safeParse({
-    title: formData.get("title"),
-    siteAddress: formData.get("siteAddress"),
-    clientId: formData.get("clientId"),
-    type: formData.get("type"),
-    status: formData.get("status"),
-    startDate: formData.get("startDate"),
-    endDate: formData.get("endDate"),
-    contractValue: formData.get("contractValue"),
-    estimatedBudget: formData.get("estimatedBudget"),
-  });
+import { createSafeAction } from "@/src/lib/safe-action";
 
-  if (!parsed.success) throw parsed.error;
-
-  let created: Awaited<ReturnType<typeof prisma.project.create>> | null = null;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const code = await getNextProjectCode();
-    try {
-      created = await prisma.project.create({
-        data: {
-          code,
-          title: parsed.data.title,
-          siteAddress: parsed.data.siteAddress,
-          clientId: parsed.data.clientId,
-          type: parsed.data.type,
-          status: parsed.data.status,
-          managerId: currentUser.id,
-          contractValue: parsed.data.contractValue,
-          estimatedBudget: parsed.data.estimatedBudget,
-          startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : null,
-          endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
-          description: "Proiect creat din modulul Proiecte",
-        },
-      });
-      break;
-    } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
-        throw error;
-      }
-    }
-  }
-  if (!created) {
-    throw new Error("Nu am putut genera un cod unic de proiect. Incearca din nou.");
-  }
-
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "PROJECT",
-    entityId: created.id,
-    action: "PROJECT_CREATED",
-    diff: {
-      title: created.title,
-      status: created.status,
-      type: created.type,
-    },
-  });
-
-  await notifyRoles({
-    roleKeys: [RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE],
-    type: NotificationType.NEW_ASSIGNMENT,
-    title: "Proiect nou creat",
-    message: `A fost creat proiectul ${created.title}.`,
-    actionUrl: `/proiecte/${created.id}`,
-  });
-
-  revalidateProjectRelatedPaths(created.id);
-}
-
-export async function createProjectAction(
-  _: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    await createProjectInternal(formData);
-    return { ok: true, message: "Proiect creat cu succes." };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { ok: false, errors: error.flatten().fieldErrors, message: "Verifica datele proiectului." };
-    }
-    return { ok: false, message: error instanceof Error ? error.message : "Eroare la creare proiect" };
-  }
-}
-
-export async function updateProjectStatus(formData: FormData) {
-  const currentUser = await requirePermission("PROJECTS", "UPDATE");
-  const parsed = updateProjectStatusSchema.safeParse({
-    id: formData.get("id"),
-    status: formData.get("status"),
-  });
-  if (!parsed.success) throw new Error("Date invalide pentru actualizarea statusului.");
-  const { id, status } = parsed.data;
-  await assertProjectAccess(currentUser, id);
-
-  const before = await prisma.project.findUnique({
-    where: { id },
-    select: { status: true, title: true, managerId: true },
-  });
-  if (!before) throw new Error("Proiect inexistent.");
-
-  const updated = await prisma.project.update({
-    where: { id },
-    data: { status },
-    select: { id: true, title: true, status: true, managerId: true },
-  });
-
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "PROJECT",
-    entityId: id,
-    action: "PROJECT_STATUS_UPDATED",
-    diff: { beforeStatus: before?.status, afterStatus: updated.status },
-  });
-
-  if (status === "BLOCKED") {
-    await notifyRoles({
-      roleKeys: [RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER],
-      type: NotificationType.DELAYED_PROJECT,
-      title: "Proiect blocat",
-      message: `Proiectul ${updated.title} a fost marcat ca blocat.`,
-      actionUrl: `/proiecte/${id}`,
+export const createProjectAction = createSafeAction(
+  {
+    schema: createProjectSchema,
+    permission: { resource: "PROJECTS", action: "CREATE" },
+    // activityLog is handled inside Service for now, but we can move it here
+  },
+  async (data, currentUser) => {
+    const created = await ProjectService.create({
+      ...data,
+      managerId: currentUser.id,
+      startDate: data.startDate ? new Date(data.startDate) : null,
+      endDate: data.endDate ? new Date(data.endDate) : null,
     });
-  }
 
-  if (before.status !== updated.status && updated.managerId && updated.managerId !== currentUser.id) {
-    await notifyUser({
-      userId: updated.managerId,
-      type: updated.status === ProjectStatus.BLOCKED ? NotificationType.DELAYED_PROJECT : NotificationType.NEW_ASSIGNMENT,
-      title: "Actualizare status proiect",
-      message: `${updated.title} este acum ${updated.status}.`,
-      actionUrl: `/proiecte/${updated.id}`,
-    });
+    revalidateProjectRelatedPaths(created.id);
+    return created;
   }
+);
 
-  revalidateProjectRelatedPaths(id);
+const updateProjectStatusActionInternal = createSafeAction(
+  {
+    schema: updateProjectStatusSchema,
+    permission: { resource: "PROJECTS", action: "UPDATE" },
+  },
+  async (data, currentUser) => {
+    await assertProjectAccess(currentUser, data.id);
+    const updated = await ProjectService.updateStatus(data.id, data.status, currentUser.id);
+    revalidateProjectRelatedPaths(data.id);
+    return updated;
+  }
+);
+
+export async function updateProjectStatusAction(formData: FormData) {
+  await updateProjectStatusActionInternal(null, formData);
 }
 
 export async function deleteProject(formData: FormData) {
@@ -241,24 +142,7 @@ export async function deleteProject(formData: FormData) {
   const id = String(formData.get("id"));
   await assertProjectAccess(currentUser, id);
 
-  const project = await prisma.project.findUnique({
-    where: { id },
-    select: { id: true, title: true, deletedAt: true },
-  });
-  if (!project || project.deletedAt) throw new Error("Proiect inexistent sau deja arhivat.");
-
-  const archiveResult = await archiveProjectsWithWorkOrders([id]);
-
-  await logActivity({
-    userId: currentUser.id,
-    entityType: "PROJECT",
-    entityId: id,
-    action: "PROJECT_SOFT_DELETED",
-    diff: {
-      title: project.title,
-      archivedWorkOrders: archiveResult.archivedWorkOrders,
-    },
-  });
+  await ProjectService.softDelete(id, currentUser.id);
 
   revalidateProjectRelatedPaths(id);
 }

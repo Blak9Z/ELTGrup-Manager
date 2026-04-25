@@ -41,6 +41,8 @@ Toate modulele sunt filtrate dupa rol + acces in scope (proiect/echipa), cu veri
 - Tailwind CSS
 - Vitest + ESLint
 - `pdf-lib` pentru export PDF
+- `recharts` pentru dashboard-uri analitice
+- `framer-motion` pentru tranzitii fluide
 - Upload documente: S3 compatibil sau fallback local
 
 ## Cerinte
@@ -242,7 +244,11 @@ docs/
 - Validare permisiuni prin RBAC (`src/lib/rbac.ts`)
 - Scope dinamic pe proiect/echipa (`src/lib/access-scope.ts`)
 - Verificari server-side in toate actiunile sensibile
-- Audit operational in `ActivityLog`
+- Audit operational in `ActivityLog` (Vizualizare in `/setari/activitate`)
+- Navigare rapida tip Command Palette (`Ctrl+K`)
+- Suport PWA pentru utilizare pe dispozitive mobile
+- Analiza avansata de profitabilitate (Financiar)
+- Arhitectura scalabila bazata pe Service Layer si Safe Actions
 
 ## Note
 

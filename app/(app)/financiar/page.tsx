@@ -7,6 +7,7 @@ import { Card } from "@/src/components/ui/card";
 import { ConfirmSubmitButton } from "@/src/components/forms/confirm-submit-button";
 import { FormModal } from "@/src/components/forms/form-modal";
 import { PageHeader } from "@/src/components/ui/page-header";
+import { ProfitabilityChart } from "@/src/components/dashboard/profitability-chart";
 import { auth } from "@/src/lib/auth";
 import { resolveAccessScope } from "@/src/lib/access-scope";
 import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination } from "@/src/lib/query-params";
@@ -155,6 +156,14 @@ export default async function FinanciarPage({
   const costByProject = new Map(projectCostSums.map((item) => [item.projectId, Number(item._sum.amount || 0)]));
   const invoicedByProject = new Map(projectInvoiceSums.map((item) => [item.projectId, Number(item._sum.totalAmount || 0)]));
   const statusSummaryMap = new Map(invoiceStatusSummary.map((item) => [item.status, item]));
+  
+  const chartData = projects.map(project => ({
+    name: project.title.length > 20 ? project.title.substring(0, 20) + "..." : project.title,
+    revenue: invoicedByProject.get(project.id) || 0,
+    costs: costByProject.get(project.id) || 0,
+    profit: (invoicedByProject.get(project.id) || 0) - (costByProject.get(project.id) || 0)
+  })).filter(p => p.revenue > 0 || p.costs > 0);
+
   const outstandingAmount = invoiceStatusSummary
     .filter((item) => item.status !== InvoiceStatus.PAID && item.status !== InvoiceStatus.CANCELED)
     .reduce((sum, item) => sum + Number(item._sum.totalAmount || 0), 0);
@@ -166,6 +175,11 @@ export default async function FinanciarPage({
     <PermissionGuard resource="INVOICES" action="VIEW">
       <div className="space-y-6">
         <PageHeader title="Financiar operational" subtitle="Buget proiect, costuri reale, TVA, creante, status facturi, marja estimata" />
+        
+        {chartData.length > 0 && (
+          <ProfitabilityChart data={chartData} />
+        )}
+
         {canExportInvoices ? (
           <div className="flex justify-end">
             <Link href="/api/export/financiar">

@@ -91,9 +91,10 @@ export default async function ClientiPage({
     where.deletedAt = { not: null };
   }
 
-  if (scopedProjectIds) {
-    andFilters.push({ projects: { some: { id: { in: scopedProjectIds } } } });
-  }
+  // We removed project-based filtering for clients to allow Managers and Admin to see all clients in the catalog.
+  // if (scopedProjectIds) {
+  //   andFilters.push({ projects: { some: { id: { in: scopedProjectIds } } } });
+  // }
   if (typeFilter) {
     andFilters.push({ type: typeFilter });
   }

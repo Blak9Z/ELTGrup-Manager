@@ -16,7 +16,7 @@ import { buildListHref, parseEnumParam, parsePositiveIntParam, resolvePagination
 import { hasPermission } from "@/src/lib/rbac";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
-import { bulkProjectsAction, deleteProject, updateProjectStatus } from "./actions";
+import { bulkProjectsAction, deleteProject, updateProjectStatusAction } from "./actions";
 import { ProjectCreateForm } from "./project-create-form";
 
 const projectStatusMeta: Record<ProjectStatus, { label: string; tone: "neutral" | "info" | "danger" | "success" | "warning" }> = {
@@ -260,7 +260,7 @@ export default async function ProjectsPage({
                     {canUpdate || canDelete ? (
                       <div className="mt-3 flex flex-col gap-2">
                         {canUpdate ? (
-                          <form action={updateProjectStatus} className="flex flex-col gap-2">
+                          <form action={updateProjectStatusAction} className="flex flex-col gap-2">
                             <input type="hidden" name="id" value={project.id} />
                             <div className="grid grid-cols-[1fr_auto] gap-2">
                               <select name="status" defaultValue={project.status} className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm focus:border-[var(--border-strong)] focus:outline-none">
@@ -335,7 +335,7 @@ export default async function ProjectsPage({
                           {canUpdate || canDelete ? (
                             <div className="flex gap-2">
                               {canUpdate ? (
-                                <form action={updateProjectStatus}>
+                                <form action={updateProjectStatusAction}>
                                   <input type="hidden" name="id" value={project.id} />
                                   <select name="status" defaultValue={project.status} className="h-9 rounded-md px-2 text-xs">
                                     {projectStatusOptions.map((st) => (

@@ -5,6 +5,7 @@ export const appModules = [
   "dashboard",
   "projects",
   "work_orders",
+  "teams",
   "calendar",
   "time_tracking",
   "field",
@@ -48,6 +49,12 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
   dashboard: { resource: "REPORTS", action: "VIEW", routePrefixes: ["/panou"] },
   projects: { resource: "PROJECTS", action: "VIEW", routePrefixes: ["/proiecte"] },
   work_orders: { resource: "TASKS", action: "VIEW", routePrefixes: ["/lucrari"] },
+  teams: {
+    resource: "TEAMS",
+    action: "VIEW",
+    routePrefixes: ["/echipe"],
+    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE],
+  },
   calendar: { resource: "TASKS", action: "VIEW", routePrefixes: ["/calendar"] },
   time_tracking: { resource: "TIME_TRACKING", action: "VIEW", routePrefixes: ["/pontaj"] },
   field: {
@@ -62,14 +69,14 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
     resource: "PROJECTS",
     action: "VIEW",
     routePrefixes: ["/clienti"],
-    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.BACKOFFICE, RoleKey.ACCOUNTANT],
+    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE, RoleKey.ACCOUNTANT],
   },
   reports: { resource: "REPORTS", action: "VIEW", routePrefixes: ["/rapoarte-zilnice"] },
   subcontractors: {
     resource: "TASKS",
     action: "VIEW",
     routePrefixes: ["/subcontractori"],
-    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE],
+    roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR, RoleKey.PROJECT_MANAGER, RoleKey.SITE_MANAGER, RoleKey.BACKOFFICE, RoleKey.ACCOUNTANT],
   },
   financial: {
     resource: "INVOICES",
@@ -87,7 +94,7 @@ export const modulePolicies: Record<AppModule, ModulePolicy> = {
   settings: {
     resource: "SETTINGS",
     action: "VIEW",
-    routePrefixes: ["/setari"],
+    routePrefixes: ["/setari", "/setari/activitate"],
     roles: [RoleKey.SUPER_ADMIN, RoleKey.ADMINISTRATOR],
   },
 };

@@ -48,8 +48,8 @@ model User {
   assignedOrders           WorkOrder[]                 @relation("AssignedResponsible")
   workerProfile            WorkerProfile?
 
-  @@index([email, isActive])
-  @@index([createdAt])
+  @@index([email, isActive, deletedAt])
+  @@index([createdAt, deletedAt])
 }
 
 model Role {
@@ -106,7 +106,7 @@ model Team {
   workOrders WorkOrder[]
   workers    WorkerProfile[]
 
-  @@index([region])
+  @@index([region, deletedAt])
 }
 
 model WorkerProfile {
@@ -201,9 +201,9 @@ model Project {
   timeEntries          TimeEntry[]
   workOrders           WorkOrder[]
 
-  @@index([status, managerId])
-  @@index([startDate, endDate])
-  @@index([clientId])
+  @@index([status, managerId, deletedAt])
+  @@index([startDate, endDate, deletedAt])
+  @@index([clientId, deletedAt])
 }
 
 model ProjectPhase {
@@ -260,9 +260,9 @@ model WorkOrder {
   responsible              User?                     @relation("AssignedResponsible", fields: [responsibleId], references: [id])
   team                     Team?                     @relation(fields: [teamId], references: [id])
 
-  @@index([teamId, startDate])
-  @@index([dueDate, priority])
-  @@index([projectId, status])
+  @@index([teamId, startDate, deletedAt])
+  @@index([dueDate, priority, deletedAt])
+  @@index([projectId, status, deletedAt])
 }
 
 model TaskChecklistItem {

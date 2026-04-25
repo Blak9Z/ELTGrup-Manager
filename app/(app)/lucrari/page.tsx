@@ -179,7 +179,7 @@ export default async function WorkOrdersPage({
     "team.findMany",
     () =>
       prisma.team.findMany({
-        where: scope.teamId ? { deletedAt: null, id: scope.teamId } : { deletedAt: null },
+        where: scope.teamId ? { deletedAt: null, isActive: true, id: scope.teamId } : { deletedAt: null, isActive: true },
         select: { id: true, name: true },
         orderBy: [{ name: "asc" }, { id: "asc" }],
       }),

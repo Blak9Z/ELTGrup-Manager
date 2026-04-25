@@ -97,7 +97,9 @@ export default async function SubcontractoriPage({
   const scope = session?.user
     ? await resolveAccessScope(userContext)
     : { projectIds: null, teamId: null };
-  const where: Prisma.SubcontractorWhereInput = { ...subcontractorScopeWhere(scope) };
+  // We removed project-based filtering for subcontractors to allow Managers and Admin to see all collaborators in the catalog.
+  // const where: Prisma.SubcontractorWhereInput = { ...subcontractorScopeWhere(scope) };
+  const where: Prisma.SubcontractorWhereInput = {};
   const andFilters: Prisma.SubcontractorWhereInput[] = [];
 
   if (archivedFilter === "active") {
