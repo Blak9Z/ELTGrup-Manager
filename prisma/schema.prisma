@@ -46,6 +46,7 @@ model User {
   roles                    UserRole[]
   approvedWorkOrders       WorkOrder[]                 @relation("WorkOrderApprovedBy")
   assignedOrders           WorkOrder[]                 @relation("AssignedResponsible")
+  installationInspections InstallationInspection[]     @relation("InspectionPerformedBy")
   workerProfile            WorkerProfile?
 
   @@index([email, isActive, deletedAt])
@@ -143,6 +144,7 @@ model Client {
   contacts           ClientContact[]
   documents          Document[]
   invoices           Invoice[]
+  offers             Offer[]
   projects           Project[]
 
   @@index([name])
@@ -160,6 +162,92 @@ model ClientContact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Offer {
+  id          String      @id @default(cuid())
+  clientId    String
+  code        String      @unique
+  title       String
+  description String?
+  status      OfferStatus @default(DRAFT)
+  issueDate   DateTime    @default(now())
+  validUntil  DateTime
+  totalAmount Decimal     @db.Decimal(14, 2)
+  currency    String      @default("RON")
+  notes       String?
+  acceptedAt  DateTime?
+  projectId   String?
+  deletedAt   DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  items       OfferItem[]
+  project     Project?    @relation(fields: [projectId], references: [id])
+
+  @@index([status, deletedAt])
+  @@index([clientId, deletedAt])
+  @@index([validUntil, status])
+}
+
+model OfferItem {
+  id          String  @id @default(cuid())
+  offerId     String
+  name        String
+  description String?
+  category    String?
+  quantity    Decimal @db.Decimal(12, 2)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  totalPrice  Decimal @db.Decimal(12, 2)
+  sortOrder   Int     @default(0)
+  offer       Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@index([offerId, sortOrder])
+}
+
+model ProjectInstallation {
+  id             String                @id @default(cuid())
+  projectId      String
+  name           String
+  manufacturer   String
+  model          String?
+  serialNumber   String?
+  warrantyMonths Int                   @default(24)
+  installedAt    DateTime?
+  certifiedAt    DateTime?
+  nextCheckAt    DateTime?
+  documentId     String?
+  status         InstallationStatus    @default(INSTALLED)
+  notes          String?
+  deletedAt      DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  inspections    InstallationInspection[]
+  project        Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([status, nextCheckAt])
+}
+
+model InstallationInspection {
+  id                String             @id @default(cuid())
+  installationId    String
+  performedAt       DateTime           @default(now())
+  performedByUserId String?
+  result            InspectionResult   @default(PASS)
+  findings          String?
+  correctiveActions String?
+  nextDueAt         DateTime?
+  documentId        String?
+  isAnnualPSI       Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  installation      ProjectInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  performedBy       User?               @relation("InspectionPerformedBy", fields: [performedByUserId], references: [id])
+
+  @@index([installationId, performedAt])
+  @@index([nextDueAt, result])
 }
 
 model Project {
@@ -192,10 +280,13 @@ model Project {
   inventoryMovements   InventoryMovement[]
   invoices             Invoice[]
   materialRequests     MaterialRequest[]
+  installations        ProjectInstallation[]
+  permitApplications PermitApplication[]
   client               Client                    @relation(fields: [clientId], references: [id])
   manager              User?                     @relation("ProjectManager", fields: [managerId], references: [id])
   materialUsage        ProjectMaterialUsage[]
   phases               ProjectPhase[]
+  offers               Offer[]
   stockMovements       StockMovement[]
   subcontractors       SubcontractorAssignment[]
   timeEntries          TimeEntry[]
@@ -210,6 +301,7 @@ model ProjectPhase {
   id         String      @id @default(cuid())
   projectId  String
   title      String
+  type       PhaseType   @default(EXECUTIE)
   position   Int
   startDate  DateTime?
   endDate    DateTime?
@@ -220,6 +312,7 @@ model ProjectPhase {
   workOrders WorkOrder[]
 
   @@index([projectId, position])
+  @@index([projectId, type])
 }
 
 model WorkOrder {
@@ -227,6 +320,7 @@ model WorkOrder {
   projectId                String
   phaseId                  String?
   title                    String
+  type                     WorkOrderType             @default(PROJECT)
   description              String?
   siteLocation             String?
   responsibleId            String?
@@ -266,14 +360,15 @@ model WorkOrder {
 }
 
 model TaskChecklistItem {
-  id          String    @id @default(cuid())
-  workOrderId String
-  label       String
-  isDone      Boolean   @default(false)
-  doneAt      DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  id              String           @id @default(cuid())
+  workOrderId     String
+  label           String
+  isDone          Boolean          @default(false)
+  doneAt          DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  category        ChecklistCategory?
+  workOrder       WorkOrder        @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
 
   @@index([workOrderId, isDone])
 }
@@ -684,7 +779,13 @@ model Invoice {
   totalAmount   Decimal       @db.Decimal(14, 2)
   paidAmount    Decimal       @default(0) @db.Decimal(14, 2)
   status        InvoiceStatus @default(DRAFT)
-  sentAt        DateTime?
+  invoiceType   InvoiceType   @default(FINAL)
+  phaseId       String?
+  fgoTrackingId   String?
+  fgoStatus        FgoInvoiceStatus?
+  fgoErrorCode     String?
+  fgoSentAt        DateTime?
+  fgoRespondedAt   DateTime?
   paidAt        DateTime?
   notes         String?
   createdAt     DateTime      @default(now())
@@ -835,6 +936,7 @@ enum PermissionResource {
   MATERIALS
   DOCUMENTS
   INVOICES
+  OFFERS
   REPORTS
   SETTINGS
   USERS
@@ -865,6 +967,23 @@ enum ProjectType {
   INDUSTRIAL
   INFRASTRUCTURE
   MAINTENANCE
+}
+
+enum PhaseType {
+  OFERTARE
+  PROIECTARE
+  AVIZ_ISU
+  AVIZ_SSM
+  AVIZ_POMPIERI
+  EXECUTIE
+  RECEPTIE_PSI
+  MENTENANTA
+}
+
+enum WorkOrderType {
+  PROJECT
+  SERVICE_CALL
+  ADMINISTRATIVE
 }
 
 enum WorkOrderStatus {
@@ -902,6 +1021,14 @@ enum TimeEntryLiveState {
   STOPPED
   RUNNING
   PAUSED
+}
+
+enum OfferStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
 }
 
 enum StockMovementType {
@@ -983,6 +1110,60 @@ enum InventoryInspectionResult {
   FAILED
 }
 
+enum InstallationStatus {
+  INSTALLED
+  UNDER_TEST
+  CERTIFIED
+  UNDER_MAINTENANCE
+  DECOMMISSIONED
+}
+
+enum ChecklistCategory {
+  PSI
+  ELECTRIC
+  BMS
+  GENERAL
+}
+
+enum InspectionResult {
+  PASS
+  MINOR_ISSUES
+  MAJOR_ISSUES
+  FAILED
+}
+
+model ChecklistTemplate {
+  id          String            @id @default(cuid())
+  name        String
+  category    ChecklistCategory @default(GENERAL)
+  items       String[]
+  projectType ProjectType?
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([category, projectType])
+}
+
+enum FgoInvoiceStatus {
+  DRAFT_UPLOADED
+  PENDING_VALIDATION
+  VALIDATION_OK
+  VALIDATION_ERRORS
+  SENT_TO_ANAF
+  SIGNED
+  SUBMITTED_OK
+  SUBMITTED_ERRORS
+  REJECTED
+}
+
+enum InvoiceType {
+  ADVANCE
+  PROGRESS
+  FINAL
+  WARRANTY_RETENTION
+}
+
 enum InvoiceStatus {
   DRAFT
   SENT
@@ -1039,6 +1220,40 @@ enum SubcontractorApprovalStatus {
   APROBAT
   RESPINS
   SUSPENDAT
+}
+
+model PermitApplication {
+  id               String                    @id @default(cuid())
+  projectId        String
+  type             PermitType
+  status           PermitApplicationStatus  @default(SUBMITTED)
+  submittedAt      DateTime                  @default(now())
+  responseDate     DateTime?
+  rejectionReason  String?
+  notes            String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  project          Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, type, status])
+}
+
+enum PermitType {
+  AVIZ_ISU
+  AVIZ_SSM
+  AVIZ_POMPIERI
+  RECEPTIE_PSI
+}
+
+enum PermitApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CORRECTIONS_NEEDED
+  RESUBMITTED
+  EXPIRED
 }
 
 enum AssignmentStatus {

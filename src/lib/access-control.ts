@@ -3,6 +3,7 @@ import { hasPermission, normalizeRoleKeys } from "./rbac";
 
 export const appModules = [
   "dashboard",
+  "offers",
   "projects",
   "work_orders",
   "teams",
@@ -47,6 +48,7 @@ const companyWideRoles = new Set<RoleKey>([RoleKey.BACKOFFICE, RoleKey.ACCOUNTAN
 
 export const modulePolicies: Record<AppModule, ModulePolicy> = {
   dashboard: { resource: "REPORTS", action: "VIEW", routePrefixes: ["/panou"] },
+  offers: { resource: "OFFERS", action: "VIEW", routePrefixes: ["/oferte"] },
   projects: { resource: "PROJECTS", action: "VIEW", routePrefixes: ["/proiecte"] },
   work_orders: { resource: "TASKS", action: "VIEW", routePrefixes: ["/lucrari"] },
   teams: {

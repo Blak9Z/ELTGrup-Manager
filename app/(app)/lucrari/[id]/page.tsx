@@ -1,3 +1,4 @@
+import { ChecklistCategory } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
@@ -10,6 +11,8 @@ import { assertWorkOrderAccess } from "@/src/lib/access-scope";
 import { buildWorkOrderTimeline } from "@/src/lib/timeline";
 import { formatDate, formatDateTime } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
+import { getChecklistTemplates } from "@/app/api/checklist-templates/actions";
+import { applyChecklistTemplate, toggleChecklistItem } from "../checklist-actions";
 
 export default async function WorkOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,13 +38,15 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
       documents: { orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: 24 },
       timeEntries: { include: { user: true }, orderBy: [{ startAt: "desc" }, { id: "asc" }], take: 20 },
       dailyReports: { orderBy: [{ reportDate: "desc" }, { id: "asc" }], take: 20 },
-      checklistItems: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+      checklistItems: { orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true, label: true, isDone: true, category: true } },
     },
   });
 
   if (!workOrder) notFound();
 
   const timeline = await buildWorkOrderTimeline(id, 40);
+  const templates = await getChecklistTemplates();
+  const templatesByCategory = templates.reduce((acc, t) => { acc[t.category] = [...(acc[t.category] || []), t]; return acc; }, {} as Record<ChecklistCategory, typeof templates>);
 
   return (
     <PermissionGuard resource="TASKS" action="VIEW">
@@ -106,6 +111,56 @@ export default async function WorkOrderDetailPage({ params }: { params: Promise<
             <p className="mt-1 text-xs text-[var(--muted)]">Cronologie unificata: update-uri, documente, pontaj, rapoarte teren si audit.</p>
             <div className="mt-3">
               <ActivityTimeline events={timeline} />
+            </div>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Checklist verificari</h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">Puncte de control grupate pe categorie: PSI, Electric, BMS.</p>
+            <div className="mt-3 space-y-3">
+                {( ["PSI", "ELECTRIC", "BMS", "GENERAL"] as const ).map((cat) => {
+                const category = cat as ChecklistCategory;
+                const items = workOrder.checklistItems.filter((i) => i.category === category || (!i.category && category === "GENERAL"));
+                const tpls = templatesByCategory[cat] || [];
+                return (
+                  <div key={cat} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                        {category === "PSI" ? "PSI" : category === "ELECTRIC" ? "Electric" : category === "BMS" ? "BMS" : "General"}
+                      </h3>
+                      {tpls.length > 0 ? (
+                        <form action={applyChecklistTemplate} className="flex items-center gap-1.5">
+                          <input type="hidden" name="workOrderId" value={workOrder.id} />
+                          <select name="templateId" className="h-6 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-[10px] text-[var(--foreground)]">
+                            <option value="">Adauga din template</option>
+                            {tpls.map((t) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </select>
+                          <button type="submit" className="rounded-md bg-[var(--surface-card)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted-strong)] transition-colors hover:bg-[var(--surface-border)]">+</button>
+                        </form>
+                      ) : null}
+                    </div>
+                    {items.length === 0 ? (
+                      <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-2.5 text-[11px] text-[var(--muted)]">Niciun punct de control.</p>
+                    ) : (
+                      items.map((item) => (
+                        <form key={item.id} action={toggleChecklistItem} className="flex items-start gap-2 rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-2.5 text-sm">
+                          <input type="hidden" name="id" value={item.id} />
+                          <input type="hidden" name="workOrderId" value={workOrder.id} />
+                          <input type="hidden" name="done" value={item.isDone ? "false" : "true"} />
+                          <button type="submit" className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${item.isDone ? "border-[#4f9c76]/50 bg-[rgba(79,156,118,0.25)]" : "border-[var(--border)] bg-[var(--surface)] hover:border-[#4f9c76]/40"}`}>
+                            {item.isDone ? <span className="text-[10px] text-[#bde7cf]">&#10003;</span> : null}
+                          </button>
+                          <span className={`text-sm ${item.isDone ? "text-[var(--muted)] line-through" : "text-[var(--foreground)]"}`}>{item.label}</span>
+                        </form>
+                      ))
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </section>

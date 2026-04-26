@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Package,
   Receipt,
+  ScrollTextIcon,
   Settings,
   Smartphone,
   Timer,
@@ -30,6 +31,7 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { module: "dashboard", href: "/panou", label: "Panou", icon: LayoutDashboard, section: "Baza" },
+  { module: "projects", href: "/oferte", label: "Oferte", icon: ScrollTextIcon, section: "Baza" },
   { module: "projects", href: "/proiecte", label: "Proiecte", icon: BriefcaseBusiness, section: "Baza" },
   { module: "work_orders", href: "/lucrari", label: "Lucrari", icon: ClipboardList, section: "Executie" },
   { module: "teams", href: "/echipe", label: "Echipe", icon: Users, section: "Executie" },

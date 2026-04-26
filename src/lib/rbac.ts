@@ -19,6 +19,7 @@ export const permissionResourceLabels = {
   MATERIALS: "Materiale",
   DOCUMENTS: "Documente",
   INVOICES: "Facturi",
+  OFFERS: "Oferte",
   REPORTS: "Rapoarte",
   SETTINGS: "Setari",
   USERS: "Utilizatori",
@@ -67,6 +68,7 @@ type RolePermissionOverview = {
 
 export const rolePermissionMatrix: PermissionMap = {
   SUPER_ADMIN: {
+    OFFERS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
     PROJECTS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
     TASKS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
     TEAMS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
@@ -79,6 +81,7 @@ export const rolePermissionMatrix: PermissionMap = {
     USERS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
   },
   ADMINISTRATOR: {
+    OFFERS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
     PROJECTS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
     TASKS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
     TEAMS: ["VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "EXPORT", "MANAGE"],
@@ -98,6 +101,7 @@ export const rolePermissionMatrix: PermissionMap = {
     REPORTS: ["VIEW"],
   },
   PROJECT_MANAGER: {
+    OFFERS: ["VIEW", "CREATE", "UPDATE", "EXPORT"],
     PROJECTS: ["VIEW", "CREATE", "UPDATE", "APPROVE", "EXPORT"],
     TASKS: ["VIEW", "CREATE", "UPDATE", "APPROVE", "EXPORT"],
     TEAMS: ["VIEW", "CREATE", "UPDATE", "EXPORT"],
@@ -118,6 +122,7 @@ export const rolePermissionMatrix: PermissionMap = {
     REPORTS: ["VIEW", "CREATE", "EXPORT"],
   },
   BACKOFFICE: {
+    OFFERS: ["VIEW", "CREATE", "UPDATE"],
     PROJECTS: ["VIEW", "CREATE", "UPDATE"],
     TASKS: ["VIEW", "CREATE", "UPDATE"],
     TEAMS: ["VIEW", "UPDATE"],

@@ -1,7 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient, Prisma } from "@prisma/client";
 
 const basePrisma = new PrismaClient({
-  log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  log:
+    process.env.NODE_ENV === "development"
+      ? ["error", "warn"]
+      : process.env.PRISMA_QUERY_LOG === "true"
+        ? ["error", "warn", "info", "query"]
+        : ["error"],
 });
 
 const prismaClientSingleton = () => {
@@ -28,10 +34,20 @@ const prismaClientSingleton = () => {
           finalArgs.where = { ...(finalArgs.where || {}), deletedAt: null };
           return query(finalArgs);
         },
-        async findUnique({ model, args, query }) {
+        async findUnique({ args, query }) {
           return query(args);
         },
         async count({ model, args, query }) {
+          const scalarFields = (Prisma as any)[`${model}ScalarFieldEnum`];
+          const hasDeletedAt = scalarFields && "deletedAt" in scalarFields;
+          if (!hasDeletedAt || (args as any)?.where?.deletedAt !== undefined) {
+            return query(args);
+          }
+          const finalArgs = args || {};
+          finalArgs.where = { ...(finalArgs.where || {}), deletedAt: null };
+          return query(finalArgs);
+        },
+        async findFirstOrThrow({ model, args, query }) {
           const scalarFields = (Prisma as any)[`${model}ScalarFieldEnum`];
           const hasDeletedAt = scalarFields && "deletedAt" in scalarFields;
           if (!hasDeletedAt || (args as any)?.where?.deletedAt !== undefined) {
@@ -54,9 +70,9 @@ const prismaClientSingleton = () => {
         },
       },
     },
+    result: {},
   });
 };
-
 
 type PrismaClientType = ReturnType<typeof prismaClientSingleton>;
 

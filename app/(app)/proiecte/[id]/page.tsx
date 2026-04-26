@@ -1,4 +1,4 @@
-import { DocumentCategory, InventoryAssignmentStatus, InventoryItemStatus, ProjectStatus } from "@prisma/client";
+import { DocumentCategory, InstallationStatus, InventoryAssignmentStatus, InventoryItemStatus, ProjectStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
@@ -12,6 +12,9 @@ import { inventoryItemStatusLabels } from "@/src/lib/inventory-labels";
 import { buildProjectTimeline } from "@/src/lib/timeline";
 import { formatCurrency, formatDate } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
+import { InstallationForm } from "../installations/installation-form";
+import { updateInstallationStatus, archiveInstallation } from "../installations/actions";
+import { PermitTracker } from "../avize/permit-tracker";
 
 const documentCategoryLabels: Record<DocumentCategory, string> = {
   CONTRACT: "Contract",
@@ -131,7 +134,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       client: { select: { id: true, name: true } },
       manager: { select: { id: true, firstName: true, lastName: true } },
       phases: {
-        select: { id: true, title: true, position: true, completed: true },
+        select: { id: true, title: true, type: true, position: true, completed: true, startDate: true, endDate: true },
         orderBy: [{ position: "asc" }, { id: "asc" }],
       },
       workOrders: {
@@ -191,6 +194,35 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         },
         orderBy: { id: "asc" },
         take: 10,
+      },
+      installations: {
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          manufacturer: true,
+          model: true,
+          serialNumber: true,
+          warrantyMonths: true,
+          installedAt: true,
+          certifiedAt: true,
+          nextCheckAt: true,
+          status: true,
+          notes: true,
+        },
+        orderBy: [{ status: "asc" }, { name: "asc" }],
+      },
+      permitApplications: {
+        select: {
+          id: true,
+          type: true,
+          status: true,
+          submittedAt: true,
+          responseDate: true,
+          notes: true,
+          rejectionReason: true,
+        },
+        orderBy: [{ submittedAt: "desc" }, { id: "asc" }],
       },
       inventoryAssignments: {
         where: { status: { in: [InventoryAssignmentStatus.ACTIVE, InventoryAssignmentStatus.PARTIAL_RETURNED] } },
@@ -304,14 +336,44 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   Nu exista faze definite pentru acest proiect.
                 </p>
               ) : null}
-              {project.phases.map((phase) => (
-                <div key={phase.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
-                  <p className="font-semibold text-[var(--foreground)]">
-                    {phase.position}. {phase.title}
-                  </p>
-                  <p className="text-xs text-[#a0b3ce]">{phase.completed ? "Finalizata" : "In progres"}</p>
-                </div>
-              ))}
+              {project.phases.map((phase) => {
+                  const phaseTypeLabels: Record<string, string> = {
+                    OFERTARE: "Ofertare",
+                    PROIECTARE: "Proiectare",
+                    AVIZ_ISU: "Aviz ISU",
+                    AVIZ_SSM: "Aviz SSM",
+                    AVIZ_POMPIERI: "Aviz Pompieri",
+                    EXECUTIE: "Executie",
+                    RECEPTIE_PSI: "Receptie PSI",
+                    MENTENANTA: "Mentenanta",
+                  };
+                  return (
+                    <div key={phase.id} className={`rounded-xl border bg-[var(--surface-card)] p-3 text-sm ${phase.completed ? "border-[rgba(79,156,118,0.35)]" : "border-[var(--border)]/70"}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-[var(--muted)]">{String(phase.position).padStart(2, "0")}</span>
+                        <p className="font-semibold text-[var(--foreground)]">{phase.title}</p>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${phase.completed ? "bg-[rgba(79,156,118,0.18)] text-[#bde7cf]" : phase.type === "AVIZ_ISU" ? "bg-[rgba(190,95,111,0.18)] text-[#f6c7cf]" : "bg-[rgba(94,134,190,0.18)] text-[#cadcf7]"}`}>
+                          {phaseTypeLabels[phase.type] || phase.type}
+                        </span>
+                        {phase.startDate ? (
+                          <span className="text-[11px] text-[var(--muted)]">
+                            {formatDate(phase.startDate)}
+                            {phase.endDate ? ` → ${formatDate(phase.endDate)}` : ""}
+                          </span>
+                        ) : null}
+                        {phase.completed ? (
+                          <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-[#bde7cf]">Finalizata</span>
+                        ) : phase.endDate ? (
+                          <span className={`ml-auto text-[10px] font-semibold uppercase tracking-wider ${new Date(phase.endDate) < new Date() ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}>
+                            {new Date(phase.endDate) < new Date() ? "Termen DEPASIT" : `Termen: ${formatDate(phase.endDate)}`}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </Card>
         </section>
@@ -355,6 +417,90 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             ))}
           </div>
         </Card>
+
+        <PermissionGuard resource="PROJECTS" action="UPDATE">
+          <Card>
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">Instalatii tehnice</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">Echipamente instalate, certificari si urmatoare verificari.</p>
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {project.installations.length === 0 ? (
+                <p className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm text-[var(--muted)]">
+                  Nu exista instalatii inregistrate pe acest proiect.
+                </p>
+              ) : null}
+              {project.installations.map((inst) => (
+                <div key={inst.id} className="rounded-xl border border-[var(--border)]/70 bg-[var(--surface-card)] p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="truncate font-semibold text-[var(--foreground)]">{inst.name}</p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {inst.manufacturer} {inst.model || ""} {inst.serialNumber ? `| S/N ${inst.serialNumber}` : ""}
+                      </p>
+                    </div>
+                    <Badge tone={
+                      inst.status === InstallationStatus.CERTIFIED ? "success" :
+                      inst.status === InstallationStatus.INSTALLED ? "info" :
+                      inst.status === InstallationStatus.UNDER_TEST ? "warning" :
+                      inst.status === InstallationStatus.UNDER_MAINTENANCE ? "danger" : "neutral"
+                    }>
+                      {inst.status === InstallationStatus.UNDER_TEST ? "Testare" :
+                       inst.status === InstallationStatus.CERTIFIED ? "Certificat" :
+                       inst.status === InstallationStatus.UNDER_MAINTENANCE ? "In service" :
+                       inst.status === InstallationStatus.DECOMMISSIONED ? "Retras" : "Instalat"}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--muted)]">
+                    {inst.warrantyMonths ? <span>Garantie {inst.warrantyMonths} luni</span> : null}
+                    {inst.installedAt ? <span>Instalat {formatDate(inst.installedAt)}</span> : null}
+                    {inst.nextCheckAt ? (
+                      <span className={new Date(inst.nextCheckAt) < new Date() ? "text-[var(--danger)] font-semibold" : ""}>
+                        Urm. verificare {formatDate(inst.nextCheckAt)}
+                        {new Date(inst.nextCheckAt) < new Date() ? " (DEPASIT)" : ""}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {Object.values(InstallationStatus).map((s) => (
+                      <form key={s} action={updateInstallationStatus} className="contents">
+                        <input type="hidden" name="id" value={inst.id} />
+                        <input type="hidden" name="projectId" value={project.id} />
+                        <input type="hidden" name="status" value={s} />
+                        <button
+                          type="submit"
+                          className={`rounded-md border px-2 py-0.5 text-[10px] transition-colors ${
+                            inst.status === s
+                              ? "border-[#4f9c76]/40 bg-[rgba(79,156,118,0.18)] text-[#bde7cf]"
+                              : "border-[var(--border)]/60 text-[var(--muted)] hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+                          }`}
+                        >
+                          {s === "INSTALLED" ? "Instalat" : s === "UNDER_TEST" ? "Testare" : s === "CERTIFIED" ? "Certificat" : s === "UNDER_MAINTENANCE" ? "In service" : "Retras"}
+                        </button>
+                      </form>
+                    ))}
+                    <form action={archiveInstallation} className="contents">
+                      <input type="hidden" name="id" value={inst.id} />
+                      <input type="hidden" name="projectId" value={project.id} />
+                      <button
+                        type="submit"
+                        className="rounded-md border border-[var(--border)]/60 px-2 py-0.5 text-[10px] text-[var(--muted)] transition-colors hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                      >
+                        Arhiveaza
+                      </button>
+                    </form>
+                  </div>
+                  {inst.notes ? <p className="mt-1.5 text-[11px] text-[var(--muted)]">{inst.notes}</p> : null}
+                </div>
+              ))}
+              <InstallationForm projectId={project.id} />
+            </div>
+          </Card>
+        </PermissionGuard>
+
+        <PermitTracker permits={project.permitApplications} projectId={project.id} />
 
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--border)] pb-3">

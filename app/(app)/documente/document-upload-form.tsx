@@ -43,7 +43,7 @@ export function DocumentUploadForm({
   }, [state]);
 
   return (
-    <form action={formAction} encType="multipart/form-data" className="space-y-5">
+    <form action={formAction} className="space-y-5">
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)]">
         <div className="space-y-4">
           <div className="space-y-2">

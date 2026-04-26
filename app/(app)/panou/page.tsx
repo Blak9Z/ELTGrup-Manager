@@ -1,4 +1,5 @@
-import { RoleKey } from "@prisma/client";
+import { ProjectStatus, RoleKey } from "@prisma/client";
+import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Card } from "@/src/components/ui/card";
 import { KpiCard } from "@/src/components/ui/kpi-card";
@@ -9,6 +10,7 @@ import { resolveAccessScope, workOrderScopeWhere } from "@/src/lib/access-scope"
 import { formatCurrency, formatDate, fullName } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { ProductivityChart } from "@/src/modules/dashboard/charts";
+import ClientViewerDashboard from "./client-viewer-dashboard";
 
 function getPrimaryRole(roleKeys: string[]) {
   const priority: RoleKey[] = [
@@ -102,6 +104,76 @@ export default async function DashboardPage() {
   const primaryRole = getPrimaryRole(userContext.roleKeys);
   const roleContext = roleExperience[primaryRole];
 
+  if (primaryRole === RoleKey.CLIENT_VIEWER) {
+    return <ClientViewerDashboard userContext={userContext} scope={scope} />;
+  }
+
+  // Verificari PSI
+  const now = new Date();
+  const in7Days = new Date(); in7Days.setDate(now.getDate() + 7);
+
+  const installationAlerts = await prisma.projectInstallation.groupBy({
+    by: ["status"],
+    where: {
+      deletedAt: null,
+      project: { ...scopedProjectWhere, deletedAt: null },
+    },
+    _count: { _all: true },
+  });
+
+  const upcomingChecks = await prisma.projectInstallation.findMany({
+    where: {
+      deletedAt: null,
+      nextCheckAt: { gte: now, lte: in7Days },
+      project: { ...scopedProjectWhere, deletedAt: null },
+    },
+    select: {
+      id: true, name: true, nextCheckAt: true, status: true,
+      project: { select: { id: true, code: true, title: true } },
+    },
+    orderBy: { nextCheckAt: "asc" },
+    take: 5,
+  });
+
+  const expiredChecks = await prisma.projectInstallation.count({
+    where: {
+      deletedAt: null,
+      nextCheckAt: { lt: now },
+      project: { ...scopedProjectWhere, deletedAt: null },
+    },
+  });
+
+  const totalInstallations = installationAlerts.reduce((acc, i) => acc + i._count._all, 0);
+  const certifiedCount = installationAlerts.find((i) => i.status === "CERTIFIED")?._count._all ?? 0;
+  const maintenanceCount = installationAlerts.find((i) => i.status === "UNDER_MAINTENANCE")?._count._all ?? 0;
+
+  // Pipeline commercial + Avizare ISU (query separat)
+  const offerBuckets = await prisma.offer.groupBy({
+    by: ["status"],
+    where: { deletedAt: null },
+    _count: { _all: true },
+  });
+
+  const avizareProjects = await prisma.project.findMany({
+    where: {
+      deletedAt: null,
+      ...scopedProjectWhere,
+      phases: { some: { type: "AVIZ_ISU", completed: false } },
+    },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      phases: {
+        where: { type: "AVIZ_ISU" },
+        select: { title: true, endDate: true, completed: true },
+        orderBy: { position: "asc" },
+        take: 1,
+      },
+    },
+    take: 5,
+  });
+
   // Parallelize all main dashboard data fetching
   const [
     delayedTasks,
@@ -113,6 +185,7 @@ export default async function DashboardPage() {
     weeklyHours,
     projectStatusBuckets,
     workOrderStatusBuckets,
+    overdueInvoices,
   ] = await Promise.all([
     prisma.workOrder.count({
       where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } },
@@ -178,6 +251,23 @@ export default async function DashboardPage() {
       where: scopedWorkOrderWhere,
       _count: { _all: true },
     }),
+    prisma.invoice.findMany({
+      where: {
+        ...scopedProjectIdWhere,
+        status: "OVERDUE",
+      },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        totalAmount: true,
+        paidAmount: true,
+        dueDate: true,
+        status: true,
+        project: { select: { id: true, code: true, title: true } },
+      },
+      orderBy: { dueDate: "asc" },
+      take: 5,
+    }),
   ]);
 
   const projectsById =
@@ -196,12 +286,18 @@ export default async function DashboardPage() {
     name: (projectNameById.get(hourItem.projectId) || "Proiect").slice(0, 18),
     ore: Math.round((hourItem._sum.durationMinutes || 0) / 60),
   }));
+  const offerCountByStatus = new Map(offerBuckets.map((item) => [item.status, item._count._all]));
+  const offersDraft = offerCountByStatus.get("DRAFT") || 0;
+  const offersSent = offerCountByStatus.get("SENT") || 0;
+  const offersAccepted = offerCountByStatus.get("ACCEPTED") || 0;
+
   const projectCountByStatus = new Map(projectStatusBuckets.map((item) => [item.status, item._count._all]));
-  const workOrderCountByStatus = new Map(workOrderStatusBuckets.map((item) => [item.status, item._count._all]));
   const activeProjects = projectCountByStatus.get("ACTIVE") || 0;
   const plannedProjects = projectCountByStatus.get("PLANNED") || 0;
   const blockedProjects = projectCountByStatus.get("BLOCKED") || 0;
   const completedProjects = projectCountByStatus.get("COMPLETED") || 0;
+
+  const workOrderCountByStatus = new Map((workOrderStatusBuckets || []).map((item) => [item.status, item._count._all]));
   const todoOrders = workOrderCountByStatus.get("TODO") || 0;
   const inProgressOrders = workOrderCountByStatus.get("IN_PROGRESS") || 0;
   const blockedOrders = workOrderCountByStatus.get("BLOCKED") || 0;
@@ -270,6 +366,71 @@ export default async function DashboardPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
+          <Card>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Pipeline comercial</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Oferte tehnice</h2>
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+                <span className="text-[var(--muted-strong)]">Draft (in lucru)</span>
+                <span className="font-semibold text-[var(--foreground)]">{offersDraft}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+                <span className="text-[var(--muted-strong)]">Trimise la client</span>
+                <span className="font-semibold text-[var(--foreground)]">{offersSent}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2">
+                <span className="text-[var(--muted-strong)]">Acceptate (in conversie)</span>
+                <span className="font-semibold text-emerald-400">{offersAccepted}</span>
+              </div>
+              <Link
+                href="/oferte"
+                className="mt-2 inline-block text-xs text-[var(--accent)] hover:underline"
+              >
+                Vezi toate ofertele →
+              </Link>
+            </div>
+          </Card>
+
+          <Card>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Avizare ISU</p>
+            <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">In asteptare autorizatie</h2>
+            <div className="mt-3 space-y-2 text-sm">
+              {avizareProjects.length === 0 ? (
+                <p className="text-xs text-[var(--muted)]">Niciun proiect in faza de avizare ISU.</p>
+              ) : (
+                avizareProjects.map((project) => {
+                  const phase = project.phases[0];
+                  const daysLeft = phase?.endDate
+                    ? Math.ceil((new Date(phase.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                    : null;
+                  return (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface-card)] px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-[var(--foreground)]">
+                          {project.code} — {project.title}
+                        </p>
+                        {daysLeft !== null && (
+                          <p className={`text-xs ${daysLeft < 7 ? "text-[var(--danger)]" : "text-[var(--muted)]"}`}>
+                            {daysLeft > 0 ? `Termen: ${daysLeft} zile` : "Termen DEPASIT"}
+                          </p>
+                        )}
+                      </div>
+                      <Link
+                        href={`/proiecte/${project.id}`}
+                        className="ml-2 shrink-0 text-xs text-[var(--accent)] hover:underline"
+                      >
+                        Deschide
+                      </Link>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Card>
+
           <Card>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Status proiecte</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Portofoliu proiecte</h2>

@@ -131,7 +131,7 @@ export default async function FinanciarPage({
       totalAmount: true,
       dueDate: true,
       issueDate: true,
-      sentAt: true,
+      fgoSentAt: true,
       paidAt: true,
       status: true,
       project: { select: { id: true, title: true } },
@@ -297,7 +297,7 @@ export default async function FinanciarPage({
                   <p className="mt-1 text-xs text-[var(--muted)]">
                     Scadenta {new Intl.DateTimeFormat("ro-RO").format(invoice.dueDate)}
                     {invoice.issueDate ? ` • Emisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.issueDate)}` : ""}
-                    {invoice.sentAt ? ` • Trimisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.sentAt)}` : ""}
+                    {invoice.fgoSentAt ? ` • Trimisa ${new Intl.DateTimeFormat("ro-RO").format(invoice.fgoSentAt)}` : ""}
                     {invoice.paidAt ? ` • Incasata ${new Intl.DateTimeFormat("ro-RO").format(invoice.paidAt)}` : ""}
                   </p>
                   {canUpdateInvoice || canDeleteFinancial ? (

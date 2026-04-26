@@ -356,7 +356,7 @@ export default async function TerenPage() {
                     </div>
 
                     <div className="flex flex-col gap-6">
-                      <form action={uploadTaskPhoto} encType="multipart/form-data" className="flex flex-col gap-3">
+                      <form action={uploadTaskPhoto} className="flex flex-col gap-3">
                         <input type="hidden" name="workOrderId" value={task.id} />
                         <input type="hidden" name="projectId" value={task.projectId} />
                         <div className="space-y-1.5">
@@ -371,7 +371,7 @@ export default async function TerenPage() {
 
                       <div className="h-px bg-[var(--border)]/30" />
 
-                      <form action={uploadTaskSignature} encType="multipart/form-data" className="flex flex-col gap-3">
+                      <form action={uploadTaskSignature} className="flex flex-col gap-3">
                         <input type="hidden" name="workOrderId" value={task.id} />
                         <input type="hidden" name="projectId" value={task.projectId} />
                         <div className="space-y-1.5">
