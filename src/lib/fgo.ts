@@ -4,13 +4,23 @@
 
 import { FgoInvoiceStatus } from "@prisma/client";
 
-const FGO_ENABLED = process.env.EFATURA_ENABLED === "true";
-const IS_SANDBOX = process.env.FGO_ENV !== "production";
+function isFgoEnabled() {
+  return process.env.EFATURA_ENABLED === "true";
+}
 
-const OAUTH_URL = process.env.FGO_OAUTH_URL || (IS_SANDBOX ? "https://sandbox.anaf.ro/oauth" : "https://logincert.anaf.ro/oauth");
-const API_URL = process.env.FGO_API_URL || (IS_SANDBOX ? "https://sandbox.anaf.ro/api" : "https://api.anaf.ro/prod");
-const CLIENT_ID = process.env.FGO_CLIENT_ID || "";
-const CLIENT_SECRET = process.env.FGO_CLIENT_SECRET || "";
+function isSandbox() {
+  return process.env.FGO_ENV !== "production";
+}
+
+function getFgoConfig() {
+  const sandbox = isSandbox();
+  return {
+    oauthUrl: process.env.FGO_OAUTH_URL || (sandbox ? "https://sandbox.anaf.ro/oauth" : "https://logincert.anaf.ro/oauth"),
+    apiUrl: process.env.FGO_API_URL || (sandbox ? "https://sandbox.anaf.ro/api" : "https://api.anaf.ro/prod"),
+    clientId: process.env.FGO_CLIENT_ID || "",
+    clientSecret: process.env.FGO_CLIENT_SECRET || "",
+  };
+}
 
 export type FgoUploadResult = {
   ok: boolean;
@@ -24,21 +34,23 @@ function sandboxUpload(): FgoUploadResult {
   return {
     ok: true,
     trackingId: `SANDBOX-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
-    status: "SUBMITTED Ok" as unknown as FgoInvoiceStatus,
+    status: "SUBMITTED_OK" as unknown as FgoInvoiceStatus,
   };
 }
 
 async function getAccessToken(): Promise<string | null> {
-  if (IS_SANDBOX) return "sandbox-token";
-  if (!CLIENT_ID || !CLIENT_SECRET) return null;
+  if (isSandbox()) return "sandbox-token";
+
+  const config = getFgoConfig();
+  if (!config.clientId || !config.clientSecret) return null;
 
   const params = new URLSearchParams();
   params.set("grant_type", "client_credentials");
-  params.set("client_id", CLIENT_ID);
-  params.set("client_secret", CLIENT_SECRET);
+  params.set("client_id", config.clientId);
+  params.set("client_secret", config.clientSecret);
   params.set("scope", "upload");
 
-  const res = await fetch(`${OAUTH_URL}/token`, {
+  const res = await fetch(`${config.oauthUrl}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
@@ -50,11 +62,11 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 export async function uploadInvoiceToFgo(invoiceJson: string): Promise<FgoUploadResult> {
-  if (!FGO_ENABLED) {
+  if (!isFgoEnabled()) {
     return { ok: false, status: "DRAFT_UPLOADED" as unknown as FgoInvoiceStatus, errors: [{ code: "EFATURA_DISABLED", message: "eFactura este dezactivata in .env" }] };
   }
 
-  if (IS_SANDBOX) {
+  if (isSandbox()) {
     // Dezvoltare / test — nu trimitem la ANAF
     console.log("[FGO SANDBOX] Simulare upload factura");
     return sandboxUpload();
@@ -65,7 +77,8 @@ export async function uploadInvoiceToFgo(invoiceJson: string): Promise<FgoUpload
     return { ok: false, status: "DRAFT_UPLOADED" as unknown as FgoInvoiceStatus, errors: [{ code: "OAUTH_FAILED", message: "Nu am putut obtine access token FGO" }] };
   }
 
-  const res = await fetch(`${API_URL}/upload`, {
+  const config = getFgoConfig();
+  const res = await fetch(`${config.apiUrl}/upload`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -92,11 +105,11 @@ export async function uploadInvoiceToFgo(invoiceJson: string): Promise<FgoUpload
 }
 
 export async function checkFgoStatus(trackingId: string): Promise<FgoUploadResult> {
-  if (!FGO_ENABLED) {
+  if (!isFgoEnabled()) {
     return { ok: false, status: "DRAFT_UPLOADED" as unknown as FgoInvoiceStatus };
   }
 
-  if (IS_SANDBOX) {
+  if (isSandbox()) {
     return { ok: true, trackingId, status: "SUBMITTED_OK" as unknown as FgoInvoiceStatus };
   }
 
@@ -105,7 +118,8 @@ export async function checkFgoStatus(trackingId: string): Promise<FgoUploadResul
     return { ok: false, status: "DRAFT_UPLOADED" as unknown as FgoInvoiceStatus };
   }
 
-  const res = await fetch(`${API_URL}/status/${trackingId}`, {
+  const config = getFgoConfig();
+  const res = await fetch(`${config.apiUrl}/status/${trackingId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
