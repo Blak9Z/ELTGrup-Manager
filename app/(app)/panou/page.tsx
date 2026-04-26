@@ -1,4 +1,4 @@
-import { ProjectStatus, RoleKey } from "@prisma/client";
+import { FgoInvoiceStatus, ProjectStatus, RoleKey } from "@prisma/client";
 import Link from "next/link";
 import { PermissionGuard } from "@/src/components/auth/permission-guard";
 import { Card } from "@/src/components/ui/card";
@@ -11,6 +11,7 @@ import { formatCurrency, formatDate, fullName } from "@/src/lib/utils";
 import { prisma } from "@/src/lib/prisma";
 import { ProductivityChart } from "@/src/modules/dashboard/charts";
 import ClientViewerDashboard from "./client-viewer-dashboard";
+import { FgoWidget } from "./fgo-widget";
 
 function getPrimaryRole(roleKeys: string[]) {
   const priority: RoleKey[] = [
@@ -186,6 +187,7 @@ export default async function DashboardPage() {
     projectStatusBuckets,
     workOrderStatusBuckets,
     overdueInvoices,
+    fgoStatusBuckets,
   ] = await Promise.all([
     prisma.workOrder.count({
       where: { ...scopedWorkOrderWhere, dueDate: { lt: new Date() }, status: { notIn: ["DONE", "CANCELED"] } },
@@ -268,6 +270,14 @@ export default async function DashboardPage() {
       orderBy: { dueDate: "asc" },
       take: 5,
     }),
+    prisma.invoice.groupBy({
+      by: ["fgoStatus"],
+      where: {
+        ...scopedProjectIdWhere,
+        fgoStatus: { not: null },
+      },
+      _count: { _all: true },
+    }),
   ]);
 
   const projectsById =
@@ -303,6 +313,21 @@ export default async function DashboardPage() {
   const blockedOrders = workOrderCountByStatus.get("BLOCKED") || 0;
 
   const receivables = Number(unpaidInvoices._sum.totalAmount || 0) - Number(unpaidInvoices._sum.paidAmount || 0);
+  const fgoCountByStatus = new Map(fgoStatusBuckets.map((item) => [item.fgoStatus, item._count._all]));
+  const fgoStats = {
+    sent:
+      (fgoCountByStatus.get(FgoInvoiceStatus.SENT_TO_ANAF) || 0) +
+      (fgoCountByStatus.get(FgoInvoiceStatus.SIGNED) || 0) +
+      (fgoCountByStatus.get(FgoInvoiceStatus.SUBMITTED_OK) || 0),
+    pending:
+      (fgoCountByStatus.get(FgoInvoiceStatus.DRAFT_UPLOADED) || 0) +
+      (fgoCountByStatus.get(FgoInvoiceStatus.PENDING_VALIDATION) || 0) +
+      (fgoCountByStatus.get(FgoInvoiceStatus.VALIDATION_OK) || 0),
+    errors:
+      (fgoCountByStatus.get(FgoInvoiceStatus.VALIDATION_ERRORS) || 0) +
+      (fgoCountByStatus.get(FgoInvoiceStatus.SUBMITTED_ERRORS) || 0) +
+      (fgoCountByStatus.get(FgoInvoiceStatus.REJECTED) || 0),
+  };
 
   return (
     <PermissionGuard resource="REPORTS" action="VIEW">
@@ -366,6 +391,8 @@ export default async function DashboardPage() {
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
+          <FgoWidget fgoStats={fgoStats} />
+
           <Card>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Pipeline comercial</p>
             <h2 className="mt-1 text-lg font-semibold text-[var(--foreground)]">Oferte tehnice</h2>
