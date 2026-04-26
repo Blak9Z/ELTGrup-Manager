@@ -1,10 +1,10 @@
-import { ChecklistCategory } from "@prisma/client";
+import { ChecklistCategory, ProjectType } from "@prisma/client";
 
 export const defaultChecklistTemplates: {
   name: string;
   category: ChecklistCategory;
   items: string[];
-  projectType?: string;
+  projectType?: ProjectType;
 }[] = [
   {
     name: "Verificare PSI Initiala",

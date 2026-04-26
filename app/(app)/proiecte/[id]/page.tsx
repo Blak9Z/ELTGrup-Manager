@@ -130,6 +130,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       code: true,
       siteAddress: true,
       status: true,
+      contractValue: true,
       estimatedBudget: true,
       client: { select: { id: true, name: true } },
       manager: { select: { id: true, firstName: true, lastName: true } },
@@ -251,6 +252,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   const totalCost = project.costs.reduce((sum, cost) => sum + Number(cost.amount), 0);
   const totalInvoiced = project.invoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount), 0);
+  const revenueBasis = totalInvoiced > 0 ? totalInvoiced : Number(project.contractValue || 0);
+  const estimatedMargin = revenueBasis - totalCost;
+  const estimatedMarginPercent = revenueBasis > 0 ? (estimatedMargin / revenueBasis) * 100 : 0;
   const timeline = await buildProjectTimeline(id, 40);
   const planDocumentIds = new Set<string>();
   const planGroups = planSections.map((section) => {
@@ -285,7 +289,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           }
         />
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <Card>
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Status</p>
             <div className="mt-2">
@@ -305,6 +309,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <Card>
             <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Facturat</p>
             <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{formatCurrency(totalInvoiced)}</p>
+          </Card>
+          <Card>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">Marja estimata</p>
+            <p className={`mt-2 text-xl font-semibold ${estimatedMargin < 0 ? "text-[var(--danger)]" : "text-emerald-400"}`}>
+              {formatCurrency(estimatedMargin)}
+            </p>
+            <p className="mt-1 text-xs text-[var(--muted)]">{estimatedMarginPercent.toFixed(1)}% din venit</p>
           </Card>
         </section>
 
